@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { Database, Newspaper, ShieldCheck, Users } from "lucide-react";
+import { AdminLinkedinImport } from "@/components/dashboard/admin-linkedin-import";
 import { Card, CardContent } from "@/components/ui/card";
 import { buttonVariants } from "@/components/ui/button";
 
@@ -34,6 +35,9 @@ export default function AdminPage() {
             </Card>
           ))}
         </div>
+        <section className="mt-8">
+          <AdminLinkedinImport />
+        </section>
       </div>
     </main>
   );

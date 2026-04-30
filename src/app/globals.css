@@ -1,3 +1,4 @@
+@import "leaflet/dist/leaflet.css";
 @import "tailwindcss";
 
 :root {
@@ -21,4 +22,85 @@ body {
 ::selection {
   background: #00aeef;
   color: #0a1f44;
+}
+
+.flight-map {
+  background: #020617;
+  font-family: inherit;
+}
+
+.flight-map .leaflet-control-zoom {
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.flight-map .leaflet-control-zoom a {
+  background: rgba(15, 23, 42, 0.94);
+  border-bottom-color: rgba(255, 255, 255, 0.12);
+  color: #e2e8f0;
+}
+
+.flight-map .leaflet-control-zoom a:hover {
+  background: rgba(30, 41, 59, 0.98);
+  color: #ffffff;
+}
+
+.flight-map .leaflet-control-attribution {
+  background: rgba(2, 6, 23, 0.72);
+  color: #94a3b8;
+}
+
+.flight-map .leaflet-control-attribution a {
+  color: #bae6fd;
+}
+
+.flight-map .leaflet-tooltip {
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 6px;
+  background: rgba(248, 250, 252, 0.96);
+  color: #0f172a;
+  box-shadow: 0 14px 35px rgba(2, 6, 23, 0.3);
+}
+
+.flight-aircraft-marker {
+  background: transparent;
+  border: 0;
+}
+
+.flight-aircraft {
+  position: relative;
+  display: grid;
+  width: 34px;
+  height: 34px;
+  place-items: center;
+  filter: drop-shadow(1px 2px 1px rgba(2, 6, 23, 0.72));
+  transform: rotate(var(--flight-heading));
+  transition:
+    filter 160ms ease,
+    transform 160ms ease;
+}
+
+.flight-aircraft.is-selected {
+  filter:
+    drop-shadow(0 0 3px color-mix(in srgb, var(--flight-color) 70%, transparent))
+    drop-shadow(1px 2px 1px rgba(2, 6, 23, 0.78));
+}
+
+.flight-aircraft svg {
+  position: relative;
+  z-index: 1;
+  width: 34px;
+  height: 34px;
+}
+
+.flight-aircraft-body {
+  fill: var(--flight-color);
+}
+
+.flight-aircraft-outline {
+  fill: none;
+  stroke: rgba(2, 6, 23, 0.92);
+  stroke-linejoin: round;
+  stroke-width: 5;
 }

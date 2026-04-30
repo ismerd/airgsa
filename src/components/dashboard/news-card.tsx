@@ -7,7 +7,7 @@ export function NewsCard({ post }: { post: NewsPost }) {
     <Card>
       <CardContent className="p-5">
         <div className="flex flex-wrap items-center gap-2">
-          <Badge>{post.category}</Badge>
+          <Badge>{post.category ?? "unclassified"}</Badge>
           <span className="text-xs text-slate-500">{post.market}</span>
           <span className="text-xs text-slate-500">{post.publishedAt}</span>
         </div>
@@ -21,4 +21,3 @@ export function NewsCard({ post }: { post: NewsPost }) {
     </Card>
   );
 }
-

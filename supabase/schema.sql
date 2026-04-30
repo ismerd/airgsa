@@ -118,14 +118,18 @@ create table public.kpi_reports (
 
 create table public.news_posts (
   id uuid primary key default gen_random_uuid(),
+  external_id text unique,
   title text not null,
   source text not null,
   source_url text,
-  category public.news_category not null,
+  author_name text,
+  author_url text,
+  category public.news_category,
   market text,
   published_at timestamptz,
   summary text,
   confidence numeric(5,2) default 0,
+  media jsonb not null default '[]'::jsonb,
   raw_payload jsonb not null default '{}'::jsonb,
   created_at timestamptz not null default now()
 );
@@ -134,10 +138,33 @@ create table public.linkedin_sources (
   id uuid primary key default gen_random_uuid(),
   name text not null,
   url text not null unique,
-  category public.news_category not null,
+  category public.news_category,
   status public.source_status not null default 'active',
   last_import_at timestamptz,
   created_at timestamptz not null default now()
+);
+
+create table public.linkedin_import_configs (
+  id uuid primary key default gen_random_uuid(),
+  name text not null default 'Default LinkedIn import',
+  token_secret_name text not null default 'LINKEDIN_API_TOKEN',
+  include_quote_posts boolean not null default true,
+  include_reposts boolean not null default true,
+  max_posts integer not null default 50,
+  posted_limit text not null default 'any',
+  lookback_value integer not null default 24,
+  lookback_unit text not null default 'hours' check (lookback_unit in ('hours', 'days', 'weeks')),
+  schedule_enabled boolean not null default true,
+  schedule_value integer not null default 12,
+  schedule_unit text not null default 'hours' check (schedule_unit in ('hours', 'days', 'weeks')),
+  last_run_at timestamptz,
+  next_run_at timestamptz,
+  classification_mode text not null default 'manual' check (classification_mode in ('manual', 'openai')),
+  scrape_comments boolean not null default false,
+  scrape_reactions boolean not null default false,
+  raw_request jsonb not null default '{}'::jsonb,
+  updated_by uuid references public.users(id) on delete set null,
+  updated_at timestamptz not null default now()
 );
 
 create table public.notifications (
@@ -154,6 +181,7 @@ create index tenders_status_deadline_idx on public.tenders(status, deadline);
 create index tender_applications_tender_idx on public.tender_applications(tender_id);
 create index kpi_reports_contract_period_idx on public.kpi_reports(contract_id, period_start);
 create index news_posts_category_published_idx on public.news_posts(category, published_at desc);
+create index news_posts_external_id_idx on public.news_posts(external_id);
 create index notifications_user_status_idx on public.notifications(user_id, status);
 
 alter table public.users enable row level security;
@@ -166,6 +194,7 @@ alter table public.contracts enable row level security;
 alter table public.kpi_reports enable row level security;
 alter table public.news_posts enable row level security;
 alter table public.linkedin_sources enable row level security;
+alter table public.linkedin_import_configs enable row level security;
 alter table public.notifications enable row level security;
 
 create policy "authenticated read companies" on public.companies for select to authenticated using (true);
@@ -176,6 +205,10 @@ create policy "users read own profile" on public.users for select to authenticat
 create policy "users read own notifications" on public.notifications for select to authenticated using (user_id = auth.uid());
 create policy "authenticated read news" on public.news_posts for select to authenticated using (true);
 create policy "authenticated read linkedin sources" on public.linkedin_sources for select to authenticated using (true);
+create policy "admins manage linkedin import configs" on public.linkedin_import_configs
+  for all to authenticated
+  using (exists (select 1 from public.users where id = auth.uid() and role = 'admin'))
+  with check (exists (select 1 from public.users where id = auth.uid() and role = 'admin'));
 
 insert into storage.buckets (id, name, public)
 values ('contract-documents', 'contract-documents', false)

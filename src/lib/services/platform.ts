@@ -3,6 +3,8 @@ import {
   gsaProfiles,
   kpiSeries,
   linkedinSources,
+  linkedinImportDefaults,
+  linkedinPostPreview,
   newsCategories,
   newsPosts,
   notifications,
@@ -15,6 +17,8 @@ export {
   gsaProfiles,
   kpiSeries,
   linkedinSources,
+  linkedinImportDefaults,
+  linkedinPostPreview,
   newsCategories,
   newsPosts,
   notifications,
@@ -44,4 +48,3 @@ export async function getLinkedinSources() {
   if (!isSupabaseConfigured) return linkedinSources;
   return linkedinSources;
 }
-

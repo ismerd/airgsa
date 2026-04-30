@@ -2,6 +2,8 @@ import type {
   GsaProfile,
   KpiPoint,
   LinkedinSource,
+  LinkedinImportRequest,
+  LinkedinPostPreview,
   NewsCategory,
   NewsPost,
   Notification,
@@ -196,16 +198,16 @@ export const newsPosts: NewsPost[] = [
 export const linkedinSources: LinkedinSource[] = [
   {
     id: "src-001",
-    name: "AeroBridge Cargo",
-    url: "https://www.linkedin.com/company/aerobridge-cargo",
-    category: "GSA opportunity",
+    name: "Oman Air Cargo",
+    url: "https://www.linkedin.com/showcase/omanair-cargo/posts/?feedView=all",
+    category: "cargo capacity",
     status: "active",
     lastImport: "Apr 27, 2026 08:10",
   },
   {
     id: "src-002",
-    name: "NorthStar Airways",
-    url: "https://www.linkedin.com/company/northstar-airways",
+    name: "Etihad Cargo",
+    url: "https://www.linkedin.com/showcase/etihad-cargo/posts/?feedView=all",
     category: "airline expansion",
     status: "active",
     lastImport: "Apr 26, 2026 16:45",
@@ -213,12 +215,51 @@ export const linkedinSources: LinkedinSource[] = [
   {
     id: "src-003",
     name: "PolarLine Cargo",
-    url: "https://www.linkedin.com/company/polarline-cargo",
+    url: "https://www.linkedin.com/company/polarline-cargo/posts/?feedView=all",
     category: "tender/RFP",
     status: "paused",
     lastImport: "Apr 25, 2026 11:20",
   },
 ];
+
+export const linkedinImportDefaults: LinkedinImportRequest = {
+  includeQuotePosts: false,
+  includeReposts: false,
+  maxComments: 0,
+  maxPosts: 50,
+  maxReactions: 0,
+  postNestedComments: false,
+  postNestedReactions: false,
+  postedLimit: "any",
+  scrapeComments: false,
+  scrapeReactions: false,
+  targetUrls: linkedinSources.filter((source) => source.status === "active").map((source) => source.url),
+};
+
+export const linkedinPostPreview: LinkedinPostPreview = {
+  id: "7329207003942125568",
+  linkedinUrl:
+    "https://www.linkedin.com/posts/williamhgates_how-better-data-helped-us-cut-child-mortality-activity-7329207003942125568-_gfJ",
+  authorName: "Bill Gates",
+  authorUrl: "https://www.linkedin.com/in/williamhgates",
+  content:
+    "The leading causes of childhood death reveal a stark truth: Many could be prevented, and children in poor countries die from them far more often than those in wealthy ones.",
+  postedAt: "2025-05-16T18:11:59.821Z",
+  media: [
+    {
+      type: "document",
+      title: "How better data helped us cut child mortality in half",
+      url: "https://media.licdn.com/dms/document/media/v2/D561FAQGPMwZUeWRF4w/feedshare-document-pdf-analyzed",
+    },
+    {
+      type: "image",
+      title: "Document cover page",
+      url: "https://media.licdn.com/dms/image/v2/D561FAQGPMwZUeWRF4w/feedshare-document-cover-images_1920",
+      width: 1921,
+      height: 1243,
+    },
+  ],
+};
 
 export const notifications: Notification[] = [
   {
@@ -243,4 +284,3 @@ export const notifications: Notification[] = [
     status: "read",
   },
 ];
-

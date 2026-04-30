@@ -11,7 +11,7 @@ import type { LinkedinSource } from "@/lib/types";
 const columns: Column<LinkedinSource>[] = [
   { header: "Source", cell: (row) => row.name },
   { header: "URL", cell: (row) => <span className="text-cyan-100">{row.url}</span> },
-  { header: "Category", cell: (row) => row.category },
+  { header: "Category", cell: (row) => row.category ?? "unclassified" },
   { header: "Last import", cell: (row) => row.lastImport },
   { header: "Status", cell: (row) => <StatusBadge status={row.status === "active" ? "active" : "closed"} /> },
 ];
@@ -35,6 +35,7 @@ export default function LinkedinSourcesPage() {
               <Input placeholder="Company or page name" />
               <Input placeholder="LinkedIn URL" />
               <Select>
+                <option>Unclassified / manual review</option>
                 {newsCategories.map((category) => <option key={category}>{category}</option>)}
               </Select>
               <Button className="w-full">Add mock source</Button>

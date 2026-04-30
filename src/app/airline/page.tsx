@@ -1,17 +1,22 @@
 import Link from "next/link";
 import { DollarSign, Gauge, Handshake, PackageCheck } from "lucide-react";
+import { FlightWorldMap } from "@/components/dashboard/flight-world-map";
 import { GsaCard } from "@/components/dashboard/gsa-card";
 import { KpiCard } from "@/components/dashboard/kpi-card";
-import { MapboxPlaceholder } from "@/components/dashboard/mapbox-placeholder";
 import { TenderCard } from "@/components/dashboard/tender-card";
 import { Topbar } from "@/components/dashboard/topbar";
 import { buttonVariants } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { dummyFlights, getFlightsForAirline } from "@/lib/dummy-flight-data";
 import { applications, gsaProfiles, kpiSeries, tenders } from "@/lib/services/platform";
 import { formatCurrency } from "@/lib/utils";
 
 export default function AirlineDashboardPage() {
   const latest = kpiSeries.at(-1)!;
+  const trackedFlights = getFlightsForAirline(dummyFlights, {
+    airlineName: "AeroBridge Cargo",
+    salesTeams: ["AeroBridge DACH Sales", "AeroBridge Austria Desk"],
+  });
 
   return (
     <>
@@ -55,13 +60,17 @@ export default function AirlineDashboardPage() {
           </Card>
         </div>
 
-        <div className="grid gap-5 xl:grid-cols-[.8fr_1.2fr]">
-          <MapboxPlaceholder />
-          <div className="grid gap-5 lg:grid-cols-2">
-            {gsaProfiles.slice(0, 2).map((gsa) => (
-              <GsaCard key={gsa.id} gsa={gsa} />
-            ))}
-          </div>
+        <FlightWorldMap
+          title="Sales flight tracker"
+          subtitle="Flights connected to AeroBridge Cargo sales teams and GSA activity."
+          flights={trackedFlights}
+          markerColorMode="seller"
+        />
+
+        <div className="grid gap-5 lg:grid-cols-2">
+          {gsaProfiles.slice(0, 2).map((gsa) => (
+            <GsaCard key={gsa.id} gsa={gsa} />
+          ))}
         </div>
       </main>
     </>

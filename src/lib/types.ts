@@ -70,7 +70,7 @@ export type NewsPost = {
   id: string;
   title: string;
   source: string;
-  category: NewsCategory;
+  category: NewsCategory | null;
   market: string;
   publishedAt: string;
   summary: string;
@@ -81,9 +81,53 @@ export type LinkedinSource = {
   id: string;
   name: string;
   url: string;
-  category: NewsCategory;
+  category: NewsCategory | null;
   status: "active" | "paused";
   lastImport: string;
+};
+
+export type LinkedinImportRequest = {
+  includeQuotePosts: boolean;
+  includeReposts: boolean;
+  maxComments: number;
+  maxPosts: number;
+  maxReactions: number;
+  postNestedComments: boolean;
+  postNestedReactions: boolean;
+  postedLimit: "any" | "1h" | "24h" | "week" | "month" | "3months" | "6months" | "year";
+  scrapeComments: boolean;
+  scrapeReactions: boolean;
+  targetUrls: string[];
+};
+
+export type LinkedinImportPostedLimit =
+  | "1h"
+  | "24h"
+  | "week"
+  | "month"
+  | "3months"
+  | "6months"
+  | "year"
+  | "any";
+
+export type LinkedinImportScheduleUnit = "hours" | "days" | "weeks";
+
+export type LinkedinMediaItem = {
+  type: "image" | "document";
+  title?: string;
+  url: string;
+  width?: number;
+  height?: number;
+};
+
+export type LinkedinPostPreview = {
+  id: string;
+  linkedinUrl: string;
+  authorName: string;
+  authorUrl: string;
+  content: string;
+  postedAt: string;
+  media: LinkedinMediaItem[];
 };
 
 export type Notification = {
@@ -93,4 +137,3 @@ export type Notification = {
   time: string;
   status: "unread" | "read";
 };
-

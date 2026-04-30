@@ -1,3 +1,4 @@
+import { AirlinePerformancePeriodPanel } from "@/components/dashboard/airline-performance-period-panel";
 import { RevenueChart, YieldChart } from "@/components/dashboard/chart-card";
 import { Topbar } from "@/components/dashboard/topbar";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -12,6 +13,9 @@ export default function AirlinePerformancePage() {
           <RevenueChart data={kpiSeries} />
           <YieldChart data={kpiSeries} />
         </div>
+
+        <AirlinePerformancePeriodPanel />
+
         <Card>
           <CardHeader>
             <CardTitle>Route-level watchlist</CardTitle>
