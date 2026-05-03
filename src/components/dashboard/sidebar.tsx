@@ -10,7 +10,7 @@ export type NavItem = {
 
 export function Sidebar({ items, role }: { items: NavItem[]; role: string }) {
   return (
-    <aside className="hidden min-h-screen w-72 shrink-0 border-r border-white/10 bg-[#071832] px-4 py-5 lg:block">
+    <aside className="sticky top-0 hidden h-screen w-72 shrink-0 overflow-y-auto border-r border-white/10 bg-[#071832] px-4 py-5 lg:block">
       <Link href="/" className="flex items-center gap-3 px-2">
         <span className="flex h-10 w-10 items-center justify-center rounded-md bg-cyan-400 text-[#0A1F44]">
           <Plane className="h-5 w-5" />

@@ -1,5 +1,7 @@
 export type CountryPerformance = {
   country: string;
+  code: string; // ISO 3166-1 alpha-2
+  localCurrencyCode: string; // ISO 4217
   region: string;
   revenue: number;
   yieldPerKg: number;
@@ -45,6 +47,8 @@ export const performancePeriodOptions: { id: PerformancePeriod; label: string; d
 const monthlyCountryPerformance: CountryPerformance[] = [
   {
     country: "Germany",
+    code: "DE",
+    localCurrencyCode: "EUR",
     region: "DACH",
     revenue: 482000,
     yieldPerKg: 2.68,
@@ -63,6 +67,8 @@ const monthlyCountryPerformance: CountryPerformance[] = [
   },
   {
     country: "Austria",
+    code: "AT",
+    localCurrencyCode: "EUR",
     region: "DACH",
     revenue: 218500,
     yieldPerKg: 2.41,
@@ -80,6 +86,8 @@ const monthlyCountryPerformance: CountryPerformance[] = [
   },
   {
     country: "Switzerland",
+    code: "CH",
+    localCurrencyCode: "CHF",
     region: "DACH",
     revenue: 191200,
     yieldPerKg: 2.93,
@@ -97,6 +105,8 @@ const monthlyCountryPerformance: CountryPerformance[] = [
   },
   {
     country: "United Arab Emirates",
+    code: "AE",
+    localCurrencyCode: "AED",
     region: "Middle East",
     revenue: 264700,
     yieldPerKg: 2.52,
@@ -114,6 +124,8 @@ const monthlyCountryPerformance: CountryPerformance[] = [
   },
   {
     country: "Singapore",
+    code: "SG",
+    localCurrencyCode: "SGD",
     region: "Asia",
     revenue: 236400,
     yieldPerKg: 3.18,
@@ -130,6 +142,8 @@ const monthlyCountryPerformance: CountryPerformance[] = [
   },
   {
     country: "Spain",
+    code: "ES",
+    localCurrencyCode: "EUR",
     region: "Iberia",
     revenue: 143800,
     yieldPerKg: 2.22,
@@ -228,6 +242,23 @@ export const periodAveragePerformance: PeriodAveragePerformance[] = performanceP
 
 export const countryPerformance = countryPerformanceByPeriod.monthly;
 export const gsaPerformance = gsaPerformanceByPeriod.monthly;
+
+export function scaleCountryByFactor(factor: number): CountryPerformance[] {
+  return monthlyCountryPerformance.map((row) => ({
+    ...row,
+    revenue: Math.round(row.revenue * factor),
+    tonnage: roundToOne(row.tonnage * factor),
+  }));
+}
+
+export function scaleGsaByFactor(factor: number): GsaPerformance[] {
+  return monthlyGsaPerformance.map((row) => ({
+    ...row,
+    revenue: Math.round(row.revenue * factor),
+    tonnage: roundToOne(row.tonnage * factor),
+    flightCount: Math.max(1, Math.round(row.flightCount * factor)),
+  }));
+}
 
 function scaleCountryPerformance(row: CountryPerformance, period: PerformancePeriod): CountryPerformance {
   const config = periodConfigs[period];

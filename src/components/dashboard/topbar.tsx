@@ -1,9 +1,18 @@
+import React from "react";
 import Link from "next/link";
 import { Bell, Search } from "lucide-react";
 import { buttonVariants } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 
-export function Topbar({ title, subtitle }: { title: string; subtitle: string }) {
+export function Topbar({
+  title,
+  subtitle,
+  belowBar,
+}: {
+  title: string;
+  subtitle: string;
+  belowBar?: React.ReactNode;
+}) {
   return (
     <header className="sticky top-0 z-20 border-b border-white/10 bg-slate-950/85 px-5 py-4 backdrop-blur">
       <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
@@ -21,6 +30,11 @@ export function Topbar({ title, subtitle }: { title: string; subtitle: string })
           </Link>
         </div>
       </div>
+      {belowBar && (
+        <div className="mt-3 border-t border-white/10 pt-3">
+          {belowBar}
+        </div>
+      )}
     </header>
   );
 }

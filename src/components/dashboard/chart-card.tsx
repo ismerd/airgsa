@@ -1,5 +1,7 @@
 "use client";
 
+import React from "react";
+import { useCurrency } from "@/lib/currency-context";
 import {
   Area,
   AreaChart,
@@ -17,11 +19,14 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import type { CountryPerformance, GsaPerformance } from "@/lib/airline-performance-data";
 import type { KpiPoint } from "@/lib/types";
 
-export function RevenueChart({ data }: { data: KpiPoint[] }) {
+type ChartCurrencyProps = { currencySymbol?: string; currencyCode?: string; headerControls?: React.ReactNode };
+
+export function RevenueChart({ data, currencySymbol = "$", currencyCode = "USD", headerControls }: { data: KpiPoint[] } & ChartCurrencyProps) {
   return (
     <Card>
-      <CardHeader>
-        <CardTitle>Revenue and loadfactor trend</CardTitle>
+      <CardHeader className="flex-row items-start justify-between gap-3">
+        <CardTitle className="pt-0.5">Revenue and loadfactor trend</CardTitle>
+        {headerControls}
       </CardHeader>
       <CardContent className="h-72">
         <ResponsiveContainer width="100%" height="100%">
@@ -34,8 +39,11 @@ export function RevenueChart({ data }: { data: KpiPoint[] }) {
             </defs>
             <CartesianGrid stroke="#1e293b" vertical={false} />
             <XAxis dataKey="month" stroke="#94a3b8" tickLine={false} axisLine={false} />
-            <YAxis stroke="#94a3b8" tickLine={false} axisLine={false} />
-            <Tooltip contentStyle={{ background: "#0f172a", border: "1px solid rgba(255,255,255,.12)", borderRadius: 8 }} />
+            <YAxis stroke="#94a3b8" tickLine={false} axisLine={false} tickFormatter={(v) => `${currencySymbol}${(v / 1000).toFixed(0)}k`} />
+            <Tooltip
+              contentStyle={{ background: "#0f172a", border: "1px solid rgba(255,255,255,.12)", borderRadius: 8 }}
+              formatter={(v) => [`${currencySymbol}${Number(v).toLocaleString()}`, `Revenue (${currencyCode})`]}
+            />
             <Area type="monotone" dataKey="revenue" stroke="#00AEEF" fill="url(#revenue)" strokeWidth={2} />
           </AreaChart>
         </ResponsiveContainer>
@@ -44,19 +52,23 @@ export function RevenueChart({ data }: { data: KpiPoint[] }) {
   );
 }
 
-export function YieldChart({ data }: { data: KpiPoint[] }) {
+export function YieldChart({ data, currencySymbol = "$", currencyCode = "USD", headerControls }: { data: KpiPoint[] } & ChartCurrencyProps) {
   return (
     <Card>
-      <CardHeader>
+      <CardHeader className="flex-row items-center justify-between gap-3">
         <CardTitle>Yield per kg</CardTitle>
+        {headerControls}
       </CardHeader>
       <CardContent className="h-72">
         <ResponsiveContainer width="100%" height="100%">
           <BarChart data={data}>
             <CartesianGrid stroke="#1e293b" vertical={false} />
             <XAxis dataKey="month" stroke="#94a3b8" tickLine={false} axisLine={false} />
-            <YAxis stroke="#94a3b8" tickLine={false} axisLine={false} />
-            <Tooltip contentStyle={{ background: "#0f172a", border: "1px solid rgba(255,255,255,.12)", borderRadius: 8 }} />
+            <YAxis stroke="#94a3b8" tickLine={false} axisLine={false} tickFormatter={(v) => v.toFixed(2)} />
+            <Tooltip
+              contentStyle={{ background: "#0f172a", border: "1px solid rgba(255,255,255,.12)", borderRadius: 8 }}
+              formatter={(v) => [`${currencySymbol}${Number(v).toFixed(2)}`, `Yield / kg (${currencyCode})`]}
+            />
             <Bar dataKey="yield" fill="#7dd3fc" radius={[6, 6, 0, 0]} />
           </BarChart>
         </ResponsiveContainer>
@@ -66,6 +78,9 @@ export function YieldChart({ data }: { data: KpiPoint[] }) {
 }
 
 export function CountryPerformanceChart({ data }: { data: CountryPerformance[] }) {
+  const { currency } = useCurrency();
+  const { symbol, rate } = currency;
+  const fmtShort = (v: number) => `${symbol}${Math.round((v * rate) / 1000)}k`;
   return (
     <Card>
       <CardHeader>
@@ -75,8 +90,8 @@ export function CountryPerformanceChart({ data }: { data: CountryPerformance[] }
         <ResponsiveContainer width="100%" height="100%">
           <ComposedChart data={data} margin={{ left: 8, right: 8 }}>
             <CartesianGrid stroke="#1e293b" vertical={false} />
-            <XAxis dataKey="country" stroke="#94a3b8" tickLine={false} axisLine={false} />
-            <YAxis yAxisId="revenue" stroke="#94a3b8" tickLine={false} axisLine={false} />
+            <XAxis dataKey="code" stroke="#94a3b8" tickLine={false} axisLine={false} />
+            <YAxis yAxisId="revenue" stroke="#94a3b8" tickLine={false} axisLine={false} tickFormatter={(v) => fmtShort(v)} />
             <YAxis
               yAxisId="loadFactor"
               orientation="right"
@@ -89,7 +104,7 @@ export function CountryPerformanceChart({ data }: { data: CountryPerformance[] }
             <Tooltip
               contentStyle={{ background: "#0f172a", border: "1px solid rgba(255,255,255,.12)", borderRadius: 8 }}
               formatter={(value, name) => {
-                if (name === "revenue") return [formatShortCurrency(Number(value)), "Revenue"];
+                if (name === "revenue") return [fmtShort(Number(value)), "Revenue"];
                 if (name === "loadFactor") return [`${value}%`, "Load factor"];
                 return [value, name];
               }}
@@ -104,6 +119,9 @@ export function CountryPerformanceChart({ data }: { data: CountryPerformance[] }
 }
 
 export function GsaPerformanceChart({ data }: { data: GsaPerformance[] }) {
+  const { currency } = useCurrency();
+  const { symbol, rate } = currency;
+  const fmtShort = (v: number) => `${symbol}${Math.round((v * rate) / 1000)}k`;
   return (
     <Card>
       <CardHeader>
@@ -113,12 +131,12 @@ export function GsaPerformanceChart({ data }: { data: GsaPerformance[] }) {
         <ResponsiveContainer width="100%" height="100%">
           <BarChart data={data} layout="vertical" margin={{ left: 24, right: 8 }}>
             <CartesianGrid stroke="#1e293b" horizontal={false} />
-            <XAxis type="number" stroke="#94a3b8" tickLine={false} axisLine={false} />
+            <XAxis type="number" stroke="#94a3b8" tickLine={false} axisLine={false} tickFormatter={(v) => fmtShort(v)} />
             <YAxis dataKey="gsaName" type="category" width={140} stroke="#94a3b8" tickLine={false} axisLine={false} />
             <Tooltip
               contentStyle={{ background: "#0f172a", border: "1px solid rgba(255,255,255,.12)", borderRadius: 8 }}
               formatter={(value, name) => {
-                if (name === "revenue") return [formatShortCurrency(Number(value)), "Revenue"];
+                if (name === "revenue") return [fmtShort(Number(value)), "Revenue"];
                 return [value, name];
               }}
             />
@@ -128,8 +146,4 @@ export function GsaPerformanceChart({ data }: { data: GsaPerformance[] }) {
       </CardContent>
     </Card>
   );
-}
-
-function formatShortCurrency(value: number) {
-  return `$${Math.round(value / 1000)}k`;
 }

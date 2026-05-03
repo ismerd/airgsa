@@ -135,12 +135,19 @@ export const applications: TenderApplication[] = [
 ];
 
 export const kpiSeries: KpiPoint[] = [
-  { month: "Nov", revenue: 820000, loadfactor: 61, yield: 2.08 },
-  { month: "Dec", revenue: 910000, loadfactor: 65, yield: 2.14 },
-  { month: "Jan", revenue: 970000, loadfactor: 68, yield: 2.21 },
-  { month: "Feb", revenue: 1020000, loadfactor: 71, yield: 2.24 },
-  { month: "Mar", revenue: 1180000, loadfactor: 74, yield: 2.31 },
-  { month: "Apr", revenue: 1260000, loadfactor: 77, yield: 2.38 },
+  { month: "Apr", date: "2025-04", revenue: 695000, loadfactor: 56, yield: 1.93 },
+  { month: "May", date: "2025-05", revenue: 710000, loadfactor: 57, yield: 1.95 },
+  { month: "Jun", date: "2025-06", revenue: 730000, loadfactor: 58, yield: 1.97 },
+  { month: "Jul", date: "2025-07", revenue: 755000, loadfactor: 59, yield: 1.99 },
+  { month: "Aug", date: "2025-08", revenue: 780000, loadfactor: 60, yield: 2.02 },
+  { month: "Sep", date: "2025-09", revenue: 795000, loadfactor: 61, yield: 2.04 },
+  { month: "Oct", date: "2025-10", revenue: 805000, loadfactor: 62, yield: 2.06 },
+  { month: "Nov", date: "2025-11", revenue: 820000, loadfactor: 61, yield: 2.08 },
+  { month: "Dec", date: "2025-12", revenue: 910000, loadfactor: 65, yield: 2.14 },
+  { month: "Jan", date: "2026-01", revenue: 970000, loadfactor: 68, yield: 2.21 },
+  { month: "Feb", date: "2026-02", revenue: 1020000, loadfactor: 71, yield: 2.24 },
+  { month: "Mar", date: "2026-03", revenue: 1180000, loadfactor: 74, yield: 2.31 },
+  { month: "Apr", date: "2026-04", revenue: 1260000, loadfactor: 77, yield: 2.38 },
 ];
 
 export const newsCategories: NewsCategory[] = [

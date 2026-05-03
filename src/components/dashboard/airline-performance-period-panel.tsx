@@ -4,90 +4,101 @@ import { useMemo, useState } from "react";
 import { CountryPerformanceChart, GsaPerformanceChart } from "@/components/dashboard/chart-card";
 import { CountryPerformanceWorldMap } from "@/components/dashboard/country-performance-world-map";
 import { DataTable, type Column } from "@/components/dashboard/data-table";
-import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import {
-  countryPerformanceByPeriod,
-  type CountryPerformance,
-  gsaPerformanceByPeriod,
-  type GsaPerformance,
-  periodAveragePerformance,
-  type PerformancePeriod,
-  performancePeriodOptions,
-} from "@/lib/airline-performance-data";
-import { cn, formatCurrency } from "@/lib/utils";
-
-const countryColumns: Column<CountryPerformance>[] = [
-  {
-    header: "Country",
-    cell: (row) => (
-      <div>
-        <p className="font-semibold text-white">{row.country}</p>
-        <p className="text-xs text-slate-500">{row.region}</p>
-      </div>
-    ),
-  },
-  { header: "Revenue", cell: (row) => formatCurrency(row.revenue), className: "font-semibold text-white" },
-  { header: "Yield / kg", cell: (row) => `$${row.yieldPerKg.toFixed(2)}` },
-  { header: "Loadfactor", cell: (row) => `${row.loadFactor}%` },
-  { header: "Tonnage", cell: (row) => `${row.tonnage.toFixed(1)} t` },
-  { header: "Top lane", cell: (row) => row.topLane },
-];
-
-const gsaColumns: Column<GsaPerformance>[] = [
-  {
-    header: "GSA",
-    cell: (row) => (
-      <div>
-        <p className="font-semibold text-white">{row.gsaName}</p>
-        <p className="text-xs text-slate-500">{row.assignedMarkets}</p>
-      </div>
-    ),
-  },
-  { header: "Revenue", cell: (row) => formatCurrency(row.revenue), className: "font-semibold text-white" },
-  { header: "Yield / kg", cell: (row) => `$${row.yieldPerKg.toFixed(2)}` },
-  { header: "Loadfactor", cell: (row) => `${row.loadFactor}%` },
-  { header: "Tonnage", cell: (row) => `${row.tonnage.toFixed(1)} t` },
-  { header: "Flights", cell: (row) => row.flightCount },
-];
+import { type CountryPerformance, type GsaPerformance } from "@/lib/airline-performance-data";
+import { CURRENCIES, formatMoney, useCurrency } from "@/lib/currency-context";
+import { usePeriod } from "@/lib/period-context";
+import { cn } from "@/lib/utils";
 
 export function AirlinePerformancePeriodPanel() {
-  const [selectedPeriod, setSelectedPeriod] = useState<PerformancePeriod>("monthly");
+  const { currency } = useCurrency();
+  const { symbol, rate } = currency;
+  const fmt = (v: number) => formatMoney(v, symbol, rate);
+
+  const resolveCurrency = (localCode: string) => {
+    const local = CURRENCIES.find((c) => c.code === localCode);
+    return local ?? currency;
+  };
+
+  const countryColumns: Column<CountryPerformance>[] = [
+    {
+      header: "Country",
+      cell: (row) => (
+        <div>
+          <p className="font-semibold text-white">{row.country}</p>
+          <p className="text-xs text-slate-500">{row.region}</p>
+        </div>
+      ),
+    },
+    {
+      header: "Revenue",
+      className: "font-semibold text-white",
+      cell: (row) => {
+        const cur = resolveCurrency(row.localCurrencyCode);
+        return (
+          <span className="flex items-center gap-1.5">
+            {formatMoney(row.revenue, cur.symbol, cur.rate)}
+            {cur.code !== currency.code && (
+              <span className="rounded bg-slate-700 px-1 py-0.5 text-[10px] font-medium text-slate-300">
+                {cur.code}
+              </span>
+            )}
+          </span>
+        );
+      },
+    },
+    {
+      header: "Yield / kg",
+      cell: (row) => {
+        const cur = resolveCurrency(row.localCurrencyCode);
+        return (
+          <span className="flex items-center gap-1.5">
+            {cur.symbol}{(row.yieldPerKg * cur.rate).toFixed(2)}
+            {cur.code !== currency.code && (
+              <span className="rounded bg-slate-700 px-1 py-0.5 text-[10px] font-medium text-slate-300">
+                {cur.code}
+              </span>
+            )}
+          </span>
+        );
+      },
+    },
+    { header: "Loadfactor", cell: (row) => `${row.loadFactor}%` },
+    { header: "Tonnage", cell: (row) => `${row.tonnage.toFixed(1)} t` },
+    { header: "Top lane", cell: (row) => row.topLane },
+  ];
+
+  const gsaColumns: Column<GsaPerformance>[] = [
+    {
+      header: "GSA",
+      cell: (row) => (
+        <div>
+          <p className="font-semibold text-white">{row.gsaName}</p>
+          <p className="text-xs text-slate-500">{row.assignedMarkets}</p>
+        </div>
+      ),
+    },
+    { header: "Revenue", cell: (row) => fmt(row.revenue), className: "font-semibold text-white" },
+    { header: "Yield / kg", cell: (row) => `${symbol}${(row.yieldPerKg * rate).toFixed(2)}` },
+    { header: "Loadfactor", cell: (row) => `${row.loadFactor}%` },
+    { header: "Tonnage", cell: (row) => `${row.tonnage.toFixed(1)} t` },
+    { header: "Flights", cell: (row) => row.flightCount },
+  ];
+
+  const { countries, gsas, selectedAverage } = usePeriod();
   const [selectedCountry, setSelectedCountry] = useState<string>();
-  const countries = countryPerformanceByPeriod[selectedPeriod];
-  const gsas = gsaPerformanceByPeriod[selectedPeriod];
-  const selectedAverage = periodAveragePerformance.find((period) => period.period === selectedPeriod)!;
   const countryTotals = useMemo(() => getCountryTotals(countries), [countries]);
 
   return (
     <div className="space-y-5">
       <Card>
-        <CardHeader className="gap-4 md:flex-row md:items-center md:justify-between">
-          <div>
-            <CardTitle>Commercial performance period</CardTitle>
-            <p className="mt-1 text-sm text-slate-400">
-              Switch country and GSA KPIs between daily, weekly, monthly, and yearly views.
-            </p>
-          </div>
-          <div className="grid grid-cols-2 gap-2 rounded-md border border-white/10 bg-slate-950/70 p-1 sm:flex">
-            {performancePeriodOptions.map((period) => (
-              <Button
-                key={period.id}
-                className={cn("justify-start", selectedPeriod === period.id && "bg-cyan-400 text-slate-950 hover:bg-cyan-300")}
-                size="sm"
-                type="button"
-                variant={selectedPeriod === period.id ? "default" : "ghost"}
-                onClick={() => setSelectedPeriod(period.id)}
-              >
-                {period.label}
-              </Button>
-            ))}
-          </div>
+        <CardHeader>
+          <CardTitle>Commercial performance — {selectedAverage.label}</CardTitle>
         </CardHeader>
         <CardContent className="grid gap-4 md:grid-cols-3 xl:grid-cols-5">
-          <Metric label={`${selectedAverage.label} revenue`} value={formatCurrency(selectedAverage.revenue)} />
-          <Metric label="Country revenue" value={formatCurrency(countryTotals.revenue)} />
-          <Metric label="Yield / kg" value={`$${selectedAverage.yieldPerKg.toFixed(2)}`} />
+          <Metric label="Revenue" value={fmt(selectedAverage.revenue)} />
+          <Metric label="Country revenue" value={fmt(countryTotals.revenue)} />
+          <Metric label="Yield / kg" value={`${symbol}${(selectedAverage.yieldPerKg * rate).toFixed(2)}`} />
           <Metric label="Loadfactor" value={`${selectedAverage.loadFactor}%`} />
           <Metric label="Flights" value={String(selectedAverage.flightCount)} />
         </CardContent>

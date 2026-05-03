@@ -3,7 +3,12 @@
     "allow": [
       "Bash(npm install *)",
       "Bash(npx tsc *)",
-      "Bash(node scripts/generate-deck.mjs)"
+      "Bash(node scripts/generate-deck.mjs)",
+      "PowerShell(Get-ChildItem \"C:\\\\Program Files\\\\nodejs\" -ErrorAction SilentlyContinue; Get-ChildItem \"C:\\\\Program Files \\(x86\\)\\\\nodejs\" -ErrorAction SilentlyContinue; Get-ChildItem \"$env:APPDATA\\\\nvm\" -ErrorAction SilentlyContinue; Get-ChildItem \"$env:ProgramFiles\\\\nvm\" -ErrorAction SilentlyContinue)",
+      "PowerShell(npm config get registry)",
+      "PowerShell(npm ping 2>&1)",
+      "PowerShell(npm cache clean --force 2>&1)",
+      "PowerShell(npm install --fetch-retry-mintimeout 20000 --fetch-retry-maxtimeout 120000 --fetch-retries 5 2>&1)"
     ]
   }
 }

@@ -61,6 +61,7 @@ export type TenderApplication = {
 
 export type KpiPoint = {
   month: string;
+  date: string; // "YYYY-MM"
   revenue: number;
   loadfactor: number;
   yield: number;

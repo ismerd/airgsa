@@ -58,9 +58,12 @@ function MapResizeObserver({ watchKey }: { watchKey: string }) {
 
   useEffect(() => {
     const container = map.getContainer();
+    let rafId: number;
     const invalidateMapSize = () => {
-      window.requestAnimationFrame(() => {
-        map.invalidateSize({ animate: false });
+      rafId = window.requestAnimationFrame(() => {
+        if (map.getContainer().isConnected) {
+          map.invalidateSize({ animate: false });
+        }
       });
     };
     const observer = new ResizeObserver(invalidateMapSize);
@@ -68,7 +71,10 @@ function MapResizeObserver({ watchKey }: { watchKey: string }) {
     observer.observe(container);
     invalidateMapSize();
 
-    return () => observer.disconnect();
+    return () => {
+      observer.disconnect();
+      window.cancelAnimationFrame(rafId);
+    };
   }, [map, watchKey]);
 
   return null;
