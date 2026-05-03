@@ -1,4 +1,4 @@
-import { BarChart3, Bell, Building2, Newspaper, PanelLeft, Search } from "lucide-react";
+import { BarChart3, Bell, Building2, Megaphone, Newspaper, PanelLeft, Search } from "lucide-react";
 import { Sidebar } from "@/components/dashboard/sidebar";
 
 const nav = [
@@ -8,6 +8,7 @@ const nav = [
   { label: "Performance", href: "/gsa/performance", icon: BarChart3 },
   { label: "Notifications", href: "/gsa/notifications", icon: Bell },
   { label: "Intelligence", href: "/news", icon: Newspaper },
+  { label: "Marketing", href: "/gsa/campaigns", icon: Megaphone },
 ];
 
 export default function GsaLayout({ children }: { children: React.ReactNode }) {

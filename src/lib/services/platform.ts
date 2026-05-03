@@ -1,5 +1,7 @@
 import {
+  airlineCampaigns,
   applications,
+  gsaCampaigns,
   gsaProfiles,
   kpiSeries,
   linkedinSources,
@@ -13,7 +15,9 @@ import {
 import { isSupabaseConfigured } from "@/lib/supabase/client";
 
 export {
+  airlineCampaigns,
   applications,
+  gsaCampaigns,
   gsaProfiles,
   kpiSeries,
   linkedinSources,

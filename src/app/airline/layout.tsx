@@ -1,4 +1,4 @@
-import { BarChart3, FileCheck2, Handshake, Newspaper, PanelLeft, PlaneTakeoff, Users } from "lucide-react";
+import { BarChart3, FileCheck2, Handshake, Megaphone, Newspaper, PanelLeft, PlaneTakeoff, Users } from "lucide-react";
 import { Sidebar } from "@/components/dashboard/sidebar";
 
 const nav = [
@@ -8,6 +8,7 @@ const nav = [
   { label: "Performance", href: "/airline/performance", icon: BarChart3 },
   { label: "Contracts & KPI", href: "/airline/contracts", icon: FileCheck2 },
   { label: "Intelligence", href: "/airline/intelligence", icon: Newspaper },
+  { label: "Marketing", href: "/airline/campaigns", icon: Megaphone },
   { label: "Partner profiles", href: "/airline/gsa/gsa-bluewing", icon: Handshake },
 ];
 

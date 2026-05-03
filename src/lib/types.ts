@@ -138,3 +138,28 @@ export type Notification = {
   time: string;
   status: "unread" | "read";
 };
+
+export type CampaignChannel = "platform" | "linkedin" | "instagram";
+export type CampaignStatus = "draft" | "published" | "scheduled";
+export type CampaignType =
+  | "route_announcement"
+  | "capacity_highlight"
+  | "news_update"
+  | "promotion";
+
+export type Campaign = {
+  id: string;
+  title: string;
+  type: CampaignType;
+  status: CampaignStatus;
+  author: string;
+  authorRole: "airline" | "gsa";
+  channels: CampaignChannel[];
+  audience: string;
+  body: string;
+  publishedAt?: string;
+  scheduledFor?: string;
+  createdAt: string;
+  reach?: number;
+  engagement?: number;
+};
