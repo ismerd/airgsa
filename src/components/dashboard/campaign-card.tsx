@@ -1,4 +1,4 @@
-import { Calendar, Eye, Globe, MessageSquare, Send } from "lucide-react";
+import { Calendar, Eye, Globe, ImageIcon, MessageSquare, Send } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import type { Campaign, CampaignChannel, CampaignStatus, CampaignType } from "@/lib/types";
@@ -26,7 +26,8 @@ export function CampaignCard({ campaign }: { campaign: Campaign }) {
   const status = statusConfig[campaign.status];
 
   return (
-    <Card>
+    <Card className="overflow-hidden">
+      <CampaignBanner campaign={campaign} />
       <CardContent className="p-5">
         <div className="flex flex-wrap items-center gap-2">
           <Badge variant={status.variant}>{status.label}</Badge>
@@ -89,6 +90,79 @@ export function CampaignCard({ campaign }: { campaign: Campaign }) {
       </CardContent>
     </Card>
   );
+}
+
+function CampaignBanner({ campaign }: { campaign: Campaign }) {
+  if (campaign.bannerImageUrl) {
+    return (
+      <div className="relative h-40 border-b border-white/10 bg-slate-950 sm:h-44">
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src={campaign.bannerImageUrl}
+          alt={`${campaign.title} banner`}
+          className="h-full w-full object-cover"
+        />
+        <div className="absolute inset-0 bg-gradient-to-t from-slate-950/70 via-transparent to-transparent" />
+        <CampaignLogo campaign={campaign} className="absolute bottom-3 left-4" />
+      </div>
+    );
+  }
+
+  return (
+    <div className="relative flex h-40 items-center justify-between overflow-hidden border-b border-white/10 bg-[linear-gradient(135deg,#07111f_0%,#0e7490_48%,#d9f99d_100%)] px-5 sm:h-44">
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_80%_20%,rgba(255,255,255,0.28),transparent_28%)]" />
+      <div className="relative max-w-[68%]">
+        <p className="text-xs font-semibold uppercase tracking-widest text-cyan-950/80">Airline post</p>
+        <p className="mt-2 line-clamp-2 text-xl font-semibold leading-tight text-white">{campaign.title}</p>
+      </div>
+      <CampaignLogo campaign={campaign} className="relative" large />
+      <div className="absolute bottom-3 left-5 flex items-center gap-1.5 text-xs font-medium text-cyan-950/70">
+        <ImageIcon className="h-3.5 w-3.5" />
+        Logo fallback
+      </div>
+    </div>
+  );
+}
+
+function CampaignLogo({
+  campaign,
+  className,
+  large = false,
+}: {
+  campaign: Campaign;
+  className?: string;
+  large?: boolean;
+}) {
+  const initials = getInitials(campaign.author);
+  const sizeClass = large ? "h-20 w-20 text-xl" : "h-11 w-11 text-sm";
+
+  if (campaign.airlineLogoUrl) {
+    return (
+      <div className={`${sizeClass} ${className ?? ""} grid place-items-center rounded-md border border-white/20 bg-white p-2 shadow-lg`}>
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src={campaign.airlineLogoUrl} alt={`${campaign.author} logo`} className="max-h-full max-w-full object-contain" />
+      </div>
+    );
+  }
+
+  return (
+    <div
+      className={`${sizeClass} ${className ?? ""} grid place-items-center rounded-md border border-white/20 bg-slate-950/90 font-semibold text-cyan-200 shadow-lg`}
+      aria-label={`${campaign.author} logo`}
+    >
+      {initials}
+    </div>
+  );
+}
+
+function getInitials(name: string) {
+  return name
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part[0])
+    .join("")
+    .toUpperCase();
 }
 
 export function CampaignChannelTeaser() {

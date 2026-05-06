@@ -158,6 +158,8 @@ export type Campaign = {
   channels: CampaignChannel[];
   audience: string;
   body: string;
+  bannerImageUrl?: string;
+  airlineLogoUrl?: string;
   publishedAt?: string;
   scheduledFor?: string;
   createdAt: string;
