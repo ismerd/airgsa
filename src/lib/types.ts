@@ -51,6 +51,7 @@ export type TenderApplication = {
   tenderId: string;
   gsaId: string;
   gsaName: string;
+  aiRating: number;
   commercialScore: number;
   networkScore: number;
   complianceScore: number;
