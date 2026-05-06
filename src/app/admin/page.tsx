@@ -1,44 +1,62 @@
-import Link from "next/link";
 import { Database, Newspaper, ShieldCheck, Users } from "lucide-react";
-import { AdminLinkedinImport } from "@/components/dashboard/admin-linkedin-import";
 import { Card, CardContent } from "@/components/ui/card";
-import { buttonVariants } from "@/components/ui/button";
+import { Topbar } from "@/components/dashboard/topbar";
 
-const items = [
+const stats = [
   { label: "Users", value: "18", icon: Users },
   { label: "Companies", value: "11", icon: ShieldCheck },
   { label: "Imported posts", value: "124", icon: Newspaper },
   { label: "Tables ready", value: "11", icon: Database },
 ];
 
+const recentActivity = [
+  { text: "NordicLift Aviation Services registered — awaiting approval", time: "2 min ago", dot: "bg-amber-400" },
+  { text: "BlueWing Cargo Solutions account activated", time: "1 hr ago", dot: "bg-emerald-400" },
+  { text: "LinkedIn import completed — 12 new posts", time: "3 hr ago", dot: "bg-cyan-400" },
+  { text: "Adriatica Airlines registration received", time: "May 6, 2026", dot: "bg-amber-400" },
+  { text: "PolarLine Cargo account suspended", time: "May 5, 2026", dot: "bg-rose-400" },
+];
+
 export default function AdminPage() {
   return (
-    <main className="min-h-screen bg-slate-950 px-5 py-8">
-      <div className="mx-auto max-w-6xl">
-        <div className="flex items-center justify-between">
-          <Link href="/" className="text-sm font-semibold uppercase tracking-[0.24em] text-cyan-200">AirGSA</Link>
-          <Link href="/news/sources" className={buttonVariants({ variant: "outline" })}>Manage sources</Link>
+    <>
+      <Topbar title="Platform operations" subtitle="Admin" />
+      <main className="px-5 py-8">
+        <div className="mx-auto max-w-5xl space-y-8">
+          <p className="text-slate-400">
+            MVP console for role governance, source management, and Supabase schema readiness.
+          </p>
+
+          <div className="grid gap-5 md:grid-cols-4">
+            {stats.map((item) => (
+              <Card key={item.label} className="bg-white text-slate-950">
+                <CardContent className="p-5">
+                  <item.icon className="h-5 w-5 text-cyan-600" />
+                  <p className="mt-4 text-sm text-slate-500">{item.label}</p>
+                  <p className="mt-1 text-3xl font-semibold">{item.value}</p>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+
+          <Card>
+            <CardContent className="p-6">
+              <p className="text-sm font-semibold text-white">Recent activity</p>
+              <ul className="mt-4 space-y-4">
+                {recentActivity.map((item, i) => (
+                  <li key={i} className="flex items-start gap-3">
+                    <span className={`mt-1.5 h-2 w-2 shrink-0 rounded-full ${item.dot}`} />
+                    <div>
+                      <p className="text-sm text-slate-300">{item.text}</p>
+                      <p className="text-xs text-slate-500">{item.time}</p>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            </CardContent>
+          </Card>
         </div>
-        <section className="py-10">
-          <p className="text-sm font-semibold uppercase tracking-[0.24em] text-cyan-200">Admin</p>
-          <h1 className="mt-4 text-4xl font-semibold text-white">Platform operations</h1>
-          <p className="mt-3 max-w-2xl text-slate-300">MVP console for role governance, source management, and Supabase schema readiness.</p>
-        </section>
-        <div className="grid gap-5 md:grid-cols-4">
-          {items.map((item) => (
-            <Card key={item.label} className="bg-white text-slate-950">
-              <CardContent className="p-5">
-                <item.icon className="h-5 w-5 text-cyan-600" />
-                <p className="mt-4 text-sm text-slate-500">{item.label}</p>
-                <p className="mt-1 text-3xl font-semibold">{item.value}</p>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-        <section className="mt-8">
-          <AdminLinkedinImport />
-        </section>
-      </div>
-    </main>
+      </main>
+    </>
   );
 }

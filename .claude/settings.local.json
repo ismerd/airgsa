@@ -8,7 +8,14 @@
       "PowerShell(npm config get registry)",
       "PowerShell(npm ping 2>&1)",
       "PowerShell(npm cache clean --force 2>&1)",
-      "PowerShell(npm install --fetch-retry-mintimeout 20000 --fetch-retry-maxtimeout 120000 --fetch-retries 5 2>&1)"
+      "PowerShell(npm install --fetch-retry-mintimeout 20000 --fetch-retry-maxtimeout 120000 --fetch-retries 5 2>&1)",
+      "Bash(Get-ChildItem -Path \"c:\\\\Users\\\\ierdo\\\\Desktop\\\\airgsa\" -Force)",
+      "Bash(Select-Object Name, PSIsContainer)",
+      "Bash(grep -E \"\\\\.\\(tsx?|jsx?\\)$\")",
+      "Bash(npx next *)",
+      "Bash(node -e \"const p = require\\('./package.json'\\); console.log\\('next:', p.dependencies?.next ?? p.devDependencies?.next\\)\")",
+      "Bash(Remove-Item -Recurse -Force .next -ErrorAction SilentlyContinue)",
+      "Bash(Write-Host \"Cache cleared\")"
     ]
   }
 }

@@ -1,11 +1,12 @@
 import Link from "next/link";
-import { Building2, Plane, Shield } from "lucide-react";
+import { Building2, Package, Plane, Shield } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 
 const roles = [
   { label: "Airline", href: "/airline", icon: Plane, description: "Run tenders, compare GSA partners, manage contracts, and monitor KPIs." },
   { label: "GSA", href: "/gsa", icon: Building2, description: "Find open tenders, apply to opportunities, maintain your profile, and track performance." },
-  { label: "Admin", href: "/admin", icon: Shield, description: "Review platform data, manage news sources, and prepare operations governance." },
+  { label: "Freight Forwarder", href: "/freightforwarder", icon: Package, description: "Book cargo space, track AWBs in real time, manage flight changes, and request statements." },
+  { label: "Admin", href: "/admin", icon: Shield, description: "Review platform data, manage accounts, sources, and operations governance." },
 ];
 
 export default function RoleSelectionPage() {
@@ -15,7 +16,7 @@ export default function RoleSelectionPage() {
         <Link href="/" className="text-sm font-semibold uppercase tracking-[0.24em] text-cyan-200">AirGSA</Link>
         <h1 className="mt-10 text-4xl font-semibold text-white">Choose your workspace</h1>
         <p className="mt-3 max-w-2xl text-slate-300">Each role opens a clickable MVP area backed by realistic mock data.</p>
-        <div className="mt-8 grid gap-5 md:grid-cols-3">
+        <div className="mt-8 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
           {roles.map((role) => (
             <Link key={role.label} href={role.href}>
               <Card className="h-full transition-colors hover:border-cyan-300/50 hover:bg-white/[0.09]">
