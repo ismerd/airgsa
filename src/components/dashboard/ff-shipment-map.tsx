@@ -12,7 +12,7 @@ const FlightLeafletMap = dynamic(
   {
     ssr: false,
     loading: () => (
-      <div className="flex h-full min-h-[420px] items-center justify-center bg-slate-950 text-sm text-slate-400">
+      <div className="flex h-full min-h-[420px] items-center justify-center bg-surface2 text-sm text-ink-muted">
         Loading map…
       </div>
     ),
@@ -57,7 +57,7 @@ export function FfShipmentMap({ flights, shipments }: Props) {
         <div className="flex flex-col gap-2 lg:flex-row lg:items-start lg:justify-between">
           <div>
             <CardTitle>Live shipment tracker</CardTitle>
-            <p className="mt-1 text-sm text-slate-400">
+            <p className="mt-1 text-sm text-ink-muted">
               Flights carrying your cargo. Click an aircraft to view your shipment status.
             </p>
           </div>
@@ -70,7 +70,7 @@ export function FfShipmentMap({ flights, shipments }: Props) {
       </CardHeader>
 
       <CardContent>
-        <div className="grid overflow-hidden rounded-md border border-white/10 bg-slate-950 xl:grid-cols-[minmax(0,1fr)_300px]">
+        <div className="grid overflow-hidden rounded-md border border-border-ui bg-surface2 xl:grid-cols-[minmax(0,1fr)_300px]">
           <div className="relative min-h-[420px]">
             <FlightLeafletMap
               flights={flights}
@@ -80,25 +80,25 @@ export function FfShipmentMap({ flights, shipments }: Props) {
             />
           </div>
 
-          <aside className="border-t border-white/10 bg-slate-950/95 p-4 xl:border-l xl:border-t-0">
+          <aside className="border-t border-border-ui bg-surface p-4 xl:border-l xl:border-t-0">
             {selectedFlight ? (
               <FlightPane flight={selectedFlight} shipments={myShipments} />
             ) : (
-              <div className="mb-5 rounded-md border border-dashed border-white/10 bg-white/[0.03] p-4">
-                <p className="text-sm font-semibold text-white">No flight selected</p>
-                <p className="mt-1 text-xs text-slate-400">
+              <div className="mb-5 rounded-md border border-dashed border-border-ui bg-surface p-4">
+                <p className="text-sm font-semibold text-ink">No flight selected</p>
+                <p className="mt-1 text-xs text-ink-muted">
                   Click an aircraft on the map to see your shipment details on that flight.
                 </p>
               </div>
             )}
 
             <div className="mt-2">
-              <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">Airlines</p>
+              <p className="text-xs font-semibold uppercase tracking-[0.16em] text-ink-muted">Airlines</p>
               <div className="mt-2 flex flex-wrap gap-2">
                 {airlineColors.map(([name, color]) => (
-                  <div key={name} className="flex items-center gap-2 rounded-full border border-white/10 px-2.5 py-1">
+                  <div key={name} className="flex items-center gap-2 rounded-full border border-border-ui px-2.5 py-1">
                     <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: color }} />
-                    <span className="text-xs text-slate-300">{name}</span>
+                    <span className="text-xs text-ink-muted">{name}</span>
                   </div>
                 ))}
               </div>
@@ -112,16 +112,16 @@ export function FfShipmentMap({ flights, shipments }: Props) {
 
 function FlightPane({ flight, shipments }: { flight: FlightTrackerRecord; shipments: FfShipment[] }) {
   return (
-    <div className="mb-5 rounded-md border border-white/10 bg-white/[0.04] p-4">
+    <div className="mb-5 rounded-md border border-border-ui bg-surface p-4">
       {/* Flight identity only — no commercial data */}
       <div className="flex items-start gap-2">
         <span className="mt-1.5 h-2.5 w-2.5 shrink-0 rounded-full" style={{ backgroundColor: flight.airlineColor }} />
         <div>
-          <p className="text-sm font-semibold text-white">{flight.flightNumber}</p>
-          <p className="text-xs text-slate-400">
+          <p className="text-sm font-semibold text-ink">{flight.flightNumber}</p>
+          <p className="text-xs text-ink-muted">
             {flight.origin.airportCode} — {flight.origin.airportName}
           </p>
-          <p className="text-xs text-slate-400">
+          <p className="text-xs text-ink-muted">
             {flight.destination.airportCode} — {flight.destination.airportName}
           </p>
         </div>
@@ -129,47 +129,47 @@ function FlightPane({ flight, shipments }: { flight: FlightTrackerRecord; shipme
 
       <div className="mt-3 grid grid-cols-2 gap-3 text-xs">
         <div>
-          <p className="text-slate-500">Airline</p>
-          <p className="mt-0.5 font-medium text-slate-200">{flight.airlineName}</p>
+          <p className="text-ink-muted">Airline</p>
+          <p className="mt-0.5 font-medium text-ink">{flight.airlineName}</p>
         </div>
         <div>
-          <p className="text-slate-500">Status</p>
-          <p className="mt-0.5 font-medium text-cyan-300">En route</p>
+          <p className="text-ink-muted">Status</p>
+          <p className="mt-0.5 font-medium text-brand">En route</p>
         </div>
       </div>
 
       {/* My shipments on this flight */}
       <div className="mt-4">
-        <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">
+        <p className="text-xs font-semibold uppercase tracking-[0.16em] text-ink-muted">
           Your shipments on this flight
         </p>
         {shipments.length > 0 ? (
           <div className="mt-2 space-y-2">
             {shipments.map((s) => (
-              <div key={s.awb} className="rounded-md border border-white/10 bg-slate-950/60 p-3">
+              <div key={s.awb} className="rounded-md border border-border-ui bg-surface2 p-3">
                 <div className="flex items-center justify-between gap-2">
-                  <span className="font-mono text-xs text-cyan-300">{s.awb}</span>
+                  <span className="font-mono text-xs text-brand">{s.awb}</span>
                   <Badge variant={statusVariant[s.status]}>{s.status}</Badge>
                 </div>
                 <div className="mt-2 grid grid-cols-2 gap-2 text-xs">
                   <div>
-                    <p className="text-slate-500">Weight</p>
-                    <p className="mt-0.5 text-slate-200">{s.weightKg.toLocaleString()} kg</p>
+                    <p className="text-ink-muted">Weight</p>
+                    <p className="mt-0.5 text-ink">{s.weightKg.toLocaleString()} kg</p>
                   </div>
                   <div>
-                    <p className="text-slate-500">Product</p>
-                    <p className="mt-0.5 text-slate-200">{s.product}</p>
+                    <p className="text-ink-muted">Product</p>
+                    <p className="mt-0.5 text-ink">{s.product}</p>
                   </div>
                   <div className="col-span-2">
-                    <p className="text-slate-500">ETA</p>
-                    <p className="mt-0.5 text-slate-200">{s.eta}</p>
+                    <p className="text-ink-muted">ETA</p>
+                    <p className="mt-0.5 text-ink">{s.eta}</p>
                   </div>
                 </div>
               </div>
             ))}
           </div>
         ) : (
-          <p className="mt-2 rounded-md border border-dashed border-white/10 p-3 text-center text-xs text-slate-500">
+          <p className="mt-2 rounded-md border border-dashed border-border-ui p-3 text-center text-xs text-ink-muted">
             No shipments from your account on this flight.
           </p>
         )}
@@ -180,12 +180,12 @@ function FlightPane({ flight, shipments }: { flight: FlightTrackerRecord; shipme
 
 function Metric({ icon: Icon, label, value }: { icon: typeof PlaneTakeoff; label: string; value: string }) {
   return (
-    <div className="rounded-md border border-white/10 bg-slate-950/60 px-3 py-2">
-      <div className="flex items-center gap-2 text-xs text-slate-400">
-        <Icon className="h-3.5 w-3.5 text-cyan-200" />
+    <div className="rounded-md border border-border-ui bg-surface2 px-3 py-2">
+      <div className="flex items-center gap-2 text-xs text-ink-muted">
+        <Icon className="h-3.5 w-3.5 text-brand" />
         {label}
       </div>
-      <p className="mt-1 text-sm font-semibold text-white">{value}</p>
+      <p className="mt-1 text-sm font-semibold text-ink">{value}</p>
     </div>
   );
 }

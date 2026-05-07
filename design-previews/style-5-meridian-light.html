@@ -1,0 +1,803 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AirGSA — Style 5: Meridian</title>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+/* ── Light Mode (default) ── */
+:root {
+  --bg: #F0F4FF;
+  --surface: #FFFFFF;
+  --surface2: #F7F9FF;
+  --surface3: #EEF2FB;
+  --border: #DDE4F5;
+  --border2: #EEF2FB;
+
+  --navy: #0B1E4F;
+  --blue: #1A5AFF;
+  --blue-mid: #3B7BFF;
+  --blue-light: #EBF1FF;
+  --blue-xlight: #F4F7FF;
+  --blue-dark: #0D3DAF;
+
+  --cyan: #00AADD;
+  --cyan-light: #E5F7FF;
+  --purple: #6C4FD4;
+  --purple-light: #F0ECFF;
+
+  --text: #0B1E4F;
+  --text2: #3A4A70;
+  --muted: #7A8BB0;
+  --muted2: #B0BDD8;
+
+  --success: #0B7A52;
+  --success-bg: #E6F7F1;
+  --warning: #B45309;
+  --warning-bg: #FEF3C7;
+  --danger: #C0392B;
+  --danger-bg: #FEECEB;
+
+  --map-bg: linear-gradient(160deg, #E8EFFF 0%, #F0F5FF 40%, #E4EEFF 100%);
+  --map-grid: rgba(26,90,255,0.06);
+  --node-label-bg: #ffffff;
+  --map-stat-bg: #ffffff;
+  --topbar-bg: rgba(255,255,255,0.88);
+  --sidebar-navy: #0B1E4F;
+  --notif-border: white;
+  --body-glow1: rgba(26,90,255,0.06);
+  --body-glow2: rgba(0,170,221,0.04);
+}
+
+/* ── Dark Mode ── */
+html.dark {
+  --bg: #060D1A;
+  --surface: #0B1628;
+  --surface2: #0F1E35;
+  --surface3: #152540;
+  --border: rgba(59,123,255,0.18);
+  --border2: rgba(59,123,255,0.09);
+
+  --navy: #050C18;
+  --blue: #4B8AFF;
+  --blue-mid: #3B7BFF;
+  --blue-light: rgba(26,90,255,0.18);
+  --blue-xlight: rgba(26,90,255,0.09);
+  --blue-dark: #1A5AFF;
+
+  --cyan: #00CCFF;
+  --cyan-light: rgba(0,204,255,0.14);
+  --purple: #8B6FFF;
+  --purple-light: rgba(108,79,212,0.18);
+
+  --text: #E4EFFF;
+  --text2: #A0B8D8;
+  --muted: #4A7FA0;
+  --muted2: #2A4F6A;
+
+  --success: #10B981;
+  --success-bg: rgba(16,185,129,0.12);
+  --warning: #F59E0B;
+  --warning-bg: rgba(245,158,11,0.12);
+  --danger: #EF4444;
+  --danger-bg: rgba(239,68,68,0.12);
+
+  --map-bg: linear-gradient(160deg, #0A1428 0%, #0D1A30 40%, #081020 100%);
+  --map-grid: rgba(59,123,255,0.07);
+  --node-label-bg: #0B1628;
+  --map-stat-bg: rgba(11,22,40,0.9);
+  --topbar-bg: rgba(6,13,26,0.92);
+  --sidebar-navy: #040A14;
+  --notif-border: #0B1628;
+  --body-glow1: rgba(59,123,255,0.08);
+  --body-glow2: rgba(0,204,255,0.05);
+}
+
+/* Smooth transition for all color changes */
+*, *::before, *::after {
+  transition: background-color 0.3s ease, border-color 0.3s ease, color 0.2s ease, box-shadow 0.3s ease;
+}
+
+body { background: var(--bg); color: var(--text); font-family: 'Outfit', sans-serif; display: flex; height: 100vh; overflow: hidden; font-size: 14px; }
+
+/* Subtle background gradient */
+body::before {
+  content: '';
+  position: fixed; inset: 0;
+  background:
+    radial-gradient(ellipse 70% 50% at 80% 10%, var(--body-glow1) 0%, transparent 60%),
+    radial-gradient(ellipse 50% 40% at 10% 90%, var(--body-glow2) 0%, transparent 60%);
+  pointer-events: none; z-index: 0;
+}
+
+/* ── Sidebar ── */
+aside {
+  width: 252px; min-width: 252px;
+  background: var(--sidebar-navy);
+  display: flex; flex-direction: column; padding: 24px 16px;
+  position: relative; z-index: 1;
+  box-shadow: 4px 0 24px rgba(11,30,79,0.18);
+}
+
+.logo { display: flex; align-items: center; gap: 12px; padding-bottom: 24px; border-bottom: 1px solid rgba(255,255,255,0.08); margin-bottom: 20px; }
+.logo-icon {
+  width: 40px; height: 40px;
+  background: linear-gradient(135deg, var(--blue), var(--cyan));
+  border-radius: 10px; display: flex; align-items: center; justify-content: center;
+  font-size: 18px; color: white;
+  box-shadow: 0 4px 12px rgba(26,90,255,0.4);
+}
+.logo-name { font-size: 18px; font-weight: 800; color: #FFFFFF; letter-spacing: -0.01em; }
+.logo-sub { font-size: 10px; color: rgba(255,255,255,0.4); margin-top: 2px; letter-spacing: 0.08em; text-transform: uppercase; }
+
+.nav-section { font-size: 9px; letter-spacing: 0.14em; text-transform: uppercase; color: rgba(255,255,255,0.25); margin: 18px 0 6px 10px; }
+nav a {
+  display: flex; align-items: center; gap: 10px; padding: 9px 12px; border-radius: 8px;
+  font-size: 13px; font-weight: 500; color: rgba(255,255,255,0.5);
+  text-decoration: none; margin-bottom: 2px; transition: all 0.2s; position: relative;
+}
+nav a:hover { background: rgba(255,255,255,0.07); color: rgba(255,255,255,0.85); }
+nav a.active {
+  background: rgba(26,90,255,0.25);
+  color: #FFFFFF;
+  border: 1px solid rgba(26,90,255,0.4);
+}
+nav a.active::before {
+  content: '';
+  position: absolute; left: 0; top: 50%; transform: translateY(-50%);
+  width: 3px; height: 18px;
+  background: linear-gradient(180deg, var(--blue), var(--cyan));
+  border-radius: 0 2px 2px 0;
+  box-shadow: 0 0 8px var(--blue);
+}
+.nav-badge { margin-left: auto; background: rgba(255,255,255,0.1); color: rgba(255,255,255,0.5); font-size: 10px; padding: 1px 7px; border-radius: 10px; font-family: 'JetBrains Mono', monospace; }
+.nav-badge.alert { background: rgba(200,57,43,0.3); color: #FF8A80; }
+
+.sidebar-bottom { margin-top: auto; border-top: 1px solid rgba(255,255,255,0.08); padding-top: 16px; }
+.user-card { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-radius: 8px; background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.08); }
+.user-avatar { width: 32px; height: 32px; border-radius: 50%; background: linear-gradient(135deg, var(--blue), var(--cyan)); display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700; color: white; }
+.user-name { font-size: 13px; font-weight: 600; color: white; }
+.user-role { font-size: 10px; color: rgba(255,255,255,0.4); margin-top: 1px; }
+
+/* ── Topbar ── */
+main { flex: 1; overflow-y: auto; position: relative; z-index: 1; }
+.topbar {
+  padding: 14px 28px;
+  background: var(--topbar-bg);
+  backdrop-filter: blur(16px);
+  border-bottom: 1px solid var(--border);
+  display: flex; align-items: center; justify-content: space-between;
+  position: sticky; top: 0; z-index: 10;
+  box-shadow: 0 1px 12px rgba(11,30,79,0.06);
+}
+.breadcrumb { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--muted); }
+.breadcrumb span { color: var(--text); font-weight: 600; }
+.breadcrumb-sep { color: var(--muted2); }
+.topbar-right { display: flex; align-items: center; gap: 10px; }
+.live-pill { display: flex; align-items: center; gap: 6px; background: var(--success-bg); border: 1px solid rgba(11,122,82,0.2); border-radius: 20px; padding: 5px 12px; font-size: 11px; color: var(--success); font-weight: 600; }
+.live-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--success); box-shadow: 0 0 6px var(--success); animation: blink 1.5s infinite; }
+@keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.3} }
+.topbar-date { font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--muted); }
+.notif-btn { width: 34px; height: 34px; border-radius: 8px; background: var(--surface); border: 1px solid var(--border); display: flex; align-items: center; justify-content: center; cursor: pointer; position: relative; }
+.notif-dot { position: absolute; top: 7px; right: 7px; width: 7px; height: 7px; border-radius: 50%; background: var(--danger); border: 1.5px solid var(--notif-border); }
+
+/* ── Content ── */
+.content { padding: 24px 28px; }
+
+/* ── KPI Cards ── */
+.kpi-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; margin-bottom: 22px; }
+.kpi-card {
+  background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 20px;
+  position: relative; overflow: hidden; cursor: pointer;
+  transition: box-shadow 0.2s, transform 0.2s, border-color 0.2s;
+  box-shadow: 0 1px 4px rgba(11,30,79,0.04);
+}
+.kpi-card:hover { box-shadow: 0 6px 24px rgba(26,90,255,0.1); transform: translateY(-2px); border-color: rgba(26,90,255,0.25); }
+/* Colored top accent line */
+.kpi-card::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px; border-radius: 14px 14px 0 0; background: var(--accent-gradient, linear-gradient(90deg, var(--blue), var(--cyan))); }
+.kpi-card:nth-child(2)::before { background: linear-gradient(90deg, var(--purple), #A78BFA); }
+.kpi-card:nth-child(3)::before { background: linear-gradient(90deg, var(--cyan), #22D3EE); }
+.kpi-card:nth-child(4)::before { background: linear-gradient(90deg, #10B981, #34D399); }
+
+.kpi-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
+.kpi-label { font-size: 12px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: 0.08em; }
+.kpi-icon { width: 30px; height: 30px; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 14px; }
+.kpi-icon.blue   { background: var(--blue-light); }
+.kpi-icon.purple { background: var(--purple-light); }
+.kpi-icon.cyan   { background: var(--cyan-light); }
+.kpi-icon.green  { background: var(--success-bg); }
+.kpi-value { font-size: 28px; font-weight: 800; color: var(--text); letter-spacing: -0.03em; line-height: 1; }
+.kpi-change { font-size: 12px; margin-top: 8px; font-weight: 500; }
+.change-up { color: var(--success); }
+.change-neutral { color: var(--muted); }
+.kpi-sparkline { margin-top: 14px; display: flex; align-items: flex-end; gap: 3px; height: 28px; }
+.spark-bar { flex: 1; border-radius: 3px 3px 0 0; background: var(--surface3); min-height: 4px; }
+.spark-bar.hi { background: linear-gradient(180deg, var(--blue), rgba(26,90,255,0.3)); }
+.kpi-card:nth-child(2) .spark-bar.hi { background: linear-gradient(180deg, var(--purple), rgba(108,79,212,0.3)); }
+.kpi-card:nth-child(3) .spark-bar.hi { background: linear-gradient(180deg, var(--cyan), rgba(0,170,221,0.3)); }
+.kpi-card:nth-child(4) .spark-bar.hi { background: linear-gradient(180deg, #10B981, rgba(16,185,129,0.3)); }
+
+/* ── Main Grid ── */
+.main-grid { display: grid; grid-template-columns: 1fr 340px; gap: 16px; margin-bottom: 16px; }
+.left-col { display: flex; flex-direction: column; gap: 16px; }
+.right-col { display: flex; flex-direction: column; gap: 16px; }
+
+.card {
+  background: var(--surface); border: 1px solid var(--border); border-radius: 14px; overflow: hidden;
+  box-shadow: 0 1px 4px rgba(11,30,79,0.04);
+}
+.card-header { padding: 16px 20px; border-bottom: 1px solid var(--border2); display: flex; align-items: center; justify-content: space-between; background: var(--surface); }
+.card-title { font-size: 14px; font-weight: 700; color: var(--text); display: flex; align-items: center; gap: 8px; }
+.title-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--blue); box-shadow: 0 0 0 3px rgba(26,90,255,0.15); }
+.title-dot.purple { background: var(--purple); box-shadow: 0 0 0 3px rgba(108,79,212,0.15); }
+.title-dot.green  { background: #10B981; box-shadow: 0 0 0 3px rgba(16,185,129,0.15); }
+.title-dot.warn   { background: var(--warning); box-shadow: 0 0 0 3px rgba(180,83,9,0.15); }
+
+.btn-primary { background: var(--blue); border: none; color: white; padding: 8px 16px; border-radius: 8px; font-size: 12px; font-weight: 600; cursor: pointer; font-family: 'Outfit', sans-serif; transition: background 0.2s; box-shadow: 0 2px 8px rgba(26,90,255,0.3); }
+.btn-primary:hover { background: var(--blue-dark); }
+.btn-ghost { background: var(--surface); border: 1px solid var(--border); color: var(--muted); padding: 8px 14px; border-radius: 8px; font-size: 12px; font-weight: 500; cursor: pointer; font-family: 'Outfit', sans-serif; }
+.card-body { padding: 18px 20px; }
+
+/* ── Map ── */
+.map-inner {
+  height: 230px;
+  background: var(--map-bg);
+  position: relative; display: flex; align-items: center; justify-content: center;
+  overflow: hidden;
+}
+.map-grid-bg {
+  position: absolute; inset: 0;
+  background-image: linear-gradient(var(--map-grid) 1px, transparent 1px), linear-gradient(90deg, var(--map-grid) 1px, transparent 1px);
+  background-size: 40px 40px;
+}
+
+/* Route curves via SVG */
+.map-node { position: absolute; display: flex; align-items: center; justify-content: center; }
+.node-dot { width: 10px; height: 10px; border-radius: 50%; background: var(--blue); border: 2px solid white; box-shadow: 0 2px 8px rgba(26,90,255,0.4); }
+.node-dot.cyan { background: var(--cyan); box-shadow: 0 2px 8px rgba(0,170,221,0.4); }
+.node-dot.purple { background: var(--purple); box-shadow: 0 2px 8px rgba(108,79,212,0.4); }
+.node-dot.sm { width: 7px; height: 7px; background: var(--muted2); border-color: white; box-shadow: none; }
+.node-ring { position: absolute; width: 22px; height: 22px; border-radius: 50%; border: 1.5px solid var(--blue); opacity: 0.3; animation: ring-pulse 2.5s ease-in-out infinite; }
+@keyframes ring-pulse { 0%,100%{transform:scale(1);opacity:0.35} 50%{transform:scale(1.4);opacity:0.1} }
+.node-label {
+  position: absolute; bottom: -20px; left: 50%; transform: translateX(-50%);
+  font-family: 'JetBrains Mono', monospace; font-size: 9px; font-weight: 600;
+  color: var(--text); white-space: nowrap;
+  background: var(--node-label-bg); border: 1px solid var(--border); padding: 1px 5px; border-radius: 4px;
+  box-shadow: 0 1px 4px rgba(11,30,79,0.08);
+}
+.map-stat {
+  position: absolute; background: var(--map-stat-bg); border: 1px solid var(--border); border-radius: 10px; padding: 8px 14px;
+  box-shadow: 0 2px 12px rgba(11,30,79,0.08); backdrop-filter: blur(8px);
+}
+.map-stat-label { font-size: 9px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.1em; }
+.map-stat-value { font-family: 'JetBrains Mono', monospace; font-size: 15px; font-weight: 600; color: var(--blue); margin-top: 1px; }
+
+/* ── Tender Table ── */
+.tender-table { width: 100%; border-collapse: collapse; }
+.tender-table th { font-size: 11px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: 0.07em; padding: 0 0 12px; text-align: left; border-bottom: 1px solid var(--border); }
+.tender-table td { padding: 13px 0; border-bottom: 1px solid var(--border2); vertical-align: middle; }
+.tender-table tr:last-child td { border-bottom: none; }
+.tender-table tbody tr { transition: background 0.15s; }
+.tender-table tbody tr:hover td { background: var(--blue-xlight); }
+.tender-table tbody tr:hover td:first-child { border-radius: 8px 0 0 8px; }
+.tender-table tbody tr:hover td:last-child  { border-radius: 0 8px 8px 0; }
+
+.route-code { font-family: 'JetBrains Mono', monospace; font-size: 13px; font-weight: 600; color: var(--blue); }
+.route-name { font-size: 11px; color: var(--muted); margin-top: 3px; }
+.status-pill { display: inline-flex; padding: 4px 10px; border-radius: 20px; font-size: 11px; font-weight: 600; }
+.s-open    { background: var(--success-bg); color: var(--success); }
+.s-review  { background: var(--warning-bg); color: var(--warning); }
+.s-awarded { background: var(--blue-light); color: var(--blue); }
+
+.progress-wrap { display: flex; align-items: center; gap: 8px; }
+.progress-bar { flex: 1; height: 5px; background: var(--surface3); border-radius: 3px; overflow: hidden; }
+.progress-fill { height: 100%; border-radius: 3px; background: linear-gradient(90deg, var(--blue), var(--cyan)); }
+.progress-label { font-family: 'JetBrains Mono', monospace; font-size: 10px; color: var(--muted); width: 28px; text-align: right; }
+
+/* ── Right col ── */
+
+/* Bar chart */
+.chart-wrap { padding: 4px 0 0; }
+.chart-labels { display: flex; justify-content: space-between; margin-bottom: 8px; }
+.chart-label { font-size: 10px; color: var(--muted); font-family: 'JetBrains Mono', monospace; }
+.bar-chart { display: flex; align-items: flex-end; gap: 6px; height: 90px; padding-bottom: 1px; border-bottom: 1px solid var(--border); }
+.bar-group { flex: 1; display: flex; align-items: flex-end; gap: 2px; }
+.bar { flex: 1; border-radius: 4px 4px 0 0; min-height: 4px; transition: opacity 0.2s; }
+.bar:hover { opacity: 0.8; }
+.bar-a { background: linear-gradient(180deg, var(--blue), rgba(26,90,255,0.3)); }
+.bar-b { background: linear-gradient(180deg, var(--cyan), rgba(0,170,221,0.3)); }
+.chart-legend { display: flex; gap: 14px; padding: 10px 0 0; }
+.legend-item { display: flex; align-items: center; gap: 6px; font-size: 11px; color: var(--muted); font-weight: 500; }
+.legend-dot { width: 8px; height: 8px; border-radius: 2px; }
+
+/* Score rings */
+.score-item { display: flex; align-items: center; gap: 12px; padding: 12px 0; border-bottom: 1px solid var(--border2); }
+.score-item:last-child { border-bottom: none; }
+.score-rank { font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--muted2); width: 18px; text-align: center; }
+.score-info { flex: 1; }
+.score-name { font-size: 13px; font-weight: 600; color: var(--text); }
+.score-sub { font-size: 11px; color: var(--muted); margin-top: 2px; }
+.score-ring { position: relative; width: 46px; height: 46px; flex-shrink: 0; }
+.score-ring svg { transform: rotate(-90deg); }
+.score-ring-num { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-family: 'JetBrains Mono', monospace; font-size: 11px; font-weight: 600; }
+
+/* Alert items */
+.alert-item { display: flex; align-items: flex-start; gap: 10px; padding: 11px 14px; border-radius: 10px; margin-bottom: 8px; border: 1px solid; }
+.alert-item:last-child { margin-bottom: 0; }
+.alert-warn    { background: var(--warning-bg); border-color: rgba(180,83,9,0.2); }
+.alert-info    { background: var(--blue-light);  border-color: rgba(26,90,255,0.15); }
+.alert-success { background: var(--success-bg);  border-color: rgba(11,122,82,0.2); }
+.alert-icon { font-size: 14px; margin-top: 1px; flex-shrink: 0; }
+.alert-title { font-size: 12px; font-weight: 600; color: var(--text); }
+.alert-sub { font-size: 11px; color: var(--text2); margin-top: 2px; line-height: 1.4; }
+.alert-time { font-family: 'JetBrains Mono', monospace; font-size: 10px; color: var(--muted); margin-top: 5px; }
+
+.style-tag { position: fixed; bottom: 20px; right: 20px; background: var(--blue); color: white; padding: 8px 16px; border-radius: 8px; font-size: 12px; font-weight: 700; box-shadow: 0 4px 16px rgba(26,90,255,0.35); }
+
+/* ── Dark/Light Toggle ── */
+.theme-toggle {
+  display: flex; align-items: center; gap: 6px;
+  background: var(--surface2); border: 1px solid var(--border);
+  border-radius: 20px; padding: 5px 12px 5px 8px;
+  cursor: pointer; font-size: 12px; font-weight: 600;
+  color: var(--muted); user-select: none;
+  transition: border-color 0.2s, background 0.2s;
+}
+.theme-toggle:hover { border-color: var(--blue); color: var(--text); }
+.toggle-track {
+  width: 32px; height: 18px; border-radius: 9px;
+  background: var(--surface3); border: 1px solid var(--border);
+  position: relative; transition: background 0.3s;
+  flex-shrink: 0;
+}
+html.dark .toggle-track { background: var(--blue); border-color: var(--blue); }
+.toggle-thumb {
+  position: absolute; top: 2px; left: 2px;
+  width: 12px; height: 12px; border-radius: 50%;
+  background: var(--muted2); transition: transform 0.3s, background 0.3s;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+}
+html.dark .toggle-thumb { transform: translateX(14px); background: white; }
+.toggle-icon { font-size: 14px; line-height: 1; }
+</style>
+</head>
+<body>
+
+<!-- Sidebar -->
+<aside>
+  <div class="logo">
+    <div class="logo-icon">✈</div>
+    <div>
+      <div class="logo-name">AirGSA</div>
+      <div class="logo-sub">Airline Workspace</div>
+    </div>
+  </div>
+
+  <div class="nav-section">Navigation</div>
+  <nav>
+    <a href="#" class="active">⬡ &nbsp;Dashboard</a>
+    <a href="#">⬡ &nbsp;Performance</a>
+    <a href="#">⬡ &nbsp;Tenders <span class="nav-badge">4</span></a>
+    <a href="#">⬡ &nbsp;Contracts</a>
+    <div class="nav-section">Intelligence</div>
+    <a href="#">⬡ &nbsp;Campaigns <span class="nav-badge">2</span></a>
+    <a href="#">⬡ &nbsp;Intel Feed</a>
+    <a href="#">⬡ &nbsp;Fleet</a>
+    <a href="#">⬡ &nbsp;Capacity Alerts <span class="nav-badge alert">2</span></a>
+    <div class="nav-section">Admin</div>
+    <a href="#">⬡ &nbsp;Applications</a>
+    <a href="#">⬡ &nbsp;Settings</a>
+  </nav>
+
+  <div class="sidebar-bottom">
+    <div class="user-card">
+      <div class="user-avatar">AC</div>
+      <div>
+        <div class="user-name">AeroBridge Cargo</div>
+        <div class="user-role">Airline Admin</div>
+      </div>
+    </div>
+  </div>
+</aside>
+
+<!-- Main -->
+<main>
+  <div class="topbar">
+    <div class="breadcrumb">
+      <span style="color:var(--muted)">AirGSA</span>
+      <span class="breadcrumb-sep">/</span>
+      <span>Dashboard</span>
+    </div>
+    <div class="topbar-right">
+      <div class="topbar-date">07 MAY 2026 · 13:22 UTC</div>
+      <div class="live-pill"><div class="live-dot"></div>Live</div>
+      <div class="theme-toggle" onclick="toggleTheme()" id="themeToggle">
+        <div class="toggle-track"><div class="toggle-thumb"></div></div>
+        <span class="toggle-icon" id="themeIcon">🌙</span>
+        <span id="themeLabel">Dark</span>
+      </div>
+      <div class="notif-btn">🔔<div class="notif-dot"></div></div>
+    </div>
+  </div>
+
+  <div class="content">
+
+    <!-- KPIs -->
+    <div class="kpi-grid">
+      <div class="kpi-card">
+        <div class="kpi-header">
+          <div class="kpi-label">Revenue MTD</div>
+          <div class="kpi-icon blue">💰</div>
+        </div>
+        <div class="kpi-value">$2.4M</div>
+        <div class="kpi-change change-up">↑ +14.6% vs prior month</div>
+        <div class="kpi-sparkline">
+          <div class="spark-bar" style="height:40%"></div>
+          <div class="spark-bar" style="height:55%"></div>
+          <div class="spark-bar" style="height:45%"></div>
+          <div class="spark-bar" style="height:70%"></div>
+          <div class="spark-bar" style="height:60%"></div>
+          <div class="spark-bar" style="height:80%"></div>
+          <div class="spark-bar hi" style="height:100%"></div>
+        </div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-header">
+          <div class="kpi-label">Load Factor</div>
+          <div class="kpi-icon purple">📦</div>
+        </div>
+        <div class="kpi-value">82.3%</div>
+        <div class="kpi-change change-up">↑ +3 pts on focus lanes</div>
+        <div class="kpi-sparkline">
+          <div class="spark-bar" style="height:65%"></div>
+          <div class="spark-bar" style="height:70%"></div>
+          <div class="spark-bar" style="height:72%"></div>
+          <div class="spark-bar" style="height:75%"></div>
+          <div class="spark-bar" style="height:78%"></div>
+          <div class="spark-bar" style="height:80%"></div>
+          <div class="spark-bar hi" style="height:100%"></div>
+        </div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-header">
+          <div class="kpi-label">Yield / kg</div>
+          <div class="kpi-icon cyan">⚡</div>
+        </div>
+        <div class="kpi-value">$3.18</div>
+        <div class="kpi-change change-up">↑ +6.1% blended yield</div>
+        <div class="kpi-sparkline">
+          <div class="spark-bar" style="height:50%"></div>
+          <div class="spark-bar" style="height:60%"></div>
+          <div class="spark-bar" style="height:58%"></div>
+          <div class="spark-bar" style="height:75%"></div>
+          <div class="spark-bar" style="height:70%"></div>
+          <div class="spark-bar" style="height:85%"></div>
+          <div class="spark-bar hi" style="height:100%"></div>
+        </div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-header">
+          <div class="kpi-label">Active GSAs</div>
+          <div class="kpi-icon green">🤝</div>
+        </div>
+        <div class="kpi-value">8</div>
+        <div class="kpi-change change-neutral">3 pending selection</div>
+        <div class="kpi-sparkline">
+          <div class="spark-bar" style="height:50%"></div>
+          <div class="spark-bar" style="height:50%"></div>
+          <div class="spark-bar" style="height:62%"></div>
+          <div class="spark-bar" style="height:62%"></div>
+          <div class="spark-bar" style="height:75%"></div>
+          <div class="spark-bar" style="height:75%"></div>
+          <div class="spark-bar hi" style="height:100%"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Main grid -->
+    <div class="main-grid">
+      <div class="left-col">
+
+        <!-- Map card -->
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title"><div class="title-dot"></div>Live Flight Network</div>
+            <div style="display:flex;gap:8px;">
+              <button class="btn-ghost">Export</button>
+              <button class="btn-primary">Full Map</button>
+            </div>
+          </div>
+          <div class="map-inner">
+            <div class="map-grid-bg"></div>
+
+            <!-- Route SVG -->
+            <svg style="position:absolute;inset:0;width:100%;height:100%;" viewBox="0 0 800 230" preserveAspectRatio="none">
+              <!-- FRA → HKG -->
+              <path d="M 176 80 Q 390 20 560 95" stroke="rgba(26,90,255,0.35)" stroke-width="2" fill="none" stroke-dasharray="5,4"/>
+              <!-- FRA → DXB -->
+              <path d="M 176 80 Q 280 160 308 138" stroke="rgba(0,170,221,0.35)" stroke-width="1.5" fill="none" stroke-dasharray="4,5"/>
+              <!-- HKG → NRT -->
+              <path d="M 560 95 Q 620 55 688 80" stroke="rgba(108,79,212,0.3)" stroke-width="1.5" fill="none" stroke-dasharray="4,5"/>
+              <!-- LHR → FRA -->
+              <path d="M 96 68 Q 136 60 176 80" stroke="rgba(26,90,255,0.25)" stroke-width="1" fill="none" stroke-dasharray="3,4"/>
+            </svg>
+
+            <!-- Airport nodes -->
+            <div class="map-node" style="top:35%;left:22%;">
+              <div class="node-ring"></div>
+              <div class="node-dot"></div>
+              <div class="node-label">FRA</div>
+            </div>
+            <div class="map-node" style="top:60%;left:38.5%;">
+              <div class="node-dot cyan"></div>
+              <div class="node-label">DXB</div>
+            </div>
+            <div class="map-node" style="top:41%;left:70%;">
+              <div class="node-ring" style="border-color:var(--purple)"></div>
+              <div class="node-dot purple"></div>
+              <div class="node-label">HKG</div>
+            </div>
+            <div class="map-node" style="top:35%;left:86%;">
+              <div class="node-dot sm"></div>
+              <div class="node-label">NRT</div>
+            </div>
+            <div class="map-node" style="top:29.5%;left:12%;">
+              <div class="node-dot sm"></div>
+              <div class="node-label">LHR</div>
+            </div>
+
+            <div class="map-stat" style="top:12px;left:12px;">
+              <div class="map-stat-label">Active Routes</div>
+              <div class="map-stat-value">24</div>
+            </div>
+            <div class="map-stat" style="top:12px;right:12px;">
+              <div class="map-stat-label">In Flight</div>
+              <div class="map-stat-value" style="color:var(--success)">7</div>
+            </div>
+            <div class="map-stat" style="bottom:12px;left:50%;transform:translateX(-50%);">
+              <div class="map-stat-label">On-Time Rate</div>
+              <div class="map-stat-value">96.4%</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Tender table -->
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title"><div class="title-dot"></div>Tender Overview</div>
+            <button class="btn-primary">+ Create Tender</button>
+          </div>
+          <div class="card-body">
+            <table class="tender-table">
+              <thead>
+                <tr>
+                  <th>Route</th>
+                  <th>Applicants</th>
+                  <th>Deadline</th>
+                  <th>Fill Rate</th>
+                  <th>Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td style="padding-left:8px"><div class="route-code">FRA → DXB</div><div class="route-name">EU-ME Corridor</div></td>
+                  <td><span style="font-family:'JetBrains Mono',monospace;font-size:14px;font-weight:600;color:var(--text)">8</span></td>
+                  <td><span style="font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--muted)">12 days</span></td>
+                  <td>
+                    <div class="progress-wrap">
+                      <div class="progress-bar"><div class="progress-fill" style="width:72%"></div></div>
+                      <div class="progress-label">72%</div>
+                    </div>
+                  </td>
+                  <td style="padding-right:8px"><span class="status-pill s-open">Open</span></td>
+                </tr>
+                <tr>
+                  <td style="padding-left:8px"><div class="route-code">JFK → HKG</div><div class="route-name">Transatlantic</div></td>
+                  <td><span style="font-family:'JetBrains Mono',monospace;font-size:14px;font-weight:600;color:var(--text)">5</span></td>
+                  <td><span style="font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--warning)">5 days</span></td>
+                  <td>
+                    <div class="progress-wrap">
+                      <div class="progress-bar"><div class="progress-fill" style="width:55%"></div></div>
+                      <div class="progress-label">55%</div>
+                    </div>
+                  </td>
+                  <td style="padding-right:8px"><span class="status-pill s-review">Review</span></td>
+                </tr>
+                <tr>
+                  <td style="padding-left:8px"><div class="route-code">MUC → SIN</div><div class="route-name">APAC Lane</div></td>
+                  <td><span style="font-family:'JetBrains Mono',monospace;font-size:14px;font-weight:600;color:var(--text)">3</span></td>
+                  <td><span style="font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--muted)">22 days</span></td>
+                  <td>
+                    <div class="progress-wrap">
+                      <div class="progress-bar"><div class="progress-fill" style="width:30%"></div></div>
+                      <div class="progress-label">30%</div>
+                    </div>
+                  </td>
+                  <td style="padding-right:8px"><span class="status-pill s-open">Open</span></td>
+                </tr>
+                <tr>
+                  <td style="padding-left:8px"><div class="route-code">LHR → ORD</div><div class="route-name">North Atlantic</div></td>
+                  <td><span style="font-family:'JetBrains Mono',monospace;font-size:14px;font-weight:600;color:var(--text)">6</span></td>
+                  <td><span style="font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--success)">Closed</span></td>
+                  <td>
+                    <div class="progress-wrap">
+                      <div class="progress-bar"><div class="progress-fill" style="width:100%;background:linear-gradient(90deg,var(--success),#34D399)"></div></div>
+                      <div class="progress-label" style="color:var(--success)">100%</div>
+                    </div>
+                  </td>
+                  <td style="padding-right:8px"><span class="status-pill s-awarded">Awarded</span></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+      </div><!-- /left-col -->
+
+      <!-- Right column -->
+      <div class="right-col">
+
+        <!-- Bar chart -->
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title"><div class="title-dot purple"></div>Revenue vs Yield</div>
+            <span style="font-size:11px;color:var(--muted)">Last 7 months</span>
+          </div>
+          <div class="card-body" style="padding-bottom:14px;">
+            <div class="chart-wrap">
+              <div class="chart-labels">
+                <span class="chart-label">Nov</span>
+                <span class="chart-label">Dec</span>
+                <span class="chart-label">Jan</span>
+                <span class="chart-label">Feb</span>
+                <span class="chart-label">Mar</span>
+                <span class="chart-label">Apr</span>
+                <span class="chart-label">May</span>
+              </div>
+              <div class="bar-chart">
+                <div class="bar-group"><div class="bar bar-a" style="height:50%"></div><div class="bar bar-b" style="height:55%"></div></div>
+                <div class="bar-group"><div class="bar bar-a" style="height:65%"></div><div class="bar bar-b" style="height:60%"></div></div>
+                <div class="bar-group"><div class="bar bar-a" style="height:55%"></div><div class="bar bar-b" style="height:58%"></div></div>
+                <div class="bar-group"><div class="bar bar-a" style="height:72%"></div><div class="bar bar-b" style="height:66%"></div></div>
+                <div class="bar-group"><div class="bar bar-a" style="height:78%"></div><div class="bar bar-b" style="height:72%"></div></div>
+                <div class="bar-group"><div class="bar bar-a" style="height:86%"></div><div class="bar bar-b" style="height:80%"></div></div>
+                <div class="bar-group"><div class="bar bar-a" style="height:100%"></div><div class="bar bar-b" style="height:90%"></div></div>
+              </div>
+              <div class="chart-legend">
+                <div class="legend-item"><div class="legend-dot" style="background:var(--blue)"></div>Revenue</div>
+                <div class="legend-item"><div class="legend-dot" style="background:var(--cyan)"></div>Yield</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Score rings -->
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title"><div class="title-dot" style="background:var(--blue)"></div>Selection Pipeline</div>
+            <span style="font-size:11px;color:var(--muted)">AI-ranked</span>
+          </div>
+          <div class="card-body" style="padding-top:12px;padding-bottom:12px;">
+            <div class="score-item">
+              <div class="score-rank">#1</div>
+              <div class="score-info">
+                <div class="score-name">Lufthansa Cargo GSA</div>
+                <div class="score-sub">FRA → DXB · 5.2% commission</div>
+              </div>
+              <div class="score-ring">
+                <svg width="46" height="46" viewBox="0 0 46 46">
+                  <circle cx="23" cy="23" r="19" fill="none" stroke="var(--surface3)" stroke-width="3.5"/>
+                  <circle cx="23" cy="23" r="19" fill="none" stroke="var(--blue)" stroke-width="3.5" stroke-dasharray="119" stroke-dashoffset="7" stroke-linecap="round"/>
+                </svg>
+                <div class="score-ring-num" style="color:var(--blue)">94</div>
+              </div>
+            </div>
+            <div class="score-item">
+              <div class="score-rank">#2</div>
+              <div class="score-info">
+                <div class="score-name">Emirates SkyCargo</div>
+                <div class="score-sub">JFK → HKG · 6.1% commission</div>
+              </div>
+              <div class="score-ring">
+                <svg width="46" height="46" viewBox="0 0 46 46">
+                  <circle cx="23" cy="23" r="19" fill="none" stroke="var(--surface3)" stroke-width="3.5"/>
+                  <circle cx="23" cy="23" r="19" fill="none" stroke="var(--cyan)" stroke-width="3.5" stroke-dasharray="119" stroke-dashoffset="14" stroke-linecap="round"/>
+                </svg>
+                <div class="score-ring-num" style="color:var(--cyan)">88</div>
+              </div>
+            </div>
+            <div class="score-item">
+              <div class="score-rank">#3</div>
+              <div class="score-info">
+                <div class="score-name">DACHSER Air & Sea</div>
+                <div class="score-sub">MUC → SIN · 4.8% commission</div>
+              </div>
+              <div class="score-ring">
+                <svg width="46" height="46" viewBox="0 0 46 46">
+                  <circle cx="23" cy="23" r="19" fill="none" stroke="var(--surface3)" stroke-width="3.5"/>
+                  <circle cx="23" cy="23" r="19" fill="none" stroke="var(--purple)" stroke-width="3.5" stroke-dasharray="119" stroke-dashoffset="22" stroke-linecap="round"/>
+                </svg>
+                <div class="score-ring-num" style="color:var(--purple)">81</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Alerts -->
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title"><div class="title-dot warn"></div>Recent Alerts</div>
+            <span style="font-size:12px;color:var(--blue);cursor:pointer;font-weight:600;">View all</span>
+          </div>
+          <div class="card-body">
+            <div class="alert-item alert-warn">
+              <div class="alert-icon">⚠️</div>
+              <div>
+                <div class="alert-title">Capacity Alert — FRA Hub</div>
+                <div class="alert-sub">Freighter load &gt;95% on EU-ME lanes</div>
+                <div class="alert-time">2 minutes ago</div>
+              </div>
+            </div>
+            <div class="alert-item alert-info">
+              <div class="alert-icon">📋</div>
+              <div>
+                <div class="alert-title">New GSA Application</div>
+                <div class="alert-sub">Panalpina submitted for JFK → HKG</div>
+                <div class="alert-time">18 minutes ago</div>
+              </div>
+            </div>
+            <div class="alert-item alert-success">
+              <div class="alert-icon">✅</div>
+              <div>
+                <div class="alert-title">Contract Signed — LHR → ORD</div>
+                <div class="alert-sub">DB Schenker agreement effective June 1</div>
+                <div class="alert-time">1 hour ago</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div><!-- /right-col -->
+    </div>
+  </div>
+</main>
+
+<div class="style-tag">Style 5 — Meridian</div>
+
+<script>
+  const html = document.documentElement;
+  const icon = document.getElementById('themeIcon');
+  const label = document.getElementById('themeLabel');
+
+  function applyTheme(dark) {
+    if (dark) {
+      html.classList.add('dark');
+      icon.textContent = '☀️';
+      label.textContent = 'Light';
+    } else {
+      html.classList.remove('dark');
+      icon.textContent = '🌙';
+      label.textContent = 'Dark';
+    }
+  }
+
+  function toggleTheme() {
+    const isDark = html.classList.contains('dark');
+    localStorage.setItem('airgsa-theme', isDark ? 'light' : 'dark');
+    applyTheme(!isDark);
+  }
+
+  // On load: restore saved preference or use system preference
+  const saved = localStorage.getItem('airgsa-theme');
+  if (saved) {
+    applyTheme(saved === 'dark');
+  } else {
+    applyTheme(window.matchMedia('(prefers-color-scheme: dark)').matches);
+  }
+</script>
+</body>
+</html>

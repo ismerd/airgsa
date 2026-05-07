@@ -53,7 +53,7 @@ export default function FreightForwarderDashboard() {
         <Card>
           <CardHeader className="flex-row items-center justify-between">
             <CardTitle>Recent AWBs</CardTitle>
-            <Link href="/freightforwarder/tracking" className="text-xs font-semibold text-cyan-400 hover:underline">
+            <Link href="/freightforwarder/tracking" className="text-xs font-semibold text-brand hover:underline">
               Track all →
             </Link>
           </CardHeader>
@@ -61,7 +61,7 @@ export default function FreightForwarderDashboard() {
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
-                  <tr className="border-b border-white/10 text-xs font-semibold uppercase tracking-wider text-slate-500">
+                  <tr className="border-b border-border-ui text-xs font-semibold uppercase tracking-wider text-ink-muted">
                     <th className="pb-3 text-left">AWB</th>
                     <th className="pb-3 text-left">Route</th>
                     <th className="pb-3 text-left">Airline / Flight</th>
@@ -71,14 +71,14 @@ export default function FreightForwarderDashboard() {
                     <th className="pb-3 text-left">Status</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-white/5">
+                <tbody className="divide-y divide-border-ui">
                   {recentAwbs.map((awb) => (
-                    <tr key={awb.awb} className="text-slate-300">
-                      <td className="py-3 font-mono text-xs text-cyan-300">{awb.awb}</td>
-                      <td className="py-3 font-semibold text-white">{awb.origin} → {awb.destination}</td>
+                    <tr key={awb.awb} className="text-ink-muted">
+                      <td className="py-3 font-mono text-xs text-brand">{awb.awb}</td>
+                      <td className="py-3 font-semibold text-ink">{awb.origin} → {awb.destination}</td>
                       <td className="py-3">
-                        <p className="text-white">{awb.airline}</p>
-                        <p className="text-xs text-slate-500">{awb.flight}</p>
+                        <p className="text-ink">{awb.airline}</p>
+                        <p className="text-xs text-ink-muted">{awb.flight}</p>
                       </td>
                       <td className="py-3">{awb.weightKg.toLocaleString()} kg</td>
                       <td className="py-3">{awb.product}</td>

@@ -35,12 +35,12 @@ export default function GsaMarketplacePage() {
 
 function Metric({ label, value }: { label: string; value: string }) {
   return (
-    <Card className="bg-white text-slate-950">
+    <Card>
       <CardHeader>
-        <CardTitle className="text-sm text-slate-500">{label}</CardTitle>
+        <CardTitle className="text-sm text-ink-muted">{label}</CardTitle>
       </CardHeader>
       <CardContent>
-        <p className="text-3xl font-semibold">{value}</p>
+        <p className="text-3xl font-bold text-ink">{value}</p>
       </CardContent>
     </Card>
   );

@@ -71,7 +71,7 @@ export default function StatementsPage() {
               <Card>
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
-                    <FileText className="h-5 w-5 text-cyan-400" />
+                    <FileText className="h-5 w-5 text-brand" />
                     Request statement
                   </CardTitle>
                 </CardHeader>
@@ -83,7 +83,7 @@ export default function StatementsPage() {
                     </div>
                   )}
                   <div>
-                    <label className="mb-1.5 block text-xs font-semibold text-slate-400">Statement type</label>
+                    <label className="mb-1.5 block text-xs font-semibold text-ink-muted">Statement type</label>
                     <Select
                       value={form.type}
                       onChange={(e) => { setRequested(false); setForm((f) => ({ ...f, type: (e.target as HTMLSelectElement).value })); }}
@@ -94,20 +94,20 @@ export default function StatementsPage() {
                   </div>
                   <div className="grid grid-cols-2 gap-3">
                     <div>
-                      <label className="mb-1.5 block text-xs font-semibold text-slate-400">From</label>
+                      <label className="mb-1.5 block text-xs font-semibold text-ink-muted">From</label>
                       <Input type="date" value={form.from} onChange={(e) => setForm((f) => ({ ...f, from: e.target.value }))} />
                     </div>
                     <div>
-                      <label className="mb-1.5 block text-xs font-semibold text-slate-400">To</label>
+                      <label className="mb-1.5 block text-xs font-semibold text-ink-muted">To</label>
                       <Input type="date" value={form.to} onChange={(e) => setForm((f) => ({ ...f, to: e.target.value }))} />
                     </div>
                   </div>
                   <div>
-                    <label className="mb-1.5 block text-xs font-semibold text-slate-400">Filter by AWB (optional)</label>
+                    <label className="mb-1.5 block text-xs font-semibold text-ink-muted">Filter by AWB (optional)</label>
                     <Input placeholder="e.g. 235-12345678" className="font-mono" />
                   </div>
                   <div>
-                    <label className="mb-1.5 block text-xs font-semibold text-slate-400">Format</label>
+                    <label className="mb-1.5 block text-xs font-semibold text-ink-muted">Format</label>
                     <Select>
                       <option>PDF</option>
                       <option>Excel (.xlsx)</option>
@@ -128,23 +128,23 @@ export default function StatementsPage() {
               </CardHeader>
               <CardContent>
                 {statements.length === 0 ? (
-                  <p className="text-sm text-slate-400">No statements yet.</p>
+                  <p className="text-sm text-ink-muted">No statements yet.</p>
                 ) : (
-                  <div className="divide-y divide-white/10">
+                  <div className="divide-y divide-border-ui">
                     {statements.map((stmt) => (
                       <div key={stmt.id} className="flex items-center justify-between gap-4 py-4">
                         <div className="flex items-start gap-3">
-                          <FileText className="mt-0.5 h-4 w-4 shrink-0 text-slate-500" />
+                          <FileText className="mt-0.5 h-4 w-4 shrink-0 text-ink-muted" />
                           <div>
-                            <p className="text-sm font-semibold text-white">{stmt.type}</p>
-                            <p className="text-xs text-slate-400">Period: {stmt.period}</p>
-                            <p className="text-xs text-slate-500">Requested {stmt.requestedAt}{stmt.size ? ` · ${stmt.size}` : ""}</p>
+                            <p className="text-sm font-semibold text-ink">{stmt.type}</p>
+                            <p className="text-xs text-ink-muted">Period: {stmt.period}</p>
+                            <p className="text-xs text-ink-muted">Requested {stmt.requestedAt}{stmt.size ? ` · ${stmt.size}` : ""}</p>
                           </div>
                         </div>
                         <div className="flex items-center gap-3">
                           <Badge variant={statusVariant[stmt.status]}>{stmt.status}</Badge>
                           {stmt.status === "ready" && (
-                            <button className="rounded-md p-1.5 text-slate-400 transition-colors hover:bg-white/10 hover:text-white" title="Download">
+                            <button className="rounded-md p-1.5 text-ink-muted transition-colors hover:bg-surface2 hover:text-ink" title="Download">
                               <Download className="h-4 w-4" />
                             </button>
                           )}

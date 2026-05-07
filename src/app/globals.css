@@ -1,68 +1,171 @@
 @import "leaflet/dist/leaflet.css";
 @import "tailwindcss";
 
+/* ── Design Token Palette ── */
 :root {
-  --background: #020617;
-  --foreground: #f8fafc;
+  --background: #F0F4FF;
+  --foreground: #0B1E4F;
+
+  /* Surfaces */
+  --surface:   #FFFFFF;
+  --surface2:  #F7F9FF;
+  --surface3:  #EEF2FB;
+  --border-ui: #DDE4F5;
+
+  /* Brand */
+  --brand:        #1A5AFF;
+  --brand-light:  #EBF1FF;
+  --brand-xlight: #F4F7FF;
+  --brand-dark:   #0D3DAF;
+  --cyan-accent:  #00AADD;
+  --navy:         #0B1E4F;
+
+  /* Text */
+  --ink:       #0B1E4F;
+  --ink-muted: #7A8BB0;
+  --ink-faint: #B0BDD8;
+
+  /* Semantic */
+  --success:    #0B7A52;
+  --success-bg: #E6F7F1;
+  --warning:    #B45309;
+  --warning-bg: #FEF3C7;
+  --danger:     #C0392B;
+  --danger-bg:  #FEECEB;
 }
 
+/* ── Tailwind v4 Theme Mapping ── */
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --font-sans: var(--font-outfit);
+  --font-mono: var(--font-jetbrains);
+
+  --color-page:         var(--background);
+  --color-surface:      var(--surface);
+  --color-surface2:     var(--surface2);
+  --color-surface3:     var(--surface3);
+  --color-border-ui:    var(--border-ui);
+
+  --color-brand:        var(--brand);
+  --color-brand-light:  var(--brand-light);
+  --color-brand-xlight: var(--brand-xlight);
+  --color-brand-dark:   var(--brand-dark);
+  --color-cyan-accent:  var(--cyan-accent);
+  --color-navy:         var(--navy);
+
+  --color-ink:          var(--ink);
+  --color-ink-muted:    var(--ink-muted);
+  --color-ink-faint:    var(--ink-faint);
+
+  --color-success:      var(--success);
+  --color-success-bg:   var(--success-bg);
+  --color-warning:      var(--warning);
+  --color-warning-bg:   var(--warning-bg);
+  --color-danger:       var(--danger);
+  --color-danger-bg:    var(--danger-bg);
 }
 
+/* ── Dark Mode Overrides ── */
+html.dark {
+  --background: #0A1628;
+  --surface:    #0F1E38;
+  --surface2:   #0B1630;
+  --surface3:   #131E3A;
+  --border-ui:  #1C2D52;
+
+  --ink:        #E4ECFF;
+  --ink-muted:  #7A8BB0;
+  --ink-faint:  #3A4B70;
+
+  --brand-light:  rgba(26, 90, 255, 0.14);
+  --brand-xlight: rgba(26, 90, 255, 0.07);
+
+  --success-bg: rgba(11, 122, 82, 0.16);
+  --warning-bg: rgba(180, 83, 9, 0.16);
+  --danger-bg:  rgba(192, 57, 43, 0.16);
+}
+
+/* ── Dark mode Leaflet ── */
+html.dark .flight-map {
+  background: #0B1630;
+}
+html.dark .flight-map .leaflet-control-zoom {
+  border-color: #1C2D52;
+}
+html.dark .flight-map .leaflet-control-zoom a {
+  background: #0F1E38;
+  border-bottom-color: #1C2D52;
+  color: #E4ECFF;
+}
+html.dark .flight-map .leaflet-control-zoom a:hover {
+  background: rgba(26,90,255,0.14);
+  color: var(--brand);
+}
+html.dark .flight-map .leaflet-control-attribution {
+  background: rgba(10,22,40,0.85);
+  color: #7A8BB0;
+}
+html.dark .flight-map .leaflet-tooltip {
+  border-color: #1C2D52;
+  background: #0F1E38;
+  color: #E4ECFF;
+}
+
+/* ── Base ── */
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: var(--font-geist-sans), Arial, Helvetica, sans-serif;
 }
 
 ::selection {
-  background: #00aeef;
-  color: #0a1f44;
+  background: var(--brand);
+  color: #ffffff;
 }
 
+/* ── Leaflet — light mode ── */
 .flight-map {
-  background: #020617;
+  background: #EEF2FB;
   font-family: inherit;
 }
 
 .flight-map .leaflet-control-zoom {
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  border-radius: 6px;
+  border: 1px solid var(--border-ui);
+  border-radius: 8px;
   overflow: hidden;
+  box-shadow: 0 2px 8px rgba(11,30,79,0.08);
 }
 
 .flight-map .leaflet-control-zoom a {
-  background: rgba(15, 23, 42, 0.94);
-  border-bottom-color: rgba(255, 255, 255, 0.12);
-  color: #e2e8f0;
+  background: #ffffff;
+  border-bottom-color: var(--border-ui);
+  color: var(--ink);
+  font-weight: 600;
 }
 
 .flight-map .leaflet-control-zoom a:hover {
-  background: rgba(30, 41, 59, 0.98);
-  color: #ffffff;
+  background: var(--brand-light);
+  color: var(--brand);
 }
 
 .flight-map .leaflet-control-attribution {
-  background: rgba(2, 6, 23, 0.72);
-  color: #94a3b8;
+  background: rgba(255,255,255,0.85);
+  color: var(--ink-muted);
+  font-size: 10px;
 }
 
 .flight-map .leaflet-control-attribution a {
-  color: #bae6fd;
+  color: var(--brand);
 }
 
 .flight-map .leaflet-tooltip {
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  border-radius: 6px;
-  background: rgba(248, 250, 252, 0.96);
-  color: #0f172a;
-  box-shadow: 0 14px 35px rgba(2, 6, 23, 0.3);
+  border: 1px solid var(--border-ui);
+  border-radius: 8px;
+  background: #ffffff;
+  color: var(--ink);
+  box-shadow: 0 4px 16px rgba(11,30,79,0.12);
+  font-family: inherit;
 }
 
+/* ── Flight aircraft marker ── */
 .flight-aircraft-marker {
   background: transparent;
   border: 0;
@@ -74,17 +177,15 @@ body {
   width: 34px;
   height: 34px;
   place-items: center;
-  filter: drop-shadow(1px 2px 1px rgba(2, 6, 23, 0.72));
+  filter: drop-shadow(1px 2px 3px rgba(11,30,79,0.25));
   transform: rotate(var(--flight-heading));
-  transition:
-    filter 160ms ease,
-    transform 160ms ease;
+  transition: filter 160ms ease, transform 160ms ease;
 }
 
 .flight-aircraft.is-selected {
   filter:
-    drop-shadow(0 0 3px color-mix(in srgb, var(--flight-color) 70%, transparent))
-    drop-shadow(1px 2px 1px rgba(2, 6, 23, 0.78));
+    drop-shadow(0 0 4px color-mix(in srgb, var(--flight-color) 70%, transparent))
+    drop-shadow(1px 2px 3px rgba(11,30,79,0.3));
 }
 
 .flight-aircraft svg {
@@ -100,7 +201,7 @@ body {
 
 .flight-aircraft-outline {
   fill: none;
-  stroke: rgba(2, 6, 23, 0.92);
+  stroke: rgba(255,255,255,0.9);
   stroke-linejoin: round;
   stroke-width: 5;
 }

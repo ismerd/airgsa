@@ -25,21 +25,21 @@ export function AirlinePerformancePeriodPanel() {
       header: "Country",
       cell: (row) => (
         <div>
-          <p className="font-semibold text-white">{row.country}</p>
-          <p className="text-xs text-slate-500">{row.region}</p>
+          <p className="font-semibold text-ink">{row.country}</p>
+          <p className="text-xs text-ink-muted">{row.region}</p>
         </div>
       ),
     },
     {
       header: "Revenue",
-      className: "font-semibold text-white",
+      className: "font-semibold text-ink",
       cell: (row) => {
         const cur = resolveCurrency(row.localCurrencyCode);
         return (
           <span className="flex items-center gap-1.5">
             {formatMoney(row.revenue, cur.symbol, cur.rate)}
             {cur.code !== currency.code && (
-              <span className="rounded bg-slate-700 px-1 py-0.5 text-[10px] font-medium text-slate-300">
+              <span className="rounded bg-surface2 px-1 py-0.5 text-[10px] font-medium text-ink-muted">
                 {cur.code}
               </span>
             )}
@@ -55,7 +55,7 @@ export function AirlinePerformancePeriodPanel() {
           <span className="flex items-center gap-1.5">
             {cur.symbol}{(row.yieldPerKg * cur.rate).toFixed(2)}
             {cur.code !== currency.code && (
-              <span className="rounded bg-slate-700 px-1 py-0.5 text-[10px] font-medium text-slate-300">
+              <span className="rounded bg-surface2 px-1 py-0.5 text-[10px] font-medium text-ink-muted">
                 {cur.code}
               </span>
             )}
@@ -73,12 +73,12 @@ export function AirlinePerformancePeriodPanel() {
       header: "GSA",
       cell: (row) => (
         <div>
-          <p className="font-semibold text-white">{row.gsaName}</p>
-          <p className="text-xs text-slate-500">{row.assignedMarkets}</p>
+          <p className="font-semibold text-ink">{row.gsaName}</p>
+          <p className="text-xs text-ink-muted">{row.assignedMarkets}</p>
         </div>
       ),
     },
-    { header: "Revenue", cell: (row) => fmt(row.revenue), className: "font-semibold text-white" },
+    { header: "Revenue", cell: (row) => fmt(row.revenue), className: "font-semibold text-ink" },
     { header: "Yield / kg", cell: (row) => `${symbol}${(row.yieldPerKg * rate).toFixed(2)}` },
     { header: "Loadfactor", cell: (row) => `${row.loadFactor}%` },
     { header: "Tonnage", cell: (row) => `${row.tonnage.toFixed(1)} t` },
@@ -139,9 +139,9 @@ export function AirlinePerformancePeriodPanel() {
 
 function Metric({ label, value }: { label: string; value: string }) {
   return (
-    <div className="rounded-md border border-white/10 bg-slate-950/60 p-4">
-      <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">{label}</p>
-      <p className="mt-2 text-xl font-semibold text-white">{value}</p>
+    <div className="rounded-xl border border-border-ui bg-surface2 p-4">
+      <p className="text-xs font-semibold uppercase tracking-[0.16em] text-ink-muted">{label}</p>
+      <p className="mt-2 text-xl font-semibold text-ink">{value}</p>
     </div>
   );
 }

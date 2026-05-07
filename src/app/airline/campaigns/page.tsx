@@ -20,7 +20,7 @@ export default function AirlineCampaignsPage() {
       <main className="space-y-6 p-5">
 
         <div className="flex items-center justify-between">
-          <p className="max-w-xl text-sm text-slate-400">
+          <p className="max-w-xl text-sm text-ink-muted">
             Publish route announcements, capacity highlights, and updates directly to your GSA partners. No duplication. No inconsistencies.
           </p>
           <Button className="gap-2">
@@ -38,8 +38,8 @@ export default function AirlineCampaignsPage() {
           ].map(({ label, value }) => (
             <Card key={label}>
               <CardContent className="p-5">
-                <p className="text-xs font-semibold uppercase tracking-widest text-slate-500">{label}</p>
-                <p className="mt-1 text-3xl font-semibold text-white">{value}</p>
+                <p className="text-xs font-semibold uppercase tracking-widest text-ink-muted">{label}</p>
+                <p className="mt-1 text-3xl font-semibold text-ink">{value}</p>
               </CardContent>
             </Card>
           ))}
@@ -48,7 +48,7 @@ export default function AirlineCampaignsPage() {
         {published.length > 0 && (
           <section className="space-y-3">
             <div className="flex items-center gap-2">
-              <h2 className="text-sm font-semibold text-white">Published</h2>
+              <h2 className="text-sm font-semibold text-ink">Published</h2>
               <Badge variant="success">{published.length}</Badge>
             </div>
             <div className="grid gap-4 xl:grid-cols-2">
@@ -60,7 +60,7 @@ export default function AirlineCampaignsPage() {
         {scheduled.length > 0 && (
           <section className="space-y-3">
             <div className="flex items-center gap-2">
-              <h2 className="text-sm font-semibold text-white">Scheduled</h2>
+              <h2 className="text-sm font-semibold text-ink">Scheduled</h2>
               <Badge variant="warning">{scheduled.length}</Badge>
             </div>
             <div className="grid gap-4 xl:grid-cols-2">
@@ -72,7 +72,7 @@ export default function AirlineCampaignsPage() {
         {drafts.length > 0 && (
           <section className="space-y-3">
             <div className="flex items-center gap-2">
-              <h2 className="text-sm font-semibold text-white">Drafts</h2>
+              <h2 className="text-sm font-semibold text-ink">Drafts</h2>
               <Badge variant="muted">{drafts.length}</Badge>
             </div>
             <div className="grid gap-4 xl:grid-cols-2">
@@ -80,7 +80,7 @@ export default function AirlineCampaignsPage() {
                 <div key={c.id} className="relative">
                   <CampaignCard campaign={c} />
                   <div className="absolute right-4 top-4">
-                    <button className="flex items-center gap-1.5 rounded border border-white/10 bg-slate-900 px-2.5 py-1 text-xs text-slate-400 hover:text-white transition-colors">
+                    <button className="flex items-center gap-1.5 rounded border border-border-ui bg-surface2 px-2.5 py-1 text-xs text-ink-muted hover:text-ink transition-colors">
                       <Edit3 className="h-3 w-3" />
                       Edit draft
                     </button>

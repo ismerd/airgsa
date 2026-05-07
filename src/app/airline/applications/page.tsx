@@ -22,7 +22,7 @@ const columns: Column<TenderApplication>[] = [
     cell: (row) => {
       const rank = rankedApplications.findIndex((application) => application.id === row.id) + 1;
       return (
-        <div className="inline-flex h-8 w-8 items-center justify-center rounded-md bg-white/10 text-sm font-semibold text-white">
+        <div className="inline-flex h-8 w-8 items-center justify-center rounded-md bg-surface2 text-sm font-semibold text-ink">
           {rank}
         </div>
       );
@@ -31,7 +31,7 @@ const columns: Column<TenderApplication>[] = [
   {
     header: "GSA",
     cell: (row) => (
-      <Link href={`/airline/gsa/${row.gsaId}`} className="font-semibold text-cyan-100 hover:text-cyan-300">
+      <Link href={`/airline/gsa/${row.gsaId}`} className="font-semibold text-brand hover:text-brand">
         {row.gsaName}
       </Link>
     ),
@@ -39,7 +39,7 @@ const columns: Column<TenderApplication>[] = [
   {
     header: "Tender",
     cell: (row) => (
-      <span className="block max-w-[220px] text-slate-300">
+      <span className="block max-w-[220px] text-ink-muted">
         {tenderTitleById.get(row.tenderId) ?? row.tenderId}
       </span>
     ),
@@ -94,7 +94,7 @@ export default function ApplicationsPage() {
         <Card>
           <CardHeader>
             <CardTitle>Application ranking</CardTitle>
-            <p className="text-sm text-slate-400">
+            <p className="text-sm text-ink-muted">
               Compare commercial, network, compliance, and mock AI fit before shortlisting or award.
             </p>
           </CardHeader>
@@ -109,13 +109,13 @@ export default function ApplicationsPage() {
 
 function InsightMetric({ label, value, helper }: { label: string; value: string; helper: string }) {
   return (
-    <div className="rounded-lg border border-white/10 bg-slate-950/40 p-4">
-      <p className="flex items-center gap-2 text-sm font-medium text-slate-400">
-        <Sparkles className="h-4 w-4 text-cyan-300" />
+    <div className="rounded-lg border border-border-ui bg-surface2 p-4">
+      <p className="flex items-center gap-2 text-sm font-medium text-ink-muted">
+        <Sparkles className="h-4 w-4 text-brand" />
         {label}
       </p>
-      <p className="mt-2 text-2xl font-semibold text-white">{value}</p>
-      <p className="mt-1 text-sm text-slate-500">{helper}</p>
+      <p className="mt-2 text-2xl font-semibold text-ink">{value}</p>
+      <p className="mt-1 text-sm text-ink-muted">{helper}</p>
     </div>
   );
 }
@@ -130,8 +130,8 @@ function AiRating({ rating }: { rating: number }) {
         <Star className="mr-1 h-3.5 w-3.5 fill-current" />
         {rating.toFixed(1)}/5.0
       </Badge>
-      <div className="h-1.5 w-28 overflow-hidden rounded-full bg-slate-800">
-        <div className="h-full rounded-full bg-cyan-300" style={{ width }} />
+      <div className="h-1.5 w-28 overflow-hidden rounded-full bg-black/10">
+        <div className="h-full rounded-full bg-brand" style={{ width }} />
       </div>
     </div>
   );

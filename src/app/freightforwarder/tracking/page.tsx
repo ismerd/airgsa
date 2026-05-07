@@ -175,9 +175,9 @@ export default function TrackingPage() {
               <CardTitle>Track your shipment</CardTitle>
             </CardHeader>
             <CardContent>
-              <p className="mb-4 text-sm text-slate-400">
+              <p className="mb-4 text-sm text-ink-muted">
                 Enter an Air Waybill number to see real-time status and tracking events.
-                <span className="ml-1 text-slate-500">Try: 235-12345678 · 176-44556677 · 080-77889900</span>
+                <span className="ml-1 text-ink-muted">Try: 235-12345678 · 176-44556677 · 080-77889900</span>
               </p>
               <div className="flex gap-3">
                 <Input
@@ -199,8 +199,8 @@ export default function TrackingPage() {
           {result === "not-found" && (
             <Card>
               <CardContent className="p-8 text-center">
-                <p className="text-slate-400">No shipment found for <span className="font-mono text-white">{query}</span>.</p>
-                <p className="mt-1 text-sm text-slate-500">Check the AWB number and try again.</p>
+                <p className="text-ink-muted">No shipment found for <span className="font-mono text-ink">{query}</span>.</p>
+                <p className="mt-1 text-sm text-ink-muted">Check the AWB number and try again.</p>
               </CardContent>
             </Card>
           )}
@@ -212,9 +212,9 @@ export default function TrackingPage() {
                 <CardContent className="p-6">
                   <div className="flex flex-wrap items-start justify-between gap-4">
                     <div>
-                      <p className="font-mono text-lg font-semibold text-cyan-300">{result.awb}</p>
-                      <p className="mt-1 text-xl font-semibold text-white">{result.origin} → {result.destination}</p>
-                      <p className="mt-1 text-sm text-slate-400">{result.airline} · {result.flight}</p>
+                      <p className="font-mono text-lg font-semibold text-brand">{result.awb}</p>
+                      <p className="mt-1 text-xl font-semibold text-ink">{result.origin} → {result.destination}</p>
+                      <p className="mt-1 text-sm text-ink-muted">{result.airline} · {result.flight}</p>
                     </div>
                     <Badge variant={statusVariant[result.status]} className="text-sm">{result.status}</Badge>
                   </div>
@@ -226,8 +226,8 @@ export default function TrackingPage() {
                       { label: "ETA", value: result.eta },
                     ].map((d) => (
                       <div key={d.label}>
-                        <p className="text-xs text-slate-500">{d.label}</p>
-                        <p className="mt-0.5 font-medium text-white">{d.value}</p>
+                        <p className="text-xs text-ink-muted">{d.label}</p>
+                        <p className="mt-0.5 font-medium text-ink">{d.value}</p>
                       </div>
                     ))}
                   </div>
@@ -250,20 +250,20 @@ export default function TrackingPage() {
                             {event.done ? (
                               <CheckCircle2 className="h-5 w-5 shrink-0 text-emerald-400" />
                             ) : event.active ? (
-                              <Loader2 className="h-5 w-5 shrink-0 animate-spin text-cyan-400" />
+                              <Loader2 className="h-5 w-5 shrink-0 animate-spin text-brand" />
                             ) : (
                               <Circle className="h-5 w-5 shrink-0 text-slate-600" />
                             )}
                             {!isLast && (
-                              <div className={`my-1 w-px flex-1 ${event.done ? "bg-emerald-400/30" : "bg-white/10"}`} style={{ minHeight: "28px" }} />
+                              <div className={`my-1 w-px flex-1 ${event.done ? "bg-emerald-400/30" : "bg-black/10"}`} style={{ minHeight: "28px" }} />
                             )}
                           </div>
                           {/* Content */}
                           <div className="pb-6">
-                            <p className={`text-sm font-semibold ${event.done ? "text-white" : event.active ? "text-cyan-300" : "text-slate-500"}`}>
+                            <p className={`text-sm font-semibold ${event.done ? "text-ink" : event.active ? "text-brand" : "text-ink-muted"}`}>
                               {event.label}
                             </p>
-                            <div className="mt-0.5 flex flex-wrap items-center gap-2 text-xs text-slate-500">
+                            <div className="mt-0.5 flex flex-wrap items-center gap-2 text-xs text-ink-muted">
                               <span className="flex items-center gap-1">
                                 <MapPin className="h-3 w-3" />
                                 {event.location}

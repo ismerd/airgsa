@@ -10,7 +10,7 @@ export function TimeRangeFilter() {
   return (
     <div className="flex flex-wrap items-center justify-end gap-2">
       {/* Period pills — horizontally scrollable on mobile */}
-      <div className="flex overflow-x-auto rounded-md border border-white/10 bg-slate-900/80 p-0.5 scrollbar-none">
+      <div className="flex overflow-x-auto rounded-md border border-border-ui bg-surface2 p-0.5 scrollbar-none">
         {performancePeriodOptions.map((p) => (
           <PeriodButton
             key={p.id}
@@ -34,15 +34,15 @@ export function TimeRangeFilter() {
             value={customStart}
             max={customEnd}
             onChange={(e) => setCustomStart(e.target.value)}
-            className="h-8 rounded-md border border-white/10 bg-slate-950/80 px-2 text-xs text-white outline-none focus:border-cyan-300"
+            className="h-8 rounded-md border border-border-ui bg-surface2 px-2 text-xs text-ink outline-none focus:border-brand"
           />
-          <span className="text-xs text-slate-500">–</span>
+          <span className="text-xs text-ink-muted">–</span>
           <input
             type="date"
             value={customEnd}
             min={customStart}
             onChange={(e) => setCustomEnd(e.target.value)}
-            className="h-8 rounded-md border border-white/10 bg-slate-950/80 px-2 text-xs text-white outline-none focus:border-cyan-300"
+            className="h-8 rounded-md border border-border-ui bg-surface2 px-2 text-xs text-ink outline-none focus:border-brand"
           />
         </div>
       )}
@@ -57,7 +57,7 @@ function PeriodButton({ label, active, onClick }: { label: string; active: boole
       onClick={onClick}
       className={cn(
         "whitespace-nowrap rounded px-3 py-1.5 text-xs font-medium transition-colors",
-        active ? "bg-cyan-400 text-slate-950" : "text-slate-400 hover:text-white",
+        active ? "bg-brand text-white" : "text-ink-muted hover:text-ink",
       )}
     >
       {label}

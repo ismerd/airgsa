@@ -12,7 +12,7 @@ const FlightLeafletMap = dynamic(
   {
     ssr: false,
     loading: () => (
-      <div className="flex h-full min-h-[420px] items-center justify-center bg-slate-950 text-sm text-slate-400">
+      <div className="flex h-full min-h-[420px] items-center justify-center bg-surface2 text-sm text-ink-muted">
         Loading flight map...
       </div>
     ),
@@ -59,7 +59,7 @@ export function FlightWorldMap({ title, subtitle, flights, markerColorMode }: Fl
         <div className="flex flex-col gap-2 lg:flex-row lg:items-start lg:justify-between">
           <div>
             <CardTitle>{title}</CardTitle>
-            <p className="mt-1 text-sm text-slate-400">{subtitle}</p>
+            <p className="mt-1 text-sm text-ink-muted">{subtitle}</p>
           </div>
           <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
             <SummaryMetric icon={Plane} label="Flights" value={String(summary.totalFlights)} />
@@ -71,7 +71,7 @@ export function FlightWorldMap({ title, subtitle, flights, markerColorMode }: Fl
       </CardHeader>
 
       <CardContent>
-        <div className="grid overflow-hidden rounded-md border border-white/10 bg-slate-950 xl:grid-cols-[minmax(0,1fr)_340px]">
+        <div className="grid overflow-hidden rounded-md border border-border-ui bg-surface2 xl:grid-cols-[minmax(0,1fr)_340px]">
           <div className="relative min-h-[420px]">
             {flights.length > 0 ? (
               <FlightLeafletMap
@@ -83,13 +83,13 @@ export function FlightWorldMap({ title, subtitle, flights, markerColorMode }: Fl
                 }
               />
             ) : (
-              <div className="flex h-full min-h-[420px] items-center justify-center text-sm text-slate-400">
+              <div className="flex h-full min-h-[420px] items-center justify-center text-sm text-ink-muted">
                 No flights match this dashboard context.
               </div>
             )}
           </div>
 
-          <aside className="border-t border-white/10 bg-slate-950/95 p-4 xl:border-l xl:border-t-0">
+          <aside className="border-t border-border-ui bg-surface p-4 xl:border-l xl:border-t-0">
             {selectedFlight ? (
               <FlightDetails flight={selectedFlight} markerColorMode={markerColorMode} />
             ) : (
@@ -106,21 +106,21 @@ export function FlightWorldMap({ title, subtitle, flights, markerColorMode }: Fl
 
 function EmptyFlightDetails() {
   return (
-    <div className="mb-5 rounded-md border border-dashed border-white/10 bg-white/[0.03] p-4">
-      <p className="text-sm font-semibold text-white">No flight selected</p>
-      <p className="mt-1 text-xs text-slate-400">Click an aircraft on the map to show route and shipment statistics.</p>
+    <div className="mb-5 rounded-md border border-dashed border-border-ui bg-surface p-4">
+      <p className="text-sm font-semibold text-ink">No flight selected</p>
+      <p className="mt-1 text-xs text-ink-muted">Click an aircraft on the map to show route and shipment statistics.</p>
     </div>
   );
 }
 
 function SummaryMetric({ icon: Icon, label, value }: { icon: typeof Plane; label: string; value: string }) {
   return (
-    <div className="min-w-32 rounded-md border border-white/10 bg-slate-950/60 px-3 py-2">
-      <div className="flex items-center gap-2 text-xs text-slate-400">
-        <Icon className="h-3.5 w-3.5 text-cyan-200" />
+    <div className="min-w-32 rounded-md border border-border-ui bg-surface2 px-3 py-2">
+      <div className="flex items-center gap-2 text-xs text-ink-muted">
+        <Icon className="h-3.5 w-3.5 text-brand" />
         {label}
       </div>
-      <p className="mt-1 text-sm font-semibold text-white">{value}</p>
+      <p className="mt-1 text-sm font-semibold text-ink">{value}</p>
     </div>
   );
 }
@@ -136,12 +136,12 @@ function FlightDetails({
   const products = Object.entries(flight.products).filter(([, value]) => Number(value) > 0) as [keyof ProductMix, number][];
 
   return (
-    <div className="mb-5 rounded-md border border-white/10 bg-white/[0.04] p-4">
+    <div className="mb-5 rounded-md border border-border-ui bg-surface p-4">
       <div className="flex items-start gap-3">
         <span className="mt-1 h-3 w-3 shrink-0 rounded-full" style={{ backgroundColor: markerColor }} />
         <div>
-          <p className="text-sm font-semibold text-white">{flight.flightNumber}</p>
-          <p className="text-xs text-slate-400">
+          <p className="text-sm font-semibold text-ink">{flight.flightNumber}</p>
+          <p className="text-xs text-ink-muted">
             {flight.origin.airportCode} {flight.origin.airportName} to {flight.destination.airportCode}{" "}
             {flight.destination.airportName}
           </p>
@@ -158,15 +158,15 @@ function FlightDetails({
       </div>
 
       <div className="mt-4">
-        <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">Product mix</p>
+        <p className="text-xs font-semibold uppercase tracking-[0.16em] text-ink-muted">Product mix</p>
         <div className="mt-3 space-y-2">
           {products.map(([key, value]) => (
             <div key={key}>
               <div className="mb-1 flex items-center justify-between gap-3 text-xs">
-                <span className="text-slate-300">{productLabels[key]}</span>
-                <span className="font-semibold text-white">{value}%</span>
+                <span className="text-ink-muted">{productLabels[key]}</span>
+                <span className="font-semibold text-ink">{value}%</span>
               </div>
-              <div className="h-1.5 overflow-hidden rounded-full bg-white/10">
+              <div className="h-1.5 overflow-hidden rounded-full bg-black/10">
                 <div className="h-full rounded-full" style={{ width: `${value}%`, backgroundColor: markerColor }} />
               </div>
             </div>
@@ -180,8 +180,8 @@ function FlightDetails({
 function Detail({ label, value }: { label: string; value: string }) {
   return (
     <div>
-      <p className="text-xs text-slate-500">{label}</p>
-      <p className="mt-0.5 font-medium text-slate-100">{value}</p>
+      <p className="text-xs text-ink-muted">{label}</p>
+      <p className="mt-0.5 font-medium text-ink">{value}</p>
     </div>
   );
 }
@@ -191,12 +191,12 @@ function Legend({ title, items }: { title: string; items: { name: string; color:
 
   return (
     <div className="mt-4">
-      <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">{title}</p>
+      <p className="text-xs font-semibold uppercase tracking-[0.16em] text-ink-muted">{title}</p>
       <div className="mt-2 flex flex-wrap gap-2">
         {items.map((item) => (
-          <div key={`${title}-${item.name}`} className="flex items-center gap-2 rounded-full border border-white/10 px-2.5 py-1">
+          <div key={`${title}-${item.name}`} className="flex items-center gap-2 rounded-full border border-border-ui px-2.5 py-1">
             <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: item.color }} />
-            <span className="text-xs text-slate-300">{item.name}</span>
+            <span className="text-xs text-ink-muted">{item.name}</span>
           </div>
         ))}
       </div>

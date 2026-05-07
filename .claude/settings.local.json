@@ -15,7 +15,13 @@
       "Bash(npx next *)",
       "Bash(node -e \"const p = require\\('./package.json'\\); console.log\\('next:', p.dependencies?.next ?? p.devDependencies?.next\\)\")",
       "Bash(Remove-Item -Recurse -Force .next -ErrorAction SilentlyContinue)",
-      "Bash(Write-Host \"Cache cleared\")"
+      "Bash(Write-Host \"Cache cleared\")",
+      "WebSearch",
+      "WebFetch(domain:github.com)",
+      "WebFetch(domain:raw.githubusercontent.com)",
+      "PowerShell(New-Item -ItemType Directory -Path \"C:\\\\Users\\\\ierdo\\\\Desktop\\\\airgsa\\\\design-previews\" -Force)",
+      "Bash(grep -v \"^\\\\s*//\")",
+      "Bash(npm run *)"
     ]
   }
 }

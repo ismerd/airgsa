@@ -78,20 +78,20 @@ export default function RoutesPage() {
               <CardTitle>Route search</CardTitle>
             </CardHeader>
             <CardContent>
-              <p className="mb-4 text-sm text-slate-400">Find available air cargo routes between airports. Try FRA → DXB or OSL → ICN.</p>
+              <p className="mb-4 text-sm text-ink-muted">Find available air cargo routes between airports. Try FRA → DXB or OSL → ICN.</p>
               <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
                 <div className="flex-1">
-                  <label className="mb-1.5 block text-xs font-semibold text-slate-400">Origin</label>
+                  <label className="mb-1.5 block text-xs font-semibold text-ink-muted">Origin</label>
                   <Select value={origin} onChange={(e) => setOrigin((e.target as HTMLSelectElement).value)}>
                     <option value="">Select origin</option>
                     {airports.map((a) => <option key={a.code} value={a.code}>{a.code} – {a.name}</option>)}
                   </Select>
                 </div>
                 <div className="hidden sm:flex sm:pb-2">
-                  <ArrowRight className="h-5 w-5 text-slate-500" />
+                  <ArrowRight className="h-5 w-5 text-ink-muted" />
                 </div>
                 <div className="flex-1">
-                  <label className="mb-1.5 block text-xs font-semibold text-slate-400">Destination</label>
+                  <label className="mb-1.5 block text-xs font-semibold text-ink-muted">Destination</label>
                   <Select value={destination} onChange={(e) => setDestination((e.target as HTMLSelectElement).value)}>
                     <option value="">Select destination</option>
                     {airports.map((a) => <option key={a.code} value={a.code}>{a.code} – {a.name}</option>)}
@@ -109,20 +109,20 @@ export default function RoutesPage() {
             results.length === 0 ? (
               <Card>
                 <CardContent className="p-8 text-center">
-                  <p className="text-slate-400">No direct or connecting routes found for <span className="text-white">{origin} → {destination}</span>.</p>
-                  <p className="mt-1 text-sm text-slate-500">Try a different origin or destination.</p>
+                  <p className="text-ink-muted">No direct or connecting routes found for <span className="text-ink">{origin} → {destination}</span>.</p>
+                  <p className="mt-1 text-sm text-ink-muted">Try a different origin or destination.</p>
                 </CardContent>
               </Card>
             ) : (
               <div className="space-y-4">
-                <p className="text-sm text-slate-400">{results.length} route{results.length > 1 ? "s" : ""} found for <span className="text-white">{origin} → {destination}</span></p>
+                <p className="text-sm text-ink-muted">{results.length} route{results.length > 1 ? "s" : ""} found for <span className="text-ink">{origin} → {destination}</span></p>
                 {results.map((route) => (
-                  <Card key={route.id} className={route.highlighted ? "border-cyan-400/30" : ""}>
+                  <Card key={route.id} className={route.highlighted ? "border-brand/30" : ""}>
                     <CardContent className="p-5">
                       <div className="flex flex-wrap items-start justify-between gap-4">
                         <div>
                           <div className="flex items-center gap-2">
-                            <span className="font-semibold text-white">{route.airline}</span>
+                            <span className="font-semibold text-ink">{route.airline}</span>
                             {route.highlighted && (
                               <Badge variant="default" className="flex items-center gap-1">
                                 <Zap className="h-3 w-3" /> Best option
@@ -134,25 +134,25 @@ export default function RoutesPage() {
                               <Badge variant="muted">{route.stops} stop</Badge>
                             )}
                           </div>
-                          <p className="mt-1 text-sm text-slate-400">
+                          <p className="mt-1 text-sm text-ink-muted">
                             {route.flights.join(" → ")} · {origin} → {destination}
                           </p>
                         </div>
                         <div className="text-right">
-                          <p className="text-xl font-semibold text-white">
-                            ${route.ratePerKg.toFixed(2)}<span className="text-sm font-normal text-slate-400">/kg</span>
+                          <p className="text-xl font-semibold text-ink">
+                            ${route.ratePerKg.toFixed(2)}<span className="text-sm font-normal text-ink-muted">/kg</span>
                           </p>
-                          <p className="text-xs text-slate-500">min {route.minKg} kg</p>
+                          <p className="text-xs text-ink-muted">min {route.minKg} kg</p>
                         </div>
                       </div>
                       <div className="mt-4 grid grid-cols-2 gap-3 text-sm sm:grid-cols-3">
-                        <div className="flex items-center gap-2 text-slate-400">
-                          <Clock className="h-4 w-4 text-cyan-400" />
-                          <span>Transit: <span className="text-white">{route.transit}</span></span>
+                        <div className="flex items-center gap-2 text-ink-muted">
+                          <Clock className="h-4 w-4 text-brand" />
+                          <span>Transit: <span className="text-ink">{route.transit}</span></span>
                         </div>
-                        <div className="flex items-center gap-2 text-slate-400">
-                          <PlaneTakeoff className="h-4 w-4 text-cyan-400" />
-                          <span>Frequency: <span className="text-white">{route.departureDays}</span></span>
+                        <div className="flex items-center gap-2 text-ink-muted">
+                          <PlaneTakeoff className="h-4 w-4 text-brand" />
+                          <span>Frequency: <span className="text-ink">{route.departureDays}</span></span>
                         </div>
                       </div>
                       <div className="mt-4 flex gap-2">

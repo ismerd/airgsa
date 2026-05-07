@@ -100,7 +100,7 @@ const fleet: Aircraft[] = [
 ];
 
 const statusConfig: Record<AircraftStatus, { label: string; variant: "default" | "muted" | "warning"; dot: string }> = {
-  airborne: { label: "Airborne", variant: "default", dot: "bg-cyan-400 animate-pulse" },
+  airborne: { label: "Airborne", variant: "default", dot: "bg-brand animate-pulse" },
   ground: { label: "On ground", variant: "muted", dot: "bg-slate-400" },
   maintenance: { label: "Maintenance", variant: "warning", dot: "bg-amber-400" },
 };
@@ -134,14 +134,14 @@ export default function FleetPage() {
               <CardContent className="p-5">
                 <div className="flex items-start justify-between">
                   <div>
-                    <p className="text-sm font-medium text-slate-500">{item.label}</p>
+                    <p className="text-sm font-medium text-ink-muted">{item.label}</p>
                     <p className="mt-2 text-3xl font-semibold">{item.value}</p>
                   </div>
-                  <div className="rounded-md bg-cyan-50 p-2 text-cyan-600">
+                  <div className="rounded-md bg-brand-light p-2 text-brand">
                     <item.icon className="h-5 w-5" />
                   </div>
                 </div>
-                <p className="mt-3 text-xs text-slate-500">{item.sub}</p>
+                <p className="mt-3 text-xs text-ink-muted">{item.sub}</p>
               </CardContent>
             </Card>
           ))}
@@ -159,14 +159,14 @@ export default function FleetPage() {
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <Plane className="h-5 w-5 text-cyan-400" />
+              <Plane className="h-5 w-5 text-brand" />
               Fleet schedule
             </CardTitle>
           </CardHeader>
           <CardContent className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
-                <tr className="border-b border-white/10 text-xs font-semibold uppercase tracking-wider text-slate-500">
+                <tr className="border-b border-border-ui text-xs font-semibold uppercase tracking-wider text-ink-muted">
                   <th className="pb-3 text-left">Aircraft</th>
                   <th className="pb-3 text-left">Status</th>
                   <th className="pb-3 text-left">Flight</th>
@@ -175,15 +175,15 @@ export default function FleetPage() {
                   <th className="pb-3 text-left">Load factor</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-white/5">
+              <tbody className="divide-y divide-border-ui">
                 {fleet.map((aircraft) => {
                   const cfg = statusConfig[aircraft.status];
                   return (
-                    <tr key={aircraft.registration} className="align-top text-slate-300">
+                    <tr key={aircraft.registration} className="align-top text-ink-muted">
                       {/* Aircraft */}
                       <td className="py-4">
-                        <p className="font-mono font-semibold text-white">{aircraft.registration}</p>
-                        <p className="mt-0.5 text-xs text-slate-500">{aircraft.type}</p>
+                        <p className="font-mono font-semibold text-ink">{aircraft.registration}</p>
+                        <p className="mt-0.5 text-xs text-ink-muted">{aircraft.type}</p>
                       </td>
 
                       {/* Status */}
@@ -198,18 +198,18 @@ export default function FleetPage() {
                       <td className="py-4">
                         {aircraft.status === "airborne" && (
                           <>
-                            <p className="font-semibold text-white">{aircraft.flightNumber}</p>
-                            <p className="text-xs text-slate-500">{aircraft.tonnage?.toFixed(1)} t</p>
+                            <p className="font-semibold text-ink">{aircraft.flightNumber}</p>
+                            <p className="text-xs text-ink-muted">{aircraft.tonnage?.toFixed(1)} t</p>
                           </>
                         )}
                         {aircraft.status === "ground" && (
                           <>
-                            <p className="font-semibold text-white">{aircraft.nextFlight}</p>
-                            <p className="text-xs text-slate-500">Scheduled</p>
+                            <p className="font-semibold text-ink">{aircraft.nextFlight}</p>
+                            <p className="text-xs text-ink-muted">Scheduled</p>
                           </>
                         )}
                         {aircraft.status === "maintenance" && (
-                          <p className="text-slate-500">—</p>
+                          <p className="text-ink-muted">—</p>
                         )}
                       </td>
 
@@ -218,18 +218,18 @@ export default function FleetPage() {
                         {aircraft.status === "airborne" && (
                           <div>
                             <div className="mb-1.5 flex items-center justify-between text-xs">
-                              <span className="font-mono text-slate-400">{aircraft.origin}</span>
-                              <span className="text-cyan-300">{aircraft.progressPct}% en route</span>
-                              <span className="font-mono text-slate-400">{aircraft.destination}</span>
+                              <span className="font-mono text-ink-muted">{aircraft.origin}</span>
+                              <span className="text-brand">{aircraft.progressPct}% en route</span>
+                              <span className="font-mono text-ink-muted">{aircraft.destination}</span>
                             </div>
-                            <div className="relative h-1.5 w-full overflow-visible rounded-full bg-white/10">
+                            <div className="relative h-1.5 w-full overflow-visible rounded-full bg-black/10">
                               <div
                                 className="h-full rounded-full bg-cyan-500/60"
                                 style={{ width: `${aircraft.progressPct}%` }}
                               />
                               {/* Plane icon at current position */}
                               <span
-                                className="absolute -top-[7px] -translate-x-1/2 text-cyan-400"
+                                className="absolute -top-[7px] -translate-x-1/2 text-brand"
                                 style={{ left: `${aircraft.progressPct}%` }}
                               >
                                 ✈
@@ -239,14 +239,14 @@ export default function FleetPage() {
                         )}
                         {aircraft.status === "ground" && (
                           <div>
-                            <p className="text-xs text-slate-400">{aircraft.nextRoute}</p>
-                            <p className="mt-1 text-xs text-slate-500">Next departure: {aircraft.nextDeparture}</p>
+                            <p className="text-xs text-ink-muted">{aircraft.nextRoute}</p>
+                            <p className="mt-1 text-xs text-ink-muted">Next departure: {aircraft.nextDeparture}</p>
                           </div>
                         )}
                         {aircraft.status === "maintenance" && (
                           <div>
-                            <p className="text-xs text-amber-300">{aircraft.maintenanceNote}</p>
-                            <p className="mt-1 text-xs text-slate-500">Est. return: {aircraft.maintenanceUntil}</p>
+                            <p className="text-xs text-amber-600">{aircraft.maintenanceNote}</p>
+                            <p className="mt-1 text-xs text-ink-muted">Est. return: {aircraft.maintenanceUntil}</p>
                           </div>
                         )}
                       </td>
@@ -255,15 +255,15 @@ export default function FleetPage() {
                       <td className="py-4">
                         {aircraft.status === "airborne" && (
                           <div className="space-y-0.5 text-xs">
-                            <p className="text-slate-400">Dep <span className="text-slate-200">{aircraft.departed}</span></p>
-                            <p className="text-slate-400">ETA <span className="text-slate-200">{aircraft.eta}</span></p>
+                            <p className="text-ink-muted">Dep <span className="text-ink">{aircraft.departed}</span></p>
+                            <p className="text-ink-muted">ETA <span className="text-ink">{aircraft.eta}</span></p>
                           </div>
                         )}
                         {aircraft.status === "ground" && (
-                          <p className="text-xs text-slate-500">{aircraft.location}</p>
+                          <p className="text-xs text-ink-muted">{aircraft.location}</p>
                         )}
                         {aircraft.status === "maintenance" && (
-                          <p className="text-xs text-slate-500">{aircraft.location}</p>
+                          <p className="text-xs text-ink-muted">{aircraft.location}</p>
                         )}
                       </td>
 
@@ -274,7 +274,7 @@ export default function FleetPage() {
                             <p className={`font-semibold ${aircraft.loadFactor >= 80 ? "text-emerald-400" : aircraft.loadFactor >= 65 ? "text-amber-400" : "text-rose-400"}`}>
                               {aircraft.loadFactor}%
                             </p>
-                            <div className="mt-1 h-1 w-16 overflow-hidden rounded-full bg-white/10">
+                            <div className="mt-1 h-1 w-16 overflow-hidden rounded-full bg-black/10">
                               <div
                                 className={`h-full rounded-full ${aircraft.loadFactor >= 80 ? "bg-emerald-400" : aircraft.loadFactor >= 65 ? "bg-amber-400" : "bg-rose-400"}`}
                                 style={{ width: `${aircraft.loadFactor}%` }}
@@ -282,7 +282,7 @@ export default function FleetPage() {
                             </div>
                           </div>
                         ) : (
-                          <span className="text-slate-600">—</span>
+                          <span className="text-ink-muted">—</span>
                         )}
                       </td>
                     </tr>
@@ -302,8 +302,8 @@ export default function FleetPage() {
           ].map((s) => (
             <Card key={s.label}>
               <CardContent className="p-4">
-                <p className="text-xs text-slate-500">{s.label}</p>
-                <p className="mt-1 text-xl font-semibold text-white">{s.value}</p>
+                <p className="text-xs text-ink-muted">{s.label}</p>
+                <p className="mt-1 text-xl font-semibold text-ink">{s.value}</p>
               </CardContent>
             </Card>
           ))}

@@ -57,7 +57,7 @@ export default function FlightsPage() {
             ].map((m) => (
               <Card key={m.label} className="bg-white text-slate-950">
                 <CardContent className="p-5">
-                  <p className="text-sm text-slate-500">{m.label}</p>
+                  <p className="text-sm text-ink-muted">{m.label}</p>
                   <p className="mt-1 text-2xl font-semibold">{m.value}</p>
                 </CardContent>
               </Card>
@@ -67,14 +67,14 @@ export default function FlightsPage() {
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
-                <PlaneTakeoff className="h-5 w-5 text-cyan-400" />
+                <PlaneTakeoff className="h-5 w-5 text-brand" />
                 Scheduled flights
               </CardTitle>
             </CardHeader>
             <CardContent className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
-                  <tr className="border-b border-white/10 text-xs font-semibold uppercase tracking-wider text-slate-500">
+                  <tr className="border-b border-border-ui text-xs font-semibold uppercase tracking-wider text-ink-muted">
                     <th className="pb-3 text-left">Flight</th>
                     <th className="pb-3 text-left">Route</th>
                     <th className="pb-3 text-left">Departure</th>
@@ -85,20 +85,20 @@ export default function FlightsPage() {
                     <th className="pb-3 text-left">Status</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-white/5">
+                <tbody className="divide-y divide-border-ui">
                   {flights.map((f) => (
-                    <tr key={f.flight} className="text-slate-300">
+                    <tr key={f.flight} className="text-ink-muted">
                       <td className="py-3">
                         <div className="flex items-center gap-2">
                           <span
                             className="h-2 w-2 rounded-full"
                             style={{ backgroundColor: airlineColor[f.airline] ?? "#94a3b8" }}
                           />
-                          <span className="font-mono font-semibold text-white">{f.flight}</span>
+                          <span className="font-mono font-semibold text-ink">{f.flight}</span>
                         </div>
-                        <p className="mt-0.5 pl-4 text-xs text-slate-500">{f.airline}</p>
+                        <p className="mt-0.5 pl-4 text-xs text-ink-muted">{f.airline}</p>
                       </td>
-                      <td className="py-3 font-semibold text-white">{f.origin} → {f.destination}</td>
+                      <td className="py-3 font-semibold text-ink">{f.origin} → {f.destination}</td>
                       <td className="py-3">{f.departure}</td>
                       <td className="py-3">{f.arrival}</td>
                       <td className="py-3">{f.frequency}</td>

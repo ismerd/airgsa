@@ -48,12 +48,12 @@ export default function AirlineDashboardPage() {
             </CardHeader>
             <CardContent className="space-y-4">
               {applications.map((application) => (
-                <div key={application.id} className="rounded-md border border-white/10 bg-slate-950/50 p-4">
+                <div key={application.id} className="rounded-xl border border-border-ui bg-surface2 p-4">
                   <div className="flex items-center justify-between gap-3">
-                    <p className="font-semibold text-white">{application.gsaName}</p>
-                    <p className="text-sm text-cyan-200">{application.commercialScore} score</p>
+                    <p className="font-semibold text-ink">{application.gsaName}</p>
+                    <p className="text-sm font-semibold text-brand">{application.commercialScore} score</p>
                   </div>
-                  <p className="mt-1 text-sm text-slate-400">{application.proposedCommission}</p>
+                  <p className="mt-1 text-sm text-ink-muted">{application.proposedCommission}</p>
                 </div>
               ))}
             </CardContent>

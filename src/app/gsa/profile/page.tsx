@@ -12,10 +12,10 @@ export default function GsaCompanyProfilePage() {
         <Card>
           <CardHeader>
             <CardTitle>{profile.name}</CardTitle>
-            <p className="text-sm text-slate-400">{profile.headquarters}</p>
+            <p className="text-sm text-ink-muted">{profile.headquarters}</p>
           </CardHeader>
           <CardContent className="space-y-4">
-            <p className="text-sm leading-6 text-slate-300">{profile.summary}</p>
+            <p className="text-sm leading-6 text-ink-muted">{profile.summary}</p>
             <div className="flex flex-wrap gap-2">
               {profile.certifications.map((item) => <Badge key={item} variant="success">{item}</Badge>)}
             </div>
@@ -39,9 +39,9 @@ export default function GsaCompanyProfilePage() {
 
 function Field({ label, value }: { label: string; value: string }) {
   return (
-    <div className="rounded-md bg-slate-950/60 p-4">
-      <p className="text-xs text-slate-400">{label}</p>
-      <p className="mt-1 font-semibold text-white">{value}</p>
+    <div className="rounded-md bg-surface2 border border-border-ui p-4">
+      <p className="text-xs text-ink-muted">{label}</p>
+      <p className="mt-1 font-semibold text-ink">{value}</p>
     </div>
   );
 }

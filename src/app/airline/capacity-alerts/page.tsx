@@ -43,7 +43,7 @@ const gsaOptions = [
 ];
 
 const urgencyConfig: Record<Urgency, { label: string; variant: "muted" | "warning" | "danger"; border: string; bg: string }> = {
-  normal: { label: "Normal", variant: "muted", border: "border-white/10", bg: "" },
+  normal: { label: "Normal", variant: "muted", border: "border-border-ui", bg: "" },
   urgent: { label: "Urgent", variant: "warning", border: "border-amber-500/30", bg: "bg-amber-500/5" },
   critical: { label: "Critical", variant: "danger", border: "border-rose-500/40", bg: "bg-rose-500/5" },
 };
@@ -145,7 +145,7 @@ export default function CapacityAlertsPage() {
                   {active.length}
                 </span>
               )}
-              <p className="text-sm text-slate-400">
+              <p className="text-sm text-ink-muted">
                 {active.length} active alert{active.length !== 1 ? "s" : ""} sent to GSA partners
               </p>
             </div>
@@ -168,17 +168,17 @@ export default function CapacityAlertsPage() {
 
           {/* Create form */}
           {showForm && (
-            <Card className="border-cyan-400/20">
+            <Card className="border-brand/20">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
-                  <Send className="h-5 w-5 text-cyan-400" />
+                  <Send className="h-5 w-5 text-brand" />
                   New capacity alert
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-5">
                 <div className="grid gap-4 sm:grid-cols-2">
                   <div>
-                    <label className="mb-1.5 block text-xs font-semibold text-slate-400">Flight</label>
+                    <label className="mb-1.5 block text-xs font-semibold text-ink-muted">Flight</label>
                     <Select value={flight} onChange={(e) => setFlight((e.target as HTMLSelectElement).value)}>
                       <option value="">Select flight</option>
                       {upcomingFlights.map((f) => (
@@ -187,7 +187,7 @@ export default function CapacityAlertsPage() {
                     </Select>
                   </div>
                   <div>
-                    <label className="mb-1.5 block text-xs font-semibold text-slate-400">Available capacity (kg)</label>
+                    <label className="mb-1.5 block text-xs font-semibold text-ink-muted">Available capacity (kg)</label>
                     <Input
                       type="number"
                       placeholder="e.g. 8200"
@@ -199,7 +199,7 @@ export default function CapacityAlertsPage() {
 
                 {/* Urgency buttons */}
                 <div>
-                  <label className="mb-2 block text-xs font-semibold text-slate-400">Urgency</label>
+                  <label className="mb-2 block text-xs font-semibold text-ink-muted">Urgency</label>
                   <div className="flex gap-2">
                     {(["normal", "urgent", "critical"] as Urgency[]).map((u) => (
                       <button
@@ -209,11 +209,11 @@ export default function CapacityAlertsPage() {
                         className={`rounded-md border px-4 py-1.5 text-sm font-medium capitalize transition-colors ${
                           urgency === u
                             ? u === "critical"
-                              ? "border-rose-500 bg-rose-500/20 text-rose-300"
+                              ? "border-rose-500 bg-rose-500/20 text-rose-600"
                               : u === "urgent"
-                              ? "border-amber-500 bg-amber-500/20 text-amber-300"
-                              : "border-cyan-400 bg-cyan-400/20 text-cyan-300"
-                            : "border-white/10 text-slate-400 hover:border-white/20 hover:text-white"
+                              ? "border-amber-500 bg-amber-500/20 text-amber-600"
+                              : "border-brand bg-brand-light text-brand"
+                            : "border-border-ui text-ink-muted hover:border-border-ui hover:text-ink"
                         }`}
                       >
                         {u}
@@ -223,18 +223,18 @@ export default function CapacityAlertsPage() {
                 </div>
 
                 <div>
-                  <label className="mb-1.5 block text-xs font-semibold text-slate-400">Message to GSAs</label>
+                  <label className="mb-1.5 block text-xs font-semibold text-ink-muted">Message to GSAs</label>
                   <textarea
                     rows={3}
                     placeholder="Describe the capacity situation and any product mix priorities..."
                     value={message}
                     onChange={(e) => setMessage(e.target.value)}
-                    className="w-full rounded-md border border-white/10 bg-slate-900 px-3 py-2 text-sm text-slate-200 placeholder:text-slate-500 focus:border-cyan-400/50 focus:outline-none focus:ring-0"
+                    className="w-full rounded-md border border-border-ui bg-surface2 px-3 py-2 text-sm text-ink placeholder:text-ink-muted focus:border-brand focus:outline-none focus:ring-0"
                   />
                 </div>
 
                 <div>
-                  <label className="mb-1.5 block text-xs font-semibold text-slate-400">Send to</label>
+                  <label className="mb-1.5 block text-xs font-semibold text-ink-muted">Send to</label>
                   <Select value={sentTo} onChange={(e) => setSentTo((e.target as HTMLSelectElement).value)}>
                     {gsaOptions.map((g) => <option key={g} value={g}>{g}</option>)}
                   </Select>
@@ -254,7 +254,7 @@ export default function CapacityAlertsPage() {
           {/* Active alerts */}
           {active.length > 0 && (
             <div className="space-y-4">
-              <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">Active alerts</p>
+              <p className="text-xs font-semibold uppercase tracking-wider text-ink-muted">Active alerts</p>
               {active.map((alert) => {
                 const cfg = urgencyConfig[alert.urgency];
                 const loadedPct = Math.round(((alert.totalCapacityKg - alert.availableKg) / alert.totalCapacityKg) * 100);
@@ -263,18 +263,18 @@ export default function CapacityAlertsPage() {
                     <CardContent className="p-5">
                       <div className="flex flex-wrap items-start justify-between gap-4">
                         <div className="flex items-start gap-3">
-                          <span className={`mt-0.5 h-2.5 w-2.5 shrink-0 animate-pulse rounded-full ${alert.urgency === "critical" ? "bg-rose-500" : alert.urgency === "urgent" ? "bg-amber-400" : "bg-cyan-400"}`} />
+                          <span className={`mt-0.5 h-2.5 w-2.5 shrink-0 animate-pulse rounded-full ${alert.urgency === "critical" ? "bg-rose-500" : alert.urgency === "urgent" ? "bg-amber-400" : "bg-brand"}`} />
                           <div>
                             <div className="flex flex-wrap items-center gap-2">
-                              <span className="font-semibold text-white">{alert.flightNumber}</span>
-                              <span className="text-slate-400">{alert.origin} → {alert.destination}</span>
-                              <span className="text-slate-500">·</span>
-                              <span className="text-sm text-slate-400">{alert.date}</span>
+                              <span className="font-semibold text-ink">{alert.flightNumber}</span>
+                              <span className="text-ink-muted">{alert.origin} → {alert.destination}</span>
+                              <span className="text-ink-muted">·</span>
+                              <span className="text-sm text-ink-muted">{alert.date}</span>
                               <Badge variant={cfg.variant}>{cfg.label}</Badge>
                             </div>
-                            <p className="mt-2 text-sm text-slate-300">{alert.message}</p>
-                            <p className="mt-2 text-xs text-slate-500">
-                              Sent to: <span className="text-slate-300">{alert.sentTo}</span>
+                            <p className="mt-2 text-sm text-ink-muted">{alert.message}</p>
+                            <p className="mt-2 text-xs text-ink-muted">
+                              Sent to: <span className="text-ink">{alert.sentTo}</span>
                               {" · "}Sent at: {alert.sentAt}
                               {" · "}{alert.responses} GSA{alert.responses !== 1 ? "s" : ""} responded
                             </p>
@@ -282,7 +282,7 @@ export default function CapacityAlertsPage() {
                         </div>
                         <button
                           onClick={() => recallAlert(alert.id)}
-                          className="shrink-0 rounded-md p-1.5 text-slate-500 transition-colors hover:bg-white/10 hover:text-white"
+                          className="shrink-0 rounded-md p-1.5 text-ink-muted transition-colors hover:bg-surface2 hover:text-ink"
                           title="Recall alert"
                         >
                           <Trash2 className="h-4 w-4" />
@@ -291,19 +291,19 @@ export default function CapacityAlertsPage() {
 
                       {/* Capacity bar */}
                       <div className="mt-4">
-                        <div className="mb-1.5 flex justify-between text-xs text-slate-500">
+                        <div className="mb-1.5 flex justify-between text-xs text-ink-muted">
                           <span>Capacity filled</span>
                           <span>
-                            <span className="font-semibold text-white">{alert.availableKg.toLocaleString()} kg</span> open of {alert.totalCapacityKg.toLocaleString()} kg total
+                            <span className="font-semibold text-ink">{alert.availableKg.toLocaleString()} kg</span> open of {alert.totalCapacityKg.toLocaleString()} kg total
                           </span>
                         </div>
-                        <div className="h-2 w-full overflow-hidden rounded-full bg-white/10">
+                        <div className="h-2 w-full overflow-hidden rounded-full bg-black/10">
                           <div
                             className="h-full rounded-full bg-emerald-500"
                             style={{ width: `${loadedPct}%` }}
                           />
                         </div>
-                        <div className="mt-1 flex justify-between text-xs text-slate-600">
+                        <div className="mt-1 flex justify-between text-xs text-ink-muted">
                           <span>{loadedPct}% filled</span>
                           <span>{100 - loadedPct}% open</span>
                         </div>
@@ -318,14 +318,14 @@ export default function CapacityAlertsPage() {
           {/* Inactive / recalled alerts */}
           {inactive.length > 0 && (
             <div className="space-y-3">
-              <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">Past alerts</p>
+              <p className="text-xs font-semibold uppercase tracking-wider text-ink-muted">Past alerts</p>
               {inactive.map((alert) => (
                 <div
                   key={alert.id}
-                  className="flex items-center justify-between gap-4 rounded-lg border border-white/5 bg-white/[0.02] px-4 py-3"
+                  className="flex items-center justify-between gap-4 rounded-lg border border-border-ui bg-surface px-4 py-3"
                 >
-                  <div className="flex items-center gap-3 text-sm text-slate-500">
-                    <span className="font-mono font-medium text-slate-400">{alert.flightNumber}</span>
+                  <div className="flex items-center gap-3 text-sm text-ink-muted">
+                    <span className="font-mono font-medium text-ink-muted">{alert.flightNumber}</span>
                     <span>{alert.origin} → {alert.destination}</span>
                     <span>·</span>
                     <span>{alert.date}</span>

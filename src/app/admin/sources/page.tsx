@@ -10,7 +10,7 @@ import type { LinkedinSource } from "@/lib/types";
 
 const columns: Column<LinkedinSource>[] = [
   { header: "Source", cell: (row) => row.name },
-  { header: "URL", cell: (row) => <span className="text-cyan-100">{row.url}</span> },
+  { header: "URL", cell: (row) => <span className="text-brand">{row.url}</span> },
   { header: "Category", cell: (row) => row.category ?? "unclassified" },
   { header: "Last import", cell: (row) => row.lastImport },
   { header: "Status", cell: (row) => <StatusBadge status={row.status === "active" ? "active" : "closed"} /> },

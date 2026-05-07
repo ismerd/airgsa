@@ -44,10 +44,10 @@ export default function CreateTenderPage() {
 
             <div className="md:col-span-2 space-y-3">
               <div className="flex items-center gap-2">
-                <Paperclip className="h-4 w-4 text-slate-400" />
-                <p className="text-sm font-semibold text-white">Attachments</p>
+                <Paperclip className="h-4 w-4 text-ink-muted" />
+                <p className="text-sm font-semibold text-ink">Attachments</p>
                 {files.length > 0 && (
-                  <span className="rounded-full bg-cyan-500/20 px-2 py-0.5 text-xs font-semibold text-cyan-300">
+                  <span className="rounded-full bg-brand-light px-2 py-0.5 text-xs font-semibold text-brand">
                     {files.length}
                   </span>
                 )}

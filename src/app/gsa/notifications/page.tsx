@@ -87,7 +87,7 @@ export default function NotificationsPage() {
         <div>
           <div className="mb-3 flex items-center gap-2">
             <BellRing className="h-4 w-4 text-amber-400" />
-            <p className="text-sm font-semibold text-white">Capacity hunts</p>
+            <p className="text-sm font-semibold text-ink">Capacity hunts</p>
             {pendingHunts > 0 && (
               <span className="flex h-5 w-5 items-center justify-center rounded-full bg-rose-500 text-[10px] font-bold text-white">
                 {pendingHunts}
@@ -114,41 +114,41 @@ export default function NotificationsPage() {
                           <Badge variant={style.badge}>
                             {alert.urgency === "critical" ? "Critical" : "Urgent"}
                           </Badge>
-                          <span className="text-xs text-slate-400">
+                          <span className="text-xs text-ink-muted">
                             from {alert.airline} · Today {alert.receivedAt}
                           </span>
                         </div>
 
                         <div className="mt-2 flex flex-wrap items-center gap-2">
-                          <span className="text-lg font-bold text-white">{alert.flightNumber}</span>
-                          <span className="text-slate-500">·</span>
-                          <span className="font-semibold text-white">{alert.origin} → {alert.destination}</span>
-                          <span className="text-slate-500">·</span>
-                          <span className="text-sm text-slate-400">{alert.date}</span>
+                          <span className="text-lg font-bold text-ink">{alert.flightNumber}</span>
+                          <span className="text-ink-muted">·</span>
+                          <span className="font-semibold text-ink">{alert.origin} → {alert.destination}</span>
+                          <span className="text-ink-muted">·</span>
+                          <span className="text-sm text-ink-muted">{alert.date}</span>
                         </div>
 
                         <div className="mt-2 flex items-baseline gap-1.5">
-                          <span className={`text-2xl font-bold ${alert.urgency === "critical" ? "text-rose-300" : "text-amber-300"}`}>
+                          <span className={`text-2xl font-bold ${alert.urgency === "critical" ? "text-rose-500" : "text-amber-500"}`}>
                             {(alert.availableKg / 1000).toFixed(1)} t
                           </span>
-                          <span className="text-sm text-slate-400">
+                          <span className="text-sm text-ink-muted">
                             available · {(alert.totalKg / 1000).toFixed(0)} t total capacity
                           </span>
                         </div>
 
                         <div className="mt-2 w-full max-w-xs">
-                          <div className="h-1.5 w-full overflow-hidden rounded-full bg-white/10">
+                          <div className="h-1.5 w-full overflow-hidden rounded-full bg-black/10">
                             <div
                               className="h-full rounded-full bg-emerald-500"
                               style={{ width: `${filledPct}%` }}
                             />
                           </div>
-                          <p className="mt-1 text-xs text-slate-500">
+                          <p className="mt-1 text-xs text-ink-muted">
                             {filledPct}% filled · {100 - filledPct}% open
                           </p>
                         </div>
 
-                        <p className="mt-3 text-sm text-slate-300">{alert.message}</p>
+                        <p className="mt-3 text-sm text-ink-muted">{alert.message}</p>
 
                         <p className={`mt-2 text-xs font-semibold ${alert.daysToDepart <= 2 ? "text-rose-400" : "text-amber-400"}`}>
                           ⏱ {alert.daysToDepart} day{alert.daysToDepart !== 1 ? "s" : ""} to departure — act fast
@@ -185,24 +185,24 @@ export default function NotificationsPage() {
 
         {/* Regular notifications */}
         <div>
-          <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-slate-500">
+          <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-ink-muted">
             All notifications
           </p>
           <div className="space-y-3">
             {notifications.map((notification) => (
               <Card
                 key={notification.id}
-                className={notification.status === "unread" ? "border-cyan-300/30" : undefined}
+                className={notification.status === "unread" ? "border-brand/30" : undefined}
               >
                 <CardContent className="flex flex-col gap-2 p-5 md:flex-row md:items-center md:justify-between">
                   <div>
                     {notification.status === "unread" && (
-                      <span className="mb-1.5 inline-block h-1.5 w-1.5 rounded-full bg-cyan-400" />
+                      <span className="mb-1.5 inline-block h-1.5 w-1.5 rounded-full bg-brand" />
                     )}
-                    <p className="font-semibold text-white">{notification.title}</p>
-                    <p className="mt-1 text-sm text-slate-400">{notification.body}</p>
+                    <p className="font-semibold text-ink">{notification.title}</p>
+                    <p className="mt-1 text-sm text-ink-muted">{notification.body}</p>
                   </div>
-                  <p className="shrink-0 text-sm text-slate-500">{notification.time}</p>
+                  <p className="shrink-0 text-sm text-ink-muted">{notification.time}</p>
                 </CardContent>
               </Card>
             ))}

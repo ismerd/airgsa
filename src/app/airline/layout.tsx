@@ -16,7 +16,7 @@ const nav = [
 
 export default function AirlineLayout({ children }: { children: React.ReactNode }) {
   return (
-    <div className="flex min-h-screen bg-slate-950">
+    <div className="flex min-h-screen bg-page">
       <Sidebar items={nav} role="Airline" />
       <div className="min-w-0 flex-1">{children}</div>
     </div>

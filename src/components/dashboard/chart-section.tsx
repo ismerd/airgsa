@@ -45,7 +45,7 @@ export function ChartSection({ allData }: { allData: KpiPoint[] }) {
 
   const periodControls = (
     <div className="flex flex-col items-end gap-2">
-      <div className="flex rounded-lg border border-white/10 bg-slate-900/60 p-0.5">
+      <div className="flex rounded-lg border border-border-ui bg-surface2 p-0.5">
         {(["ytd", "fy", "custom"] as Period[]).map((p) => (
           <button
             key={p}
@@ -54,8 +54,8 @@ export function ChartSection({ allData }: { allData: KpiPoint[] }) {
             className={cn(
               "rounded px-3 py-1.5 text-xs font-medium transition-colors",
               period === p
-                ? "bg-cyan-400 text-slate-950"
-                : "text-slate-400 hover:text-slate-200",
+                ? "bg-brand text-white"
+                : "text-ink-muted hover:text-ink",
             )}
           >
             {p === "ytd" ? "YTD" : p === "fy" ? "FY" : "Custom"}
@@ -78,7 +78,7 @@ export function ChartSection({ allData }: { allData: KpiPoint[] }) {
               </option>
             ))}
           </Select>
-          <span className="text-xs text-slate-500">–</span>
+          <span className="text-xs text-ink-muted">–</span>
           <Select
             className="h-7 w-[120px] text-xs"
             value={customEnd}

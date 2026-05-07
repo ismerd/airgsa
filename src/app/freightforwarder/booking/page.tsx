@@ -37,8 +37,8 @@ export default function BookingPage() {
             <Card className="mx-auto max-w-lg text-center">
               <CardContent className="p-10">
                 <CheckCircle2 className="mx-auto h-12 w-12 text-emerald-400" />
-                <h2 className="mt-4 text-xl font-semibold text-white">Booking confirmed</h2>
-                <p className="mt-2 text-sm text-slate-400">Your space reservation has been submitted. An AWB will be issued within 2 hours.</p>
+                <h2 className="mt-4 text-xl font-semibold text-ink">Booking confirmed</h2>
+                <p className="mt-2 text-sm text-ink-muted">Your space reservation has been submitted. An AWB will be issued within 2 hours.</p>
                 <Button className="mt-6" onClick={() => { setBooked(false); setSelected(null); }}>
                   New booking
                 </Button>
@@ -53,46 +53,46 @@ export default function BookingPage() {
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <div>
-                    <label className="mb-1.5 block text-xs font-semibold text-slate-400">Origin airport</label>
+                    <label className="mb-1.5 block text-xs font-semibold text-ink-muted">Origin airport</label>
                     <Select>
                       <option value="">Select origin</option>
                       {airports.map((a) => <option key={a}>{a}</option>)}
                     </Select>
                   </div>
                   <div>
-                    <label className="mb-1.5 block text-xs font-semibold text-slate-400">Destination airport</label>
+                    <label className="mb-1.5 block text-xs font-semibold text-ink-muted">Destination airport</label>
                     <Select>
                       <option value="">Select destination</option>
                       {airports.map((a) => <option key={a}>{a}</option>)}
                     </Select>
                   </div>
                   <div>
-                    <label className="mb-1.5 block text-xs font-semibold text-slate-400">Earliest departure</label>
+                    <label className="mb-1.5 block text-xs font-semibold text-ink-muted">Earliest departure</label>
                     <Input type="date" defaultValue="2026-05-08" />
                   </div>
                   <div className="grid grid-cols-2 gap-3">
                     <div>
-                      <label className="mb-1.5 block text-xs font-semibold text-slate-400">Weight (kg)</label>
+                      <label className="mb-1.5 block text-xs font-semibold text-ink-muted">Weight (kg)</label>
                       <Input type="number" placeholder="e.g. 500" />
                     </div>
                     <div>
-                      <label className="mb-1.5 block text-xs font-semibold text-slate-400">Volume (cbm)</label>
+                      <label className="mb-1.5 block text-xs font-semibold text-ink-muted">Volume (cbm)</label>
                       <Input type="number" placeholder="e.g. 2.4" />
                     </div>
                   </div>
                   <div>
-                    <label className="mb-1.5 block text-xs font-semibold text-slate-400">Product type</label>
+                    <label className="mb-1.5 block text-xs font-semibold text-ink-muted">Product type</label>
                     <Select>
                       <option value="">Select product</option>
                       {products.map((p) => <option key={p}>{p}</option>)}
                     </Select>
                   </div>
                   <div>
-                    <label className="mb-1.5 block text-xs font-semibold text-slate-400">Special handling (optional)</label>
+                    <label className="mb-1.5 block text-xs font-semibold text-ink-muted">Special handling (optional)</label>
                     <Input placeholder="e.g. GDP-certified, temperature 2–8°C" />
                   </div>
                   <div>
-                    <label className="mb-1.5 block text-xs font-semibold text-slate-400">Shipper reference</label>
+                    <label className="mb-1.5 block text-xs font-semibold text-ink-muted">Shipper reference</label>
                     <Input placeholder="Your internal reference" />
                   </div>
                   <Button className="w-full" disabled={!selected} onClick={handleBook}>
@@ -103,7 +103,7 @@ export default function BookingPage() {
 
               {/* Available flights */}
               <div className="space-y-4">
-                <h2 className="text-sm font-semibold text-slate-400">Available flights</h2>
+                <h2 className="text-sm font-semibold text-ink-muted">Available flights</h2>
                 {availableFlights.map((flight) => (
                   <button
                     key={flight.id}
@@ -111,35 +111,35 @@ export default function BookingPage() {
                     onClick={() => setSelected(flight.id === selected ? null : flight.id)}
                     className={`w-full rounded-lg border p-4 text-left transition-colors ${
                       selected === flight.id
-                        ? "border-cyan-400/60 bg-cyan-400/5"
-                        : "border-white/10 bg-white/[0.02] hover:border-white/20 hover:bg-white/[0.04]"
+                        ? "border-brand/60 bg-brand-light"
+                        : "border-border-ui bg-surface hover:border-border-ui hover:bg-surface2"
                     }`}
                   >
                     <div className="flex flex-wrap items-start justify-between gap-3">
                       <div className="flex items-center gap-3">
-                        <PlaneTakeoff className="h-5 w-5 shrink-0 text-cyan-400" />
+                        <PlaneTakeoff className="h-5 w-5 shrink-0 text-brand" />
                         <div>
                           <div className="flex items-center gap-2">
-                            <span className="font-semibold text-white">{flight.flight}</span>
-                            <span className="text-slate-400">·</span>
-                            <span className="text-sm text-slate-300">{flight.airline}</span>
+                            <span className="font-semibold text-ink">{flight.flight}</span>
+                            <span className="text-ink-muted">·</span>
+                            <span className="text-sm text-ink-muted">{flight.airline}</span>
                             {flight.direct && <Badge variant="success">Direct</Badge>}
                           </div>
-                          <p className="mt-1 text-sm text-slate-400">
+                          <p className="mt-1 text-sm text-ink-muted">
                             {flight.origin} → {flight.destination} · {flight.transit}
                           </p>
                         </div>
                       </div>
                       <div className="text-right">
-                        <p className="text-lg font-semibold text-white">${flight.ratePerKg.toFixed(2)}<span className="text-sm font-normal text-slate-400">/kg</span></p>
-                        <p className="text-xs text-slate-500">{flight.availableKg.toLocaleString()} kg available</p>
+                        <p className="text-lg font-semibold text-ink">${flight.ratePerKg.toFixed(2)}<span className="text-sm font-normal text-ink-muted">/kg</span></p>
+                        <p className="text-xs text-ink-muted">{flight.availableKg.toLocaleString()} kg available</p>
                       </div>
                     </div>
-                    <div className="mt-3 grid grid-cols-2 gap-3 text-xs text-slate-400 sm:grid-cols-4">
-                      <span>Dep: <span className="text-slate-200">{flight.departure}</span></span>
-                      <span>Arr: <span className="text-slate-200">{flight.arrival}</span></span>
-                      <span>Transit: <span className="text-slate-200">{flight.transit}</span></span>
-                      <span>Capacity: <span className="text-slate-200">{flight.availableKg.toLocaleString()} kg</span></span>
+                    <div className="mt-3 grid grid-cols-2 gap-3 text-xs text-ink-muted sm:grid-cols-4">
+                      <span>Dep: <span className="text-ink">{flight.departure}</span></span>
+                      <span>Arr: <span className="text-ink">{flight.arrival}</span></span>
+                      <span>Transit: <span className="text-ink">{flight.transit}</span></span>
+                      <span>Capacity: <span className="text-ink">{flight.availableKg.toLocaleString()} kg</span></span>
                     </div>
                   </button>
                 ))}

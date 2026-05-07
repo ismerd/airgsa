@@ -80,7 +80,7 @@ export default function ChangesPage() {
           )}
 
           <div className="flex items-center justify-between">
-            <h2 className="text-sm font-semibold text-slate-400">Change requests</h2>
+            <h2 className="text-sm font-semibold text-ink-muted">Change requests</h2>
             <Button size="sm" onClick={() => setShowForm(!showForm)}>
               <Plus className="mr-2 h-4 w-4" />
               New request
@@ -88,16 +88,16 @@ export default function ChangesPage() {
           </div>
 
           {showForm && (
-            <Card className="border-cyan-400/20">
+            <Card className="border-brand/20">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
-                  <ArrowLeftRight className="h-5 w-5 text-cyan-400" />
+                  <ArrowLeftRight className="h-5 w-5 text-brand" />
                   New flight change request
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div>
-                  <label className="mb-1.5 block text-xs font-semibold text-slate-400">AWB number</label>
+                  <label className="mb-1.5 block text-xs font-semibold text-ink-muted">AWB number</label>
                   <Input
                     placeholder="e.g. 235-12345678"
                     className="font-mono"
@@ -107,7 +107,7 @@ export default function ChangesPage() {
                 </div>
                 <div className="grid gap-4 sm:grid-cols-2">
                   <div>
-                    <label className="mb-1.5 block text-xs font-semibold text-slate-400">Current flight / date</label>
+                    <label className="mb-1.5 block text-xs font-semibold text-ink-muted">Current flight / date</label>
                     <Input
                       placeholder="e.g. ABR214 / May 6"
                       value={form.currentFlight}
@@ -115,7 +115,7 @@ export default function ChangesPage() {
                     />
                   </div>
                   <div>
-                    <label className="mb-1.5 block text-xs font-semibold text-slate-400">Requested flight / date</label>
+                    <label className="mb-1.5 block text-xs font-semibold text-ink-muted">Requested flight / date</label>
                     <Input
                       placeholder="e.g. ABR214 / May 8"
                       value={form.requestedFlight}
@@ -124,7 +124,7 @@ export default function ChangesPage() {
                   </div>
                 </div>
                 <div>
-                  <label className="mb-1.5 block text-xs font-semibold text-slate-400">Reason</label>
+                  <label className="mb-1.5 block text-xs font-semibold text-ink-muted">Reason</label>
                   <Select
                     value={form.reason}
                     onChange={(e) => setForm((f) => ({ ...f, reason: (e.target as HTMLSelectElement).value }))}
@@ -149,24 +149,24 @@ export default function ChangesPage() {
             </CardHeader>
             <CardContent>
               {changes.length === 0 ? (
-                <p className="text-sm text-slate-400">No change requests yet.</p>
+                <p className="text-sm text-ink-muted">No change requests yet.</p>
               ) : (
-                <div className="divide-y divide-white/10">
+                <div className="divide-y divide-border-ui">
                   {changes.map((c) => (
                     <div key={c.id} className="flex flex-col gap-3 py-4 sm:flex-row sm:items-center sm:justify-between">
                       <div>
                         <div className="flex items-center gap-2">
-                          <span className="font-mono text-sm font-semibold text-cyan-300">{c.awb}</span>
+                          <span className="font-mono text-sm font-semibold text-brand">{c.awb}</span>
                           <Badge variant={statusVariant[c.status]}>{c.status}</Badge>
                         </div>
-                        <div className="mt-1 flex items-center gap-2 text-sm text-slate-400">
-                          <span className="text-slate-300">{c.currentFlight}</span>
-                          <ArrowLeftRight className="h-3.5 w-3.5 text-slate-500" />
-                          <span className="text-slate-300">{c.requestedFlight}</span>
+                        <div className="mt-1 flex items-center gap-2 text-sm text-ink-muted">
+                          <span className="text-ink">{c.currentFlight}</span>
+                          <ArrowLeftRight className="h-3.5 w-3.5 text-ink-muted" />
+                          <span className="text-ink">{c.requestedFlight}</span>
                         </div>
-                        <p className="mt-1 text-xs text-slate-500">{c.reason}</p>
+                        <p className="mt-1 text-xs text-ink-muted">{c.reason}</p>
                       </div>
-                      <div className="shrink-0 text-xs text-slate-500">{c.submittedAt}</div>
+                      <div className="shrink-0 text-xs text-ink-muted">{c.submittedAt}</div>
                     </div>
                   ))}
                 </div>

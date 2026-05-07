@@ -45,7 +45,7 @@ const allAccounts: Account[] = [
 
 function RoleBadge({ role }: { role: "airline" | "gsa" }) {
   return role === "airline" ? (
-    <span className="inline-flex items-center gap-1 rounded-full border border-cyan-300/30 bg-cyan-300/10 px-2.5 py-1 text-xs font-semibold text-cyan-200">
+    <span className="inline-flex items-center gap-1 rounded-full border border-brand/30 bg-brand-light px-2.5 py-1 text-xs font-semibold text-brand">
       <PlaneTakeoff className="h-3 w-3" /> Airline
     </span>
   ) : (
@@ -82,7 +82,7 @@ export default function AccountsPage() {
           <Card>
             <CardHeader className="flex flex-row items-center justify-between">
               <CardTitle className="flex items-center gap-2">
-                <UserCheck className="h-5 w-5 text-cyan-400" />
+                <UserCheck className="h-5 w-5 text-brand" />
                 Pending approvals
               </CardTitle>
               {pendingCount > 0 && (
@@ -91,29 +91,29 @@ export default function AccountsPage() {
             </CardHeader>
             <CardContent>
               {pending.length === 0 ? (
-                <p className="text-sm text-slate-400">No pending registrations.</p>
+                <p className="text-sm text-ink-muted">No pending registrations.</p>
               ) : (
-                <div className="divide-y divide-white/10">
+                <div className="divide-y divide-border-ui">
                   {pending.map((reg) => {
                     const isApproved = approved.has(reg.id);
                     const isRejected = rejected.has(reg.id);
                     return (
                       <div key={reg.id} className="flex flex-col gap-3 py-4 sm:flex-row sm:items-center sm:justify-between">
                         <div className="flex items-start gap-4">
-                          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-slate-800 text-sm font-semibold text-white">
+                          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-surface2 text-sm font-semibold text-ink">
                             {reg.name[0]}
                           </span>
                           <div>
-                            <p className="text-sm font-semibold text-white">{reg.name}</p>
-                            <p className="text-xs text-slate-400">{reg.email}</p>
+                            <p className="text-sm font-semibold text-ink">{reg.name}</p>
+                            <p className="text-xs text-ink-muted">{reg.email}</p>
                             <div className="mt-1 flex items-center gap-2">
                               <RoleBadge role={reg.role} />
-                              <span className="text-xs text-slate-500">{reg.company}</span>
+                              <span className="text-xs text-ink-muted">{reg.company}</span>
                             </div>
                           </div>
                         </div>
                         <div className="flex items-center gap-2 pl-13 sm:pl-0">
-                          <span className="text-xs text-slate-500">{reg.registeredAt}</span>
+                          <span className="text-xs text-ink-muted">{reg.registeredAt}</span>
                           {isApproved && (
                             <span className="inline-flex items-center gap-1 text-xs text-emerald-400">
                               <CheckCircle2 className="h-3.5 w-3.5" /> Approved
@@ -147,7 +147,7 @@ export default function AccountsPage() {
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
-                <Users className="h-5 w-5 text-cyan-400" />
+                <Users className="h-5 w-5 text-brand" />
                 All accounts
               </CardTitle>
             </CardHeader>
@@ -155,20 +155,20 @@ export default function AccountsPage() {
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">
                   <thead>
-                    <tr className="border-b border-white/10 text-xs font-semibold uppercase tracking-wider text-slate-500">
+                    <tr className="border-b border-border-ui text-xs font-semibold uppercase tracking-wider text-ink-muted">
                       <th className="pb-3 text-left">User</th>
                       <th className="pb-3 text-left">Company</th>
                       <th className="pb-3 text-left">Role</th>
                       <th className="pb-3 text-left">Status</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-white/5">
+                  <tbody className="divide-y divide-border-ui">
                     {allAccounts.map((acc) => (
-                      <tr key={acc.id} className="text-slate-300">
+                      <tr key={acc.id} className="text-ink-muted">
                         <td className="py-3">
                           <div>
-                            <p className="font-medium text-white">{acc.name}</p>
-                            <p className="text-xs text-slate-500">{acc.email}</p>
+                            <p className="font-medium text-ink">{acc.name}</p>
+                            <p className="text-xs text-ink-muted">{acc.email}</p>
                           </div>
                         </td>
                         <td className="py-3">{acc.company}</td>

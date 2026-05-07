@@ -1,0 +1,472 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AirGSA — Style 6: First Class</title>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300;400;500;600;700&family=Jost:wght@300;400;500;600&family=Inconsolata:wght@400;500&display=swap" rel="stylesheet">
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --bg: #0C0A08;
+  --surface: #141210;
+  --surface2: #1C1916;
+  --surface3: #221F1B;
+  --border: rgba(180,150,90,0.15);
+  --border2: rgba(180,150,90,0.07);
+  --gold: #B4965A;
+  --gold-bright: #D4B070;
+  --gold-pale: rgba(180,150,90,0.08);
+  --cream: #F0E8D8;
+  --cream-dim: #A8998A;
+  --text: #EDE8E0;
+  --muted: #6A6058;
+  --success: #6A9B7A;
+  --warning: #B8843C;
+  --danger: #9B5555;
+}
+body { background: var(--bg); color: var(--text); font-family: 'Jost', sans-serif; display: flex; height: 100vh; overflow: hidden; font-weight: 300; }
+
+/* Texture overlay */
+body::before {
+  content: '';
+  position: fixed; inset: 0;
+  background-image: url("data:image/svg+xml,%3Csvg width='100' height='100' viewBox='0 0 100 100' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.03'/%3E%3C/svg%3E");
+  pointer-events: none; z-index: 0;
+}
+
+aside {
+  width: 260px; min-width: 260px; background: var(--surface);
+  border-right: 1px solid var(--border);
+  display: flex; flex-direction: column; padding: 32px 20px;
+  position: relative; z-index: 1;
+}
+aside::after { content: ''; position: absolute; top: 0; right: 0; width: 1px; height: 100%; background: linear-gradient(180deg, transparent, var(--gold), transparent); opacity: 0.3; }
+
+.logo { text-align: center; padding-bottom: 28px; border-bottom: 1px solid var(--border); margin-bottom: 28px; }
+.logo-emblem { width: 48px; height: 48px; margin: 0 auto 12px; border: 1px solid var(--gold); border-radius: 50%; display: flex; align-items: center; justify-content: center; position: relative; }
+.logo-emblem::before { content: ''; position: absolute; inset: 3px; border-radius: 50%; border: 1px solid rgba(180,150,90,0.3); }
+.logo-emblem span { font-size: 20px; filter: drop-shadow(0 0 4px rgba(180,150,90,0.4)); }
+.logo-name { font-family: 'Cormorant Garamond', serif; font-size: 22px; font-weight: 600; letter-spacing: 0.2em; color: var(--gold-bright); text-transform: uppercase; }
+.logo-divider { width: 40px; height: 1px; background: linear-gradient(90deg, transparent, var(--gold), transparent); margin: 8px auto; }
+.logo-sub { font-size: 9px; letter-spacing: 0.3em; text-transform: uppercase; color: var(--muted); }
+
+.nav-section { font-size: 8px; letter-spacing: 0.3em; text-transform: uppercase; color: var(--muted); margin: 22px 0 8px 8px; }
+nav a {
+  display: flex; align-items: center; justify-content: space-between; padding: 9px 12px;
+  font-size: 12px; font-weight: 400; letter-spacing: 0.08em; text-transform: uppercase;
+  color: var(--cream-dim); text-decoration: none; margin-bottom: 1px; transition: all 0.25s; border-left: 1px solid transparent;
+}
+nav a:hover { color: var(--cream); border-left-color: rgba(180,150,90,0.3); }
+nav a.active { color: var(--gold-bright); border-left-color: var(--gold); background: var(--gold-pale); }
+.nav-arrow { font-size: 10px; opacity: 0.4; }
+
+.sidebar-bottom { margin-top: auto; }
+.member-card { border: 1px solid var(--border); border-radius: 2px; padding: 14px 16px; text-align: center; }
+.member-label { font-size: 8px; letter-spacing: 0.3em; text-transform: uppercase; color: var(--muted); margin-bottom: 6px; }
+.member-name { font-family: 'Cormorant Garamond', serif; font-size: 16px; font-weight: 600; color: var(--gold-bright); }
+.member-tier { font-size: 9px; letter-spacing: 0.2em; color: var(--muted); margin-top: 2px; }
+
+/* Main */
+main { flex: 1; overflow-y: auto; position: relative; z-index: 1; }
+.topbar {
+  padding: 16px 36px; background: var(--surface);
+  border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between;
+  position: sticky; top: 0; z-index: 10;
+}
+.topbar-left { }
+.page-eyebrow { font-size: 9px; letter-spacing: 0.3em; text-transform: uppercase; color: var(--muted); margin-bottom: 4px; }
+.page-title { font-family: 'Cormorant Garamond', serif; font-size: 26px; font-weight: 500; color: var(--cream); letter-spacing: 0.02em; }
+.topbar-right { display: flex; align-items: center; gap: 20px; }
+.time-display { text-align: right; }
+.time-main { font-family: 'Inconsolata', monospace; font-size: 18px; font-weight: 400; color: var(--gold-bright); letter-spacing: 0.05em; }
+.time-sub { font-size: 10px; color: var(--muted); letter-spacing: 0.1em; margin-top: 1px; }
+.topbar-sep { width: 1px; height: 36px; background: var(--border); }
+.status-indicator { display: flex; align-items: center; gap: 8px; }
+.status-gem { width: 8px; height: 8px; background: var(--success); border-radius: 50%; box-shadow: 0 0 8px var(--success); animation: gem-pulse 3s ease-in-out infinite; }
+@keyframes gem-pulse { 0%,100%{opacity:1;box-shadow:0 0 8px var(--success)} 50%{opacity:0.7;box-shadow:0 0 14px var(--success)} }
+.status-text { font-size: 10px; letter-spacing: 0.15em; text-transform: uppercase; color: var(--success); }
+
+.content { padding: 32px 36px; }
+
+/* Section headings */
+.section-head { display: flex; align-items: baseline; gap: 16px; margin-bottom: 18px; }
+.section-title { font-family: 'Cormorant Garamond', serif; font-size: 18px; font-weight: 500; color: var(--cream); letter-spacing: 0.05em; }
+.section-line { flex: 1; height: 1px; background: linear-gradient(90deg, var(--border), transparent); }
+.section-num { font-family: 'Inconsolata', monospace; font-size: 11px; color: var(--muted); }
+
+/* KPI */
+.kpi-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1px; background: var(--border); border: 1px solid var(--border); border-radius: 2px; overflow: hidden; margin-bottom: 32px; }
+.kpi-cell { background: var(--surface); padding: 26px 24px; position: relative; }
+.kpi-cell::after { content: ''; position: absolute; bottom: 0; left: 24px; right: 24px; height: 1px; background: linear-gradient(90deg, transparent, var(--gold), transparent); opacity: 0; transition: opacity 0.3s; }
+.kpi-cell:hover::after { opacity: 0.6; }
+.kpi-num { font-family: 'Inconsolata', monospace; font-size: 10px; color: var(--muted); margin-bottom: 16px; letter-spacing: 0.1em; }
+.kpi-label { font-size: 10px; letter-spacing: 0.2em; text-transform: uppercase; color: var(--muted); margin-bottom: 10px; }
+.kpi-value { font-family: 'Cormorant Garamond', serif; font-size: 36px; font-weight: 500; color: var(--cream); letter-spacing: -0.01em; line-height: 1; }
+.kpi-unit { font-size: 14px; font-family: 'Jost', sans-serif; font-weight: 300; color: var(--muted); }
+.kpi-change { font-size: 11px; color: var(--success); margin-top: 12px; letter-spacing: 0.04em; }
+.kpi-change.neutral { color: var(--muted); }
+.kpi-trend { margin-top: 14px; display: flex; align-items: flex-end; gap: 2px; height: 24px; }
+.trend-seg { flex: 1; border-radius: 1px; background: var(--surface3); }
+.trend-seg.fill { background: linear-gradient(180deg, var(--gold), rgba(180,150,90,0.3)); }
+
+/* Two-column layout */
+.two-col { display: grid; grid-template-columns: 1fr 300px; gap: 28px; }
+.main-col { display: flex; flex-direction: column; gap: 24px; }
+.side-col { display: flex; flex-direction: column; gap: 24px; }
+
+/* Map */
+.map-section { }
+.map-frame { border: 1px solid var(--border); background: linear-gradient(135deg, #100E0B 0%, #0A0806 100%); height: 210px; position: relative; overflow: hidden; }
+.map-frame::before { content: ''; position: absolute; inset: 0; background: radial-gradient(ellipse at 50% 50%, rgba(180,150,90,0.04) 0%, transparent 70%); }
+.map-graticule { position: absolute; inset: 0; opacity: 0.06; background-image: linear-gradient(rgba(180,150,90,1) 1px, transparent 1px), linear-gradient(90deg, rgba(180,150,90,1) 1px, transparent 1px); background-size: 60px 40px; }
+.flight-path { position: absolute; width: 100%; height: 100%; }
+.airport { position: absolute; display: flex; flex-direction: column; align-items: center; }
+.airport-dot { width: 5px; height: 5px; background: var(--gold); border-radius: 50%; box-shadow: 0 0 8px rgba(180,150,90,0.6); }
+.airport-code { font-family: 'Inconsolata', monospace; font-size: 8px; color: var(--gold); letter-spacing: 0.1em; margin-top: 4px; }
+.map-info-bar { display: flex; gap: 1px; background: var(--border); border-top: 1px solid var(--border); }
+.map-info-cell { flex: 1; background: var(--surface); padding: 10px 14px; }
+.map-info-label { font-size: 8px; letter-spacing: 0.2em; text-transform: uppercase; color: var(--muted); }
+.map-info-val { font-family: 'Inconsolata', monospace; font-size: 14px; color: var(--gold-bright); margin-top: 2px; }
+
+/* Tender table */
+.tender-section { }
+.elegant-table { width: 100%; border-collapse: collapse; }
+.elegant-table thead tr { border-bottom: 1px solid var(--border); }
+.elegant-table th { font-size: 9px; letter-spacing: 0.2em; text-transform: uppercase; color: var(--muted); padding: 0 0 12px; text-align: left; font-weight: 400; }
+.elegant-table tbody tr { border-bottom: 1px solid var(--border2); transition: background 0.2s; }
+.elegant-table tbody tr:hover { background: var(--gold-pale); }
+.elegant-table td { padding: 14px 0; vertical-align: middle; }
+.route-primary { font-family: 'Cormorant Garamond', serif; font-size: 16px; font-weight: 500; color: var(--cream); }
+.route-secondary { font-size: 10px; color: var(--muted); letter-spacing: 0.06em; margin-top: 2px; }
+.elegant-status { font-size: 9px; letter-spacing: 0.15em; text-transform: uppercase; padding: 4px 10px; border: 1px solid; }
+.es-open { color: var(--success); border-color: rgba(106,155,122,0.3); }
+.es-review { color: var(--warning); border-color: rgba(184,132,60,0.3); }
+.es-awarded { color: var(--gold); border-color: var(--border); }
+.days-num { font-family: 'Inconsolata', monospace; font-size: 14px; color: var(--cream-dim); }
+.days-label { font-size: 9px; color: var(--muted); }
+
+/* Side */
+.ranking-card { border: 1px solid var(--border); background: var(--surface); }
+.rank-header { padding: 16px 18px; border-bottom: 1px solid var(--border); }
+.rank-title { font-family: 'Cormorant Garamond', serif; font-size: 16px; font-weight: 500; color: var(--cream); letter-spacing: 0.04em; }
+.rank-item { padding: 14px 18px; border-bottom: 1px solid var(--border2); display: flex; align-items: center; gap: 12px; }
+.rank-item:last-child { border-bottom: none; }
+.rank-medal { font-family: 'Cormorant Garamond', serif; font-size: 20px; font-weight: 300; color: var(--muted); width: 18px; text-align: center; }
+.rank-medal.gold-text { color: var(--gold-bright); }
+.rank-medal.silver { color: #9CA3AF; }
+.rank-medal.bronze { color: #C87941; }
+.rank-info { flex: 1; }
+.rank-name { font-size: 13px; font-weight: 500; color: var(--cream); }
+.rank-sub { font-size: 10px; color: var(--muted); letter-spacing: 0.04em; margin-top: 2px; }
+.rank-score { text-align: right; }
+.rank-num { font-family: 'Cormorant Garamond', serif; font-size: 22px; font-weight: 500; color: var(--gold-bright); }
+.rank-label { font-size: 8px; color: var(--muted); letter-spacing: 0.15em; text-transform: uppercase; }
+
+/* Metrics card */
+.metric-card { border: 1px solid var(--border); background: var(--surface); padding: 18px; }
+.metric-row { display: flex; justify-content: space-between; align-items: flex-end; padding: 10px 0; border-bottom: 1px solid var(--border2); }
+.metric-row:last-child { border-bottom: none; }
+.metric-key { font-size: 11px; color: var(--muted); letter-spacing: 0.06em; }
+.metric-val { font-family: 'Inconsolata', monospace; font-size: 14px; color: var(--cream); }
+.metric-val.positive { color: var(--success); }
+.metric-val.gold { color: var(--gold-bright); }
+
+.style-tag { position: fixed; bottom: 20px; right: 20px; background: var(--surface); border: 1px solid var(--gold); color: var(--gold); padding: 8px 16px; font-size: 11px; font-weight: 500; letter-spacing: 0.15em; text-transform: uppercase; }
+</style>
+</head>
+<body>
+<aside>
+  <div class="logo">
+    <div class="logo-emblem"><span>✦</span></div>
+    <div class="logo-name">AirGSA</div>
+    <div class="logo-divider"></div>
+    <div class="logo-sub">Airline Private Suite</div>
+  </div>
+
+  <div class="nav-section">Operations</div>
+  <nav>
+    <a href="#" class="active">Dashboard <span class="nav-arrow">›</span></a>
+    <a href="#">Performance <span class="nav-arrow">›</span></a>
+    <a href="#">Tenders <span class="nav-arrow">›</span></a>
+    <a href="#">Contracts <span class="nav-arrow">›</span></a>
+    <div class="nav-section">Intelligence</div>
+    <a href="#">Campaigns <span class="nav-arrow">›</span></a>
+    <a href="#">Market Intel <span class="nav-arrow">›</span></a>
+    <a href="#">Fleet Status <span class="nav-arrow">›</span></a>
+    <div class="nav-section">Account</div>
+    <a href="#">Alerts <span class="nav-arrow">›</span></a>
+    <a href="#">Settings <span class="nav-arrow">›</span></a>
+  </nav>
+
+  <div class="sidebar-bottom">
+    <div class="member-card">
+      <div class="member-label">Logged in as</div>
+      <div class="member-name">AeroBridge Cargo</div>
+      <div class="member-tier">Platinum Member · Airline</div>
+    </div>
+  </div>
+</aside>
+
+<main>
+  <div class="topbar">
+    <div class="topbar-left">
+      <div class="page-eyebrow">Airline Operations</div>
+      <div class="page-title">Dashboard</div>
+    </div>
+    <div class="topbar-right">
+      <div class="time-display">
+        <div class="time-main">13:22</div>
+        <div class="time-sub">UTC+1 · 07 May 2026</div>
+      </div>
+      <div class="topbar-sep"></div>
+      <div class="status-indicator">
+        <div class="status-gem"></div>
+        <div class="status-text">All Systems</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="content">
+    <!-- KPI -->
+    <div class="section-head">
+      <div class="section-title">Key Performance Indicators</div>
+      <div class="section-line"></div>
+      <div class="section-num">01 / 04</div>
+    </div>
+    <div class="kpi-row">
+      <div class="kpi-cell">
+        <div class="kpi-num">I</div>
+        <div class="kpi-label">Revenue MTD</div>
+        <div class="kpi-value">$2.4<span class="kpi-unit">M</span></div>
+        <div class="kpi-change">↑ +14.6% prior month</div>
+        <div class="kpi-trend">
+          <div class="trend-seg"></div><div class="trend-seg fill" style="height:45%"></div>
+          <div class="trend-seg fill" style="height:60%"></div><div class="trend-seg fill" style="height:55%"></div>
+          <div class="trend-seg fill" style="height:75%"></div><div class="trend-seg fill" style="height:85%"></div>
+          <div class="trend-seg fill" style="height:100%"></div>
+        </div>
+      </div>
+      <div class="kpi-cell">
+        <div class="kpi-num">II</div>
+        <div class="kpi-label">Load Factor</div>
+        <div class="kpi-value">82<span class="kpi-unit">.3%</span></div>
+        <div class="kpi-change">↑ +3 pts focus lanes</div>
+        <div class="kpi-trend">
+          <div class="trend-seg fill" style="height:70%"></div><div class="trend-seg fill" style="height:72%"></div>
+          <div class="trend-seg fill" style="height:74%"></div><div class="trend-seg fill" style="height:76%"></div>
+          <div class="trend-seg fill" style="height:79%"></div><div class="trend-seg fill" style="height:81%"></div>
+          <div class="trend-seg fill" style="height:100%"></div>
+        </div>
+      </div>
+      <div class="kpi-cell">
+        <div class="kpi-num">III</div>
+        <div class="kpi-label">Yield / kg</div>
+        <div class="kpi-value">$3<span class="kpi-unit">.18</span></div>
+        <div class="kpi-change">↑ +6.1% blended</div>
+        <div class="kpi-trend">
+          <div class="trend-seg fill" style="height:50%"></div><div class="trend-seg fill" style="height:55%"></div>
+          <div class="trend-seg fill" style="height:62%"></div><div class="trend-seg fill" style="height:70%"></div>
+          <div class="trend-seg fill" style="height:80%"></div><div class="trend-seg fill" style="height:88%"></div>
+          <div class="trend-seg fill" style="height:100%"></div>
+        </div>
+      </div>
+      <div class="kpi-cell">
+        <div class="kpi-num">IV</div>
+        <div class="kpi-label">Active GSAs</div>
+        <div class="kpi-value">8</div>
+        <div class="kpi-change neutral">3 pending review</div>
+        <div class="kpi-trend">
+          <div class="trend-seg fill" style="height:62%"></div><div class="trend-seg fill" style="height:62%"></div>
+          <div class="trend-seg fill" style="height:75%"></div><div class="trend-seg fill" style="height:75%"></div>
+          <div class="trend-seg fill" style="height:87%"></div><div class="trend-seg fill" style="height:87%"></div>
+          <div class="trend-seg fill" style="height:100%"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="two-col">
+      <div class="main-col">
+        <!-- Map -->
+        <div class="map-section">
+          <div class="section-head">
+            <div class="section-title">Global Network</div>
+            <div class="section-line"></div>
+          </div>
+          <div class="map-frame">
+            <div class="map-graticule"></div>
+            <svg class="flight-path" viewBox="0 0 900 210" preserveAspectRatio="none">
+              <path d="M 198 74 Q 390 20 504 88" stroke="rgba(180,150,90,0.35)" stroke-width="1" fill="none" stroke-dasharray="5,4"/>
+              <path d="M 198 74 Q 270 130 270 126" stroke="rgba(180,150,90,0.2)" stroke-width="1" fill="none" stroke-dasharray="4,5"/>
+              <path d="M 504 88 Q 630 55 720 77" stroke="rgba(180,150,90,0.25)" stroke-width="1" fill="none" stroke-dasharray="4,5"/>
+              <path d="M 270 126 Q 400 160 504 88" stroke="rgba(180,150,90,0.15)" stroke-width="1" fill="none" stroke-dasharray="3,6"/>
+            </svg>
+            <div class="airport" style="top:35%;left:22%;">
+              <div class="airport-dot"></div>
+              <div class="airport-code">FRA</div>
+            </div>
+            <div class="airport" style="top:60%;left:30%;">
+              <div class="airport-dot" style="background:rgba(180,150,90,0.5)"></div>
+              <div class="airport-code">DXB</div>
+            </div>
+            <div class="airport" style="top:42%;left:56%;">
+              <div class="airport-dot"></div>
+              <div class="airport-code">HKG</div>
+            </div>
+            <div class="airport" style="top:37%;left:80%;">
+              <div class="airport-dot" style="background:rgba(180,150,90,0.5)"></div>
+              <div class="airport-code">NRT</div>
+            </div>
+            <div class="airport" style="top:28%;left:14%;">
+              <div class="airport-dot" style="background:rgba(180,150,90,0.4)"></div>
+              <div class="airport-code">LHR</div>
+            </div>
+          </div>
+          <div class="map-info-bar">
+            <div class="map-info-cell"><div class="map-info-label">Active Routes</div><div class="map-info-val">24</div></div>
+            <div class="map-info-cell"><div class="map-info-label">In Transit</div><div class="map-info-val">7</div></div>
+            <div class="map-info-cell"><div class="map-info-label">Delayed</div><div class="map-info-val" style="color:var(--warning)">2</div></div>
+            <div class="map-info-cell"><div class="map-info-label">On Time</div><div class="map-info-val" style="color:var(--success)">96%</div></div>
+          </div>
+        </div>
+
+        <!-- Table -->
+        <div class="tender-section">
+          <div class="section-head">
+            <div class="section-title">Open Tenders</div>
+            <div class="section-line"></div>
+          </div>
+          <table class="elegant-table">
+            <thead>
+              <tr>
+                <th>Route</th>
+                <th>Name</th>
+                <th>Applications</th>
+                <th>Deadline</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><div class="route-primary">FRA → DXB</div></td>
+                <td><div class="route-secondary">EU-Middle East Corridor</div></td>
+                <td><span style="font-family:'Inconsolata',monospace;font-size:15px;color:var(--cream-dim)">8</span></td>
+                <td><div class="days-num">12</div><div class="days-label">days</div></td>
+                <td><span class="elegant-status es-open">Open</span></td>
+              </tr>
+              <tr>
+                <td><div class="route-primary">JFK → HKG</div></td>
+                <td><div class="route-secondary">North Atlantic — Asia Pacific</div></td>
+                <td><span style="font-family:'Inconsolata',monospace;font-size:15px;color:var(--cream-dim)">5</span></td>
+                <td><div class="days-num" style="color:var(--warning)">5</div><div class="days-label">days</div></td>
+                <td><span class="elegant-status es-review">Review</span></td>
+              </tr>
+              <tr>
+                <td><div class="route-primary">MUC → SIN</div></td>
+                <td><div class="route-secondary">Europe — South East Asia</div></td>
+                <td><span style="font-family:'Inconsolata',monospace;font-size:15px;color:var(--cream-dim)">3</span></td>
+                <td><div class="days-num">22</div><div class="days-label">days</div></td>
+                <td><span class="elegant-status es-open">Open</span></td>
+              </tr>
+              <tr>
+                <td><div class="route-primary">LHR → ORD</div></td>
+                <td><div class="route-secondary">North Atlantic Freight Lane</div></td>
+                <td><span style="font-family:'Inconsolata',monospace;font-size:15px;color:var(--cream-dim)">6</span></td>
+                <td><div class="days-num" style="color:var(--success)">—</div><div class="days-label">closed</div></td>
+                <td><span class="elegant-status es-awarded">Awarded</span></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Side -->
+      <div class="side-col">
+        <div>
+          <div class="section-head">
+            <div class="section-title">GSA Rankings</div>
+            <div class="section-line"></div>
+          </div>
+          <div class="ranking-card">
+            <div class="rank-item">
+              <div class="rank-medal gold-text">I</div>
+              <div class="rank-info">
+                <div class="rank-name">Lufthansa Cargo GSA</div>
+                <div class="rank-sub">FRA → DXB · Commission 5.2%</div>
+              </div>
+              <div class="rank-score">
+                <div class="rank-num">94.2</div>
+                <div class="rank-label">Score</div>
+              </div>
+            </div>
+            <div class="rank-item">
+              <div class="rank-medal silver">II</div>
+              <div class="rank-info">
+                <div class="rank-name">Emirates SkyCargo</div>
+                <div class="rank-sub">JFK → HKG · Commission 6.1%</div>
+              </div>
+              <div class="rank-score">
+                <div class="rank-num">87.5</div>
+                <div class="rank-label">Score</div>
+              </div>
+            </div>
+            <div class="rank-item">
+              <div class="rank-medal bronze">III</div>
+              <div class="rank-info">
+                <div class="rank-name">DACHSER Air & Sea</div>
+                <div class="rank-sub">MUC → SIN · Commission 4.8%</div>
+              </div>
+              <div class="rank-score">
+                <div class="rank-num">81.0</div>
+                <div class="rank-label">Score</div>
+              </div>
+            </div>
+            <div class="rank-item">
+              <div class="rank-medal" style="color:var(--muted)">IV</div>
+              <div class="rank-info">
+                <div class="rank-name">Panalpina World</div>
+                <div class="rank-sub">LHR → ORD · Commission 5.8%</div>
+              </div>
+              <div class="rank-score">
+                <div class="rank-num" style="color:var(--muted)">74.3</div>
+                <div class="rank-label">Score</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div>
+          <div class="section-head">
+            <div class="section-title">Platform Metrics</div>
+            <div class="section-line"></div>
+          </div>
+          <div class="metric-card">
+            <div class="metric-row">
+              <div class="metric-key">Avg. Time to Award</div>
+              <div class="metric-val gold">18.4 days</div>
+            </div>
+            <div class="metric-row">
+              <div class="metric-key">GSA Response Rate</div>
+              <div class="metric-val positive">91.2%</div>
+            </div>
+            <div class="metric-row">
+              <div class="metric-key">Contracts Active</div>
+              <div class="metric-val">12</div>
+            </div>
+            <div class="metric-row">
+              <div class="metric-key">Campaigns Running</div>
+              <div class="metric-val">3</div>
+            </div>
+            <div class="metric-row">
+              <div class="metric-key">Capacity Alerts</div>
+              <div class="metric-val" style="color:var(--warning)">2 Active</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</main>
+<div class="style-tag">Style 6 — First Class</div>
+</body>
+</html>

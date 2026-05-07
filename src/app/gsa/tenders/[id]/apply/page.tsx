@@ -47,22 +47,22 @@ export default function ApplyTenderPage() {
             {/* Supporting documents */}
             <div className="md:col-span-2 space-y-3">
               <div className="flex items-center gap-2">
-                <Paperclip className="h-4 w-4 text-slate-400" />
-                <p className="text-sm font-semibold text-white">Supporting documents</p>
+                <Paperclip className="h-4 w-4 text-ink-muted" />
+                <p className="text-sm font-semibold text-ink">Supporting documents</p>
                 {files.length > 0 && (
-                  <span className="rounded-full bg-cyan-500/20 px-2 py-0.5 text-xs font-semibold text-cyan-300">
+                  <span className="rounded-full bg-brand-light px-2 py-0.5 text-xs font-semibold text-brand">
                     {files.length}
                   </span>
                 )}
               </div>
 
               {/* What airlines typically expect */}
-              <div className="rounded-lg border border-white/10 bg-white/[0.02] px-4 py-3">
-                <p className="text-xs font-semibold text-slate-400 mb-2">Commonly requested documents</p>
+              <div className="rounded-lg border border-border-ui bg-surface px-4 py-3">
+                <p className="text-xs font-semibold text-ink-muted mb-2">Commonly requested documents</p>
                 <ul className="space-y-1">
                   {requiredDocs.map((doc) => (
-                    <li key={doc} className="flex items-start gap-2 text-xs text-slate-500">
-                      <span className="mt-0.5 h-1.5 w-1.5 shrink-0 rounded-full bg-slate-600" />
+                    <li key={doc} className="flex items-start gap-2 text-xs text-ink-muted">
+                      <span className="mt-0.5 h-1.5 w-1.5 shrink-0 rounded-full bg-slate-400" />
                       {doc}
                     </li>
                   ))}

@@ -9,10 +9,10 @@ export type Column<T> = {
 
 export function DataTable<T>({ columns, data }: { columns: Column<T>[]; data: T[] }) {
   return (
-    <div className="overflow-hidden rounded-lg border border-white/10">
+    <div className="overflow-hidden rounded-lg border border-border-ui">
       <div className="overflow-x-auto">
         <table className="w-full min-w-[760px] text-left text-sm">
-          <thead className="bg-white/[0.06] text-xs uppercase tracking-wide text-slate-400">
+          <thead className="bg-surface text-xs uppercase tracking-wide text-ink-muted">
             <tr>
               {columns.map((column) => (
                 <th key={column.header} className={cn("px-4 py-3 font-semibold", column.className)}>
@@ -21,9 +21,9 @@ export function DataTable<T>({ columns, data }: { columns: Column<T>[]; data: T[
               ))}
             </tr>
           </thead>
-          <tbody className="divide-y divide-white/10">
+          <tbody className="divide-y divide-border-ui">
             {data.map((row, index) => (
-              <tr key={index} className="bg-slate-950/30 text-slate-200">
+              <tr key={index} className="bg-page text-ink-muted">
                 {columns.map((column) => (
                   <td key={column.header} className={cn("px-4 py-4 align-middle", column.className)}>
                     {column.cell(row)}

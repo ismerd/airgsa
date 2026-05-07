@@ -10,7 +10,7 @@ const nav = [
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   return (
-    <div className="flex min-h-screen bg-slate-950">
+    <div className="flex min-h-screen bg-page">
       <Sidebar items={nav} role="Admin" />
       <div className="min-w-0 flex-1">{children}</div>
     </div>

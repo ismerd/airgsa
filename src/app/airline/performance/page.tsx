@@ -27,7 +27,7 @@ export default function AirlinePerformancePage() {
             </CardHeader>
             <CardContent className="grid gap-3 md:grid-cols-3">
               {["FRA-DXB loadfactor below target", "MUC-SIN pharma yield ahead of plan", "VIE-DOH bookings need GSA push"].map((item) => (
-                <div key={item} className="rounded-md border border-white/10 bg-slate-950/50 p-4 text-sm text-slate-200">
+                <div key={item} className="rounded-xl border border-border-ui bg-surface2 p-4 text-sm text-ink-muted">
                   {item}
                 </div>
               ))}
