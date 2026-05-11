@@ -5,86 +5,77 @@ import {
   countryPerformanceByPeriod,
   gsaPerformanceByPeriod,
   periodAveragePerformance,
-  scaleCountryByFactor,
-  scaleGsaByFactor,
   type CountryPerformance,
   type GsaPerformance,
   type PeriodAveragePerformance,
   type PerformancePeriod,
 } from "./airline-performance-data";
 
-export type PeriodTab = PerformancePeriod | "custom";
+export type DashboardMode = "ytd" | "fy" | "daily" | "weekly" | "monthly" | "yearly" | "custom";
+export type KpiPeriod = "ytd" | "fy" | "custom";
+
+// What each mode means internally
+const MODE_MAP: Record<DashboardMode, { kpiPeriod: KpiPeriod; performancePeriod: PerformancePeriod }> = {
+  ytd:     { kpiPeriod: "ytd",    performancePeriod: "monthly" },
+  fy:      { kpiPeriod: "fy",     performancePeriod: "monthly" },
+  daily:   { kpiPeriod: "fy",     performancePeriod: "daily"   },
+  weekly:  { kpiPeriod: "fy",     performancePeriod: "weekly"  },
+  monthly: { kpiPeriod: "ytd",    performancePeriod: "monthly" },
+  yearly:  { kpiPeriod: "fy",     performancePeriod: "yearly"  },
+  custom:  { kpiPeriod: "custom", performancePeriod: "monthly" },
+};
 
 type PeriodContextValue = {
-  selectedPeriod: PeriodTab;
-  setSelectedPeriod: (p: PeriodTab) => void;
-  customStart: string;
-  setCustomStart: (v: string) => void;
-  customEnd: string;
-  setCustomEnd: (v: string) => void;
+  dashboardMode: DashboardMode;
+  setDashboardMode: (m: DashboardMode) => void;
+  kpiPeriod: KpiPeriod;
+  kpiCustomStart: string;
+  setKpiCustomStart: (v: string) => void;
+  kpiCustomEnd: string;
+  setKpiCustomEnd: (v: string) => void;
   countries: CountryPerformance[];
   gsas: GsaPerformance[];
   selectedAverage: Omit<PeriodAveragePerformance, "period">;
 };
 
+const defaultAverage = periodAveragePerformance.find((p) => p.period === "monthly")!;
+
 const PeriodContext = createContext<PeriodContextValue>({
-  selectedPeriod: "monthly",
-  setSelectedPeriod: () => {},
-  customStart: "2026-01-01",
-  setCustomStart: () => {},
-  customEnd: "2026-04-30",
-  setCustomEnd: () => {},
+  dashboardMode: "fy",
+  setDashboardMode: () => {},
+  kpiPeriod: "fy",
+  kpiCustomStart: "2026-01",
+  setKpiCustomStart: () => {},
+  kpiCustomEnd: "2026-04",
+  setKpiCustomEnd: () => {},
   countries: countryPerformanceByPeriod.monthly,
   gsas: gsaPerformanceByPeriod.monthly,
-  selectedAverage: periodAveragePerformance.find((p) => p.period === "monthly")!,
+  selectedAverage: defaultAverage,
 });
 
 export function PeriodProvider({ children }: { children: React.ReactNode }) {
-  const [selectedPeriod, setSelectedPeriod] = useState<PeriodTab>("monthly");
-  const [customStart, setCustomStart] = useState("2026-01-01");
-  const [customEnd, setCustomEnd] = useState("2026-04-30");
+  const [dashboardMode, setDashboardMode] = useState<DashboardMode>("fy");
+  const [kpiCustomStart, setKpiCustomStart] = useState("2026-01");
+  const [kpiCustomEnd, setKpiCustomEnd] = useState("2026-04");
 
-  const customDays = useMemo(
-    () => Math.max(1, Math.round((new Date(customEnd).getTime() - new Date(customStart).getTime()) / 86400000) + 1),
-    [customStart, customEnd],
+  const { kpiPeriod, performancePeriod } = MODE_MAP[dashboardMode];
+
+  const countries = useMemo(
+    () => countryPerformanceByPeriod[performancePeriod],
+    [performancePeriod],
   );
-
-  const customCountries = useMemo(
-    () => (selectedPeriod === "custom" ? scaleCountryByFactor(customDays / 30) : []),
-    [selectedPeriod, customDays],
+  const gsas = useMemo(
+    () => gsaPerformanceByPeriod[performancePeriod],
+    [performancePeriod],
   );
-
-  const customGsas = useMemo(
-    () => (selectedPeriod === "custom" ? scaleGsaByFactor(customDays / 30) : []),
-    [selectedPeriod, customDays],
+  const selectedAverage = useMemo(
+    () => periodAveragePerformance.find((p) => p.period === performancePeriod)!,
+    [performancePeriod],
   );
-
-  const customAverage = useMemo((): Omit<PeriodAveragePerformance, "period"> => {
-    const revenue = customCountries.reduce((s, r) => s + r.revenue, 0);
-    const tonnage = customCountries.reduce((s, r) => s + r.tonnage, 0);
-    const loadFactor = customCountries.length
-      ? Math.round(customCountries.reduce((s, r) => s + r.loadFactor, 0) / customCountries.length)
-      : 0;
-    return {
-      label: "Custom range",
-      revenue,
-      yieldPerKg: tonnage === 0 ? 0 : revenue / (tonnage * 1000),
-      loadFactor,
-      tonnage,
-      flightCount: customGsas.reduce((s, r) => s + r.flightCount, 0),
-    };
-  }, [customCountries, customGsas]);
-
-  const countries = selectedPeriod === "custom" ? customCountries : countryPerformanceByPeriod[selectedPeriod];
-  const gsas = selectedPeriod === "custom" ? customGsas : gsaPerformanceByPeriod[selectedPeriod];
-  const selectedAverage =
-    selectedPeriod === "custom"
-      ? customAverage
-      : periodAveragePerformance.find((p) => p.period === selectedPeriod)!;
 
   return (
     <PeriodContext.Provider
-      value={{ selectedPeriod, setSelectedPeriod, customStart, setCustomStart, customEnd, setCustomEnd, countries, gsas, selectedAverage }}
+      value={{ dashboardMode, setDashboardMode, kpiPeriod, kpiCustomStart, setKpiCustomStart, kpiCustomEnd, setKpiCustomEnd, countries, gsas, selectedAverage }}
     >
       {children}
     </PeriodContext.Provider>

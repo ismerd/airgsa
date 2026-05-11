@@ -1,5 +1,4 @@
 import { AirlinePerformancePeriodPanel } from "@/components/dashboard/airline-performance-period-panel";
-import { ChartSection } from "@/components/dashboard/chart-section";
 import { TimeRangeFilter } from "@/components/dashboard/time-range-filter";
 import { Topbar } from "@/components/dashboard/topbar";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -17,9 +16,7 @@ export default function AirlinePerformancePage() {
           belowBar={<TimeRangeFilter />}
         />
         <main className="space-y-5 p-5">
-          <ChartSection allData={kpiSeries} />
-
-          <AirlinePerformancePeriodPanel />
+          <AirlinePerformancePeriodPanel kpiData={kpiSeries} />
 
           <Card>
             <CardHeader>

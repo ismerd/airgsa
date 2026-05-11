@@ -178,8 +178,7 @@ body {
   height: 34px;
   place-items: center;
   filter: drop-shadow(1px 2px 3px rgba(11,30,79,0.25));
-  transform: rotate(var(--flight-heading));
-  transition: filter 160ms ease, transform 160ms ease;
+  transition: filter 160ms ease;
 }
 
 .flight-aircraft.is-selected {
@@ -204,4 +203,13 @@ body {
   stroke: rgba(255,255,255,0.9);
   stroke-linejoin: round;
   stroke-width: 5;
+}
+
+.dark .flight-aircraft-outline {
+  stroke: rgba(255,255,255,0.9);
+}
+
+:root:not(.dark) .flight-aircraft-outline {
+  stroke: rgba(255,255,255,1);
+  stroke-width: 6;
 }

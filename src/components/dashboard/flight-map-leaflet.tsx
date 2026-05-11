@@ -1,7 +1,7 @@
 "use client";
 
 import L from "leaflet";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { CircleMarker, MapContainer, Marker, Polyline, TileLayer, Tooltip, useMap } from "react-leaflet";
 import type { FlightTrackerRecord } from "@/lib/dummy-flight-data";
 
@@ -12,27 +12,44 @@ type FlightLeafletMapProps = {
   onFlightSelect: (flightId: string) => void;
 };
 
-const mapBounds: L.LatLngBoundsExpression = [
-  [-58, -135],
-  [72, 145],
-];
+
+function useDarkMode() {
+  const [isDark, setIsDark] = useState(() =>
+    typeof document !== "undefined" ? document.documentElement.classList.contains("dark") : true
+  );
+
+  useEffect(() => {
+    const observer = new MutationObserver(() => {
+      setIsDark(document.documentElement.classList.contains("dark"));
+    });
+    observer.observe(document.documentElement, { attributeFilter: ["class"] });
+    return () => observer.disconnect();
+  }, []);
+
+  return isDark;
+}
 
 export function FlightLeafletMap({ flights, selectedFlightId, markerColorMode, onFlightSelect }: FlightLeafletMapProps) {
+  const isDark = useDarkMode();
+  const tileUrl = isDark
+    ? "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
+    : "https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png";
+
   return (
     <MapContainer
-      className="flight-map h-full min-h-[420px] w-full"
+      className="flight-map h-full min-h-[560px] w-full"
       center={[31, 20]}
       zoom={2}
       minZoom={2}
       maxZoom={6}
-      maxBounds={mapBounds}
       scrollWheelZoom
       worldCopyJump
     >
       <MapResizeObserver watchKey={selectedFlightId ?? "none"} />
       <TileLayer
         attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/attributions">CARTO</a>'
-        url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
+        url={tileUrl}
+        key={tileUrl}
       />
 
       {flights.map((flight) => {
@@ -101,10 +118,12 @@ function FlightLayer({
     className: "flight-aircraft-marker",
     iconAnchor: [17, 17],
     iconSize: [34, 34],
-    html: `<span class="flight-aircraft${isSelected ? " is-selected" : ""}" style="--flight-color:${markerColor};--flight-heading:${heading}deg" aria-hidden="true">
+    html: `<span class="flight-aircraft${isSelected ? " is-selected" : ""}" style="--flight-color:${markerColor}" aria-hidden="true">
       <svg viewBox="0 0 64 64" role="img" focusable="false">
-        <path class="flight-aircraft-outline" d="M32 3.5c2 0 3.5 1.7 3.5 3.8l.3 20 24.1 9.8c1.3.5 2.1 1.8 2.1 3.2v4.4l-26-5.4.3 13.3 8.8 5.4v3.8L32 58.5l-13.1 3.3V58l8.8-5.4.3-13.3-26 5.4v-4.4c0-1.4.8-2.7 2.1-3.2l24.1-9.8.3-20c0-2.1 1.5-3.8 3.5-3.8Z" />
-        <path class="flight-aircraft-body" d="M32 3.5c2 0 3.5 1.7 3.5 3.8l.3 20 24.1 9.8c1.3.5 2.1 1.8 2.1 3.2v4.4l-26-5.4.3 13.3 8.8 5.4v3.8L32 58.5l-13.1 3.3V58l8.8-5.4.3-13.3-26 5.4v-4.4c0-1.4.8-2.7 2.1-3.2l24.1-9.8.3-20c0-2.1 1.5-3.8 3.5-3.8Z" />
+        <g transform="rotate(${heading}, 32, 32)">
+          <path class="flight-aircraft-outline" d="M32 3.5c2 0 3.5 1.7 3.5 3.8l.3 20 24.1 9.8c1.3.5 2.1 1.8 2.1 3.2v4.4l-26-5.4.3 13.3 8.8 5.4v3.8L32 58.5l-13.1 3.3V58l8.8-5.4.3-13.3-26 5.4v-4.4c0-1.4.8-2.7 2.1-3.2l24.1-9.8.3-20c0-2.1 1.5-3.8 3.5-3.8Z" />
+          <path class="flight-aircraft-body" d="M32 3.5c2 0 3.5 1.7 3.5 3.8l.3 20 24.1 9.8c1.3.5 2.1 1.8 2.1 3.2v4.4l-26-5.4.3 13.3 8.8 5.4v3.8L32 58.5l-13.1 3.3V58l8.8-5.4.3-13.3-26 5.4v-4.4c0-1.4.8-2.7 2.1-3.2l24.1-9.8.3-20c0-2.1 1.5-3.8 3.5-3.8Z" />
+        </g>
       </svg>
     </span>`,
   });

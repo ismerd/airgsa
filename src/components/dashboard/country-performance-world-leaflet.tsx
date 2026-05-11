@@ -1,9 +1,8 @@
 "use client";
 
-import L from "leaflet";
 import countriesAtlas from "world-atlas/countries-110m.json";
 import { feature } from "topojson-client";
-import { useEffect, useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { GeoJSON, MapContainer, TileLayer, useMap } from "react-leaflet";
 import type { FeatureCollection, Geometry } from "geojson";
 import type { CountryPerformance } from "@/lib/airline-performance-data";
@@ -15,10 +14,19 @@ type CountryPerformanceWorldLeafletProps = {
   onCountrySelect: (country: string) => void;
 };
 
-const mapBounds: L.LatLngBoundsExpression = [
-  [-58, -180],
-  [75, 180],
-];
+function useDarkMode() {
+  const [isDark, setIsDark] = useState(() =>
+    typeof document !== "undefined" ? document.documentElement.classList.contains("dark") : true
+  );
+  useEffect(() => {
+    const observer = new MutationObserver(() => {
+      setIsDark(document.documentElement.classList.contains("dark"));
+    });
+    observer.observe(document.documentElement, { attributeFilter: ["class"] });
+    return () => observer.disconnect();
+  }, []);
+  return isDark;
+}
 
 const worldCountries = feature(
   countriesAtlas as never,
@@ -30,6 +38,11 @@ export function CountryPerformanceWorldLeaflet({
   selectedCountry,
   onCountrySelect,
 }: CountryPerformanceWorldLeafletProps) {
+  const isDark = useDarkMode();
+  const tileUrl = isDark
+    ? "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
+    : "https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png";
+
   const maxRevenue = Math.max(...countries.map((country) => country.revenue), 1);
   const countryDataByName = useMemo(() => new Map(countries.map((country) => [country.country, country])), [countries]);
   const visibleCountryFeatures = useMemo(
@@ -43,9 +56,8 @@ export function CountryPerformanceWorldLeaflet({
 
   return (
     <MapContainer
-      className="performance-country-map h-full min-h-[390px] w-full"
+      className="performance-country-map h-full min-h-[520px] w-full"
       center={[31, 35]}
-      maxBounds={mapBounds}
       maxZoom={6}
       minZoom={2}
       scrollWheelZoom
@@ -55,7 +67,8 @@ export function CountryPerformanceWorldLeaflet({
       <CountryMapResizeObserver watchKey={`${selectedCountry ?? "none"}-${countries.length}`} />
       <TileLayer
         attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/attributions">CARTO</a>'
-        url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
+        url={tileUrl}
+        key={tileUrl}
       />
 
       <GeoJSON

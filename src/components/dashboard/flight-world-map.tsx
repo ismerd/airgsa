@@ -4,7 +4,7 @@ import dynamic from "next/dynamic";
 import { BarChart3, DollarSign, Plane, Scale } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import type { FlightTrackerRecord, ProductMix } from "@/lib/dummy-flight-data";
+import type { CargoDestination, FlightTrackerRecord, ProductMix } from "@/lib/dummy-flight-data";
 import { formatCurrency } from "@/lib/utils";
 
 const FlightLeafletMap = dynamic(
@@ -12,7 +12,7 @@ const FlightLeafletMap = dynamic(
   {
     ssr: false,
     loading: () => (
-      <div className="flex h-full min-h-[420px] items-center justify-center bg-surface2 text-sm text-ink-muted">
+      <div className="flex h-full min-h-[560px] items-center justify-center bg-surface2 text-sm text-ink-muted">
         Loading flight map...
       </div>
     ),
@@ -54,7 +54,7 @@ export function FlightWorldMap({ title, subtitle, flights, markerColorMode }: Fl
   const gsaLegend = useMemo(() => getLegendItems(flights, "gsa"), [flights]);
 
   return (
-    <Card className="overflow-hidden">
+    <Card className="isolate overflow-hidden">
       <CardHeader className="gap-4">
         <div className="flex flex-col gap-2 lg:flex-row lg:items-start lg:justify-between">
           <div>
@@ -71,47 +71,42 @@ export function FlightWorldMap({ title, subtitle, flights, markerColorMode }: Fl
       </CardHeader>
 
       <CardContent>
-        <div className="grid overflow-hidden rounded-md border border-border-ui bg-surface2 xl:grid-cols-[minmax(0,1fr)_340px]">
-          <div className="relative min-h-[420px]">
-            {flights.length > 0 ? (
-              <FlightLeafletMap
-                flights={flights}
-                markerColorMode={markerColorMode}
-                selectedFlightId={selectedFlightId}
-                onFlightSelect={(flightId) =>
-                  setSelectedFlightId((currentFlightId) => (currentFlightId === flightId ? undefined : flightId))
-                }
-              />
-            ) : (
-              <div className="flex h-full min-h-[420px] items-center justify-center text-sm text-ink-muted">
-                No flights match this dashboard context.
-              </div>
-            )}
-          </div>
+        <div className="relative overflow-hidden rounded-md border border-border-ui bg-surface2 min-h-[560px]">
+          {flights.length > 0 ? (
+            <FlightLeafletMap
+              flights={flights}
+              markerColorMode={markerColorMode}
+              selectedFlightId={selectedFlightId}
+              onFlightSelect={(flightId) =>
+                setSelectedFlightId((currentFlightId) => (currentFlightId === flightId ? undefined : flightId))
+              }
+            />
+          ) : (
+            <div className="flex h-full min-h-[560px] items-center justify-center text-sm text-ink-muted">
+              No flights match this dashboard context.
+            </div>
+          )}
 
-          <aside className="border-t border-border-ui bg-surface p-4 xl:border-l xl:border-t-0">
-            {selectedFlight ? (
+          {selectedFlight && (
+            <aside className="absolute right-3 top-3 bottom-3 z-[1000] w-[300px] overflow-y-auto rounded-lg border border-border-ui bg-surface/95 p-4 shadow-xl backdrop-blur-sm">
+              <button
+                onClick={() => setSelectedFlightId(undefined)}
+                className="absolute right-3 top-3 flex h-6 w-6 items-center justify-center rounded-full text-ink-muted hover:bg-black/10 hover:text-ink"
+                aria-label="Close"
+              >
+                ×
+              </button>
               <FlightDetails flight={selectedFlight} markerColorMode={markerColorMode} />
-            ) : (
-              <EmptyFlightDetails />
-            )}
-            <Legend title="Airlines" items={airlineLegend} />
-            <Legend title="GSAs" items={gsaLegend} />
-          </aside>
+              <Legend title="Airlines" items={airlineLegend} />
+              <Legend title="GSAs" items={gsaLegend} />
+            </aside>
+          )}
         </div>
       </CardContent>
     </Card>
   );
 }
 
-function EmptyFlightDetails() {
-  return (
-    <div className="mb-5 rounded-md border border-dashed border-border-ui bg-surface p-4">
-      <p className="text-sm font-semibold text-ink">No flight selected</p>
-      <p className="mt-1 text-xs text-ink-muted">Click an aircraft on the map to show route and shipment statistics.</p>
-    </div>
-  );
-}
 
 function SummaryMetric({ icon: Icon, label, value }: { icon: typeof Plane; label: string; value: string }) {
   return (
@@ -141,10 +136,19 @@ function FlightDetails({
         <span className="mt-1 h-3 w-3 shrink-0 rounded-full" style={{ backgroundColor: markerColor }} />
         <div>
           <p className="text-sm font-semibold text-ink">{flight.flightNumber}</p>
-          <p className="text-xs text-ink-muted">
-            {flight.origin.airportCode} {flight.origin.airportName} to {flight.destination.airportCode}{" "}
-            {flight.destination.airportName}
-          </p>
+          <div className="mt-1 flex flex-col gap-0.5">
+            <span className="flex items-center gap-1.5 text-xs text-ink-muted">
+              <CountryFlag code={flight.origin.countryCode} />
+              <span className="font-medium text-ink">{flight.origin.airportCode}</span>
+              {flight.origin.airportName}
+            </span>
+            <span className="pl-0.5 text-[10px] text-ink-muted/50">↓</span>
+            <span className="flex items-center gap-1.5 text-xs text-ink-muted">
+              <CountryFlag code={flight.destination.countryCode} />
+              <span className="font-medium text-ink">{flight.destination.airportCode}</span>
+              {flight.destination.airportName}
+            </span>
+          </div>
         </div>
       </div>
 
@@ -173,6 +177,15 @@ function FlightDetails({
           ))}
         </div>
       </div>
+
+      <div className="mt-4">
+        <p className="text-xs font-semibold uppercase tracking-[0.16em] text-ink-muted">Cargo destinations</p>
+        <div className="mt-3 space-y-2">
+          {flight.cargoDestinations.map((dest) => (
+            <CargoDestinationRow key={`${dest.city}-${dest.countryCode}`} dest={dest} color={markerColor} />
+          ))}
+        </div>
+      </div>
     </div>
   );
 }
@@ -182,6 +195,35 @@ function Detail({ label, value }: { label: string; value: string }) {
     <div>
       <p className="text-xs text-ink-muted">{label}</p>
       <p className="mt-0.5 font-medium text-ink">{value}</p>
+    </div>
+  );
+}
+
+function CountryFlag({ code }: { code: string }) {
+  return (
+    <img
+      src={`https://flagcdn.com/20x15/${code.toLowerCase()}.png`}
+      width={16}
+      height={12}
+      alt={code}
+      className="inline-block rounded-[2px] object-cover shadow-sm"
+    />
+  );
+}
+
+function CargoDestinationRow({ dest, color }: { dest: CargoDestination; color: string }) {
+  return (
+    <div>
+      <div className="mb-1 flex items-center justify-between gap-3 text-xs">
+        <span className="flex items-center gap-1.5 text-ink-muted">
+          <CountryFlag code={dest.countryCode} />
+          {dest.city}
+        </span>
+        <span className="font-semibold text-ink">{dest.percentage}%</span>
+      </div>
+      <div className="h-1.5 overflow-hidden rounded-full bg-black/10">
+        <div className="h-full rounded-full opacity-70" style={{ width: `${dest.percentage}%`, backgroundColor: color }} />
+      </div>
     </div>
   );
 }

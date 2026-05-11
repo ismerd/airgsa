@@ -152,7 +152,7 @@ export default function FleetPage() {
           title="Live fleet positions"
           subtitle="AeroBridge Cargo aircraft currently airborne. Click an aircraft for flight details."
           flights={trackedFlights}
-          markerColorMode="airline"
+          markerColorMode="gsa"
         />
 
         {/* Fleet schedule table */}

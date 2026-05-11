@@ -1,3 +1,15 @@
+export type AirportBreakdown = {
+  airportCode: string;
+  airportName: string;
+  city: string;
+  revenue: number;
+  tonnage: number;
+  loadFactor: number;
+  yieldPerKg: number;
+  flightCount: number;
+  topRoute: string;
+};
+
 export type CountryPerformance = {
   country: string;
   code: string; // ISO 3166-1 alpha-2
@@ -8,6 +20,7 @@ export type CountryPerformance = {
   loadFactor: number;
   tonnage: number;
   topLane: string;
+  airports: AirportBreakdown[];
   mapCenter: {
     lat: number;
     lng: number;
@@ -55,6 +68,11 @@ const monthlyCountryPerformance: CountryPerformance[] = [
     loadFactor: 84,
     tonnage: 179.8,
     topLane: "FRA-DXB",
+    airports: [
+      { airportCode: "FRA", airportName: "Frankfurt Airport", city: "Frankfurt", revenue: 265100, tonnage: 98.9, loadFactor: 86, yieldPerKg: 2.68, flightCount: 23, topRoute: "FRA-DXB" },
+      { airportCode: "MUC", airportName: "Munich Airport", city: "Munich", revenue: 168700, tonnage: 62.9, loadFactor: 83, yieldPerKg: 2.68, flightCount: 15, topRoute: "MUC-SIN" },
+      { airportCode: "DUS", airportName: "Düsseldorf Airport", city: "Düsseldorf", revenue: 48200, tonnage: 18.0, loadFactor: 78, yieldPerKg: 2.68, flightCount: 5, topRoute: "DUS-IST" },
+    ],
     mapCenter: { lat: 51.1657, lng: 10.4515 },
     mapFootprint: [
       [55.1, 6.1],
@@ -75,6 +93,9 @@ const monthlyCountryPerformance: CountryPerformance[] = [
     loadFactor: 76,
     tonnage: 90.7,
     topLane: "VIE-DOH",
+    airports: [
+      { airportCode: "VIE", airportName: "Vienna International Airport", city: "Vienna", revenue: 218500, tonnage: 90.7, loadFactor: 76, yieldPerKg: 2.41, flightCount: 18, topRoute: "VIE-DOH" },
+    ],
     mapCenter: { lat: 47.5162, lng: 14.5501 },
     mapFootprint: [
       [49.1, 9.5],
@@ -94,6 +115,10 @@ const monthlyCountryPerformance: CountryPerformance[] = [
     loadFactor: 81,
     tonnage: 65.3,
     topLane: "ZRH-SIN",
+    airports: [
+      { airportCode: "ZRH", airportName: "Zurich Airport", city: "Zurich", revenue: 152960, tonnage: 52.2, loadFactor: 83, yieldPerKg: 2.93, flightCount: 14, topRoute: "ZRH-SIN" },
+      { airportCode: "GVA", airportName: "Geneva Airport", city: "Geneva", revenue: 38240, tonnage: 13.1, loadFactor: 76, yieldPerKg: 2.92, flightCount: 4, topRoute: "GVA-DXB" },
+    ],
     mapCenter: { lat: 46.8182, lng: 8.2275 },
     mapFootprint: [
       [47.8, 5.9],
@@ -113,6 +138,10 @@ const monthlyCountryPerformance: CountryPerformance[] = [
     loadFactor: 79,
     tonnage: 105.1,
     topLane: "DXB-FRA",
+    airports: [
+      { airportCode: "DXB", airportName: "Dubai International Airport", city: "Dubai", revenue: 198525, tonnage: 78.8, loadFactor: 81, yieldPerKg: 2.52, flightCount: 22, topRoute: "DXB-FRA" },
+      { airportCode: "AUH", airportName: "Abu Dhabi International Airport", city: "Abu Dhabi", revenue: 66175, tonnage: 26.3, loadFactor: 74, yieldPerKg: 2.52, flightCount: 8, topRoute: "AUH-LHR" },
+    ],
     mapCenter: { lat: 23.4241, lng: 53.8478 },
     mapFootprint: [
       [26.2, 51.5],
@@ -132,6 +161,9 @@ const monthlyCountryPerformance: CountryPerformance[] = [
     loadFactor: 88,
     tonnage: 74.3,
     topLane: "SIN-MUC",
+    airports: [
+      { airportCode: "SIN", airportName: "Singapore Changi Airport", city: "Singapore", revenue: 236400, tonnage: 74.3, loadFactor: 88, yieldPerKg: 3.18, flightCount: 19, topRoute: "SIN-MUC" },
+    ],
     mapCenter: { lat: 1.3521, lng: 103.8198 },
     mapFootprint: [
       [1.55, 103.55],
@@ -150,6 +182,11 @@ const monthlyCountryPerformance: CountryPerformance[] = [
     loadFactor: 69,
     tonnage: 64.8,
     topLane: "BCN-MEX",
+    airports: [
+      { airportCode: "MAD", airportName: "Adolfo Suárez Madrid-Barajas", city: "Madrid", revenue: 79090, tonnage: 35.6, loadFactor: 70, yieldPerKg: 2.22, flightCount: 12, topRoute: "MAD-JFK" },
+      { airportCode: "BCN", airportName: "Barcelona-El Prat Airport", city: "Barcelona", revenue: 50330, tonnage: 22.7, loadFactor: 68, yieldPerKg: 2.22, flightCount: 8, topRoute: "BCN-MEX" },
+      { airportCode: "VLC", airportName: "Valencia Airport", city: "Valencia", revenue: 14380, tonnage: 6.5, loadFactor: 65, yieldPerKg: 2.21, flightCount: 3, topRoute: "VLC-LIM" },
+    ],
     mapCenter: { lat: 40.4637, lng: -3.7492 },
     mapFootprint: [
       [43.8, -9.3],
@@ -269,6 +306,14 @@ function scaleCountryPerformance(row: CountryPerformance, period: PerformancePer
     yieldPerKg: roundToTwo(row.yieldPerKg + config.yieldDelta),
     loadFactor: clampLoadFactor(row.loadFactor + config.loadFactorDelta),
     tonnage: roundToOne(row.tonnage * config.factor),
+    airports: row.airports.map((a) => ({
+      ...a,
+      revenue: Math.round(a.revenue * config.factor),
+      yieldPerKg: roundToTwo(a.yieldPerKg + config.yieldDelta),
+      loadFactor: clampLoadFactor(a.loadFactor + config.loadFactorDelta),
+      tonnage: roundToOne(a.tonnage * config.factor),
+      flightCount: Math.max(1, Math.round(a.flightCount * config.factor)),
+    })),
   };
 }
 

@@ -8,7 +8,8 @@ export type Status =
   | "rejected"
   | "active"
   | "pending"
-  | "closed";
+  | "closed"
+  | "expiring";
 
 export type NewsCategory =
   | "GSA opportunity"

@@ -10,6 +10,7 @@ const variants: Record<Status, "default" | "success" | "warning" | "danger" | "m
   active: "success",
   pending: "warning",
   closed: "muted",
+  expiring: "danger",
 };
 
 export function StatusBadge({ status }: { status: Status }) {

@@ -8,8 +8,11 @@ import {
   Bar,
   BarChart,
   CartesianGrid,
+  Cell,
   ComposedChart,
   Line,
+  Pie,
+  PieChart,
   ResponsiveContainer,
   Tooltip,
   XAxis,
@@ -22,6 +25,9 @@ import type { KpiPoint } from "@/lib/types";
 type ChartCurrencyProps = { currencySymbol?: string; currencyCode?: string; headerControls?: React.ReactNode };
 
 export function RevenueChart({ data, currencySymbol = "$", currencyCode = "USD", headerControls }: { data: KpiPoint[] } & ChartCurrencyProps) {
+  const maxRevenue = data.length > 0 ? Math.max(...data.map((d) => d.revenue)) : 0;
+  const maxLabelLen = `${currencySymbol}${Math.round(maxRevenue / 1000)}k`.length;
+  const yAxisWidth = Math.max(52, maxLabelLen * 9 + 8);
   return (
     <Card>
       <CardHeader className="flex-row items-start justify-between gap-3">
@@ -39,7 +45,7 @@ export function RevenueChart({ data, currencySymbol = "$", currencyCode = "USD",
             </defs>
             <CartesianGrid stroke="#e2e8f0" vertical={false} />
             <XAxis dataKey="month" stroke="#64748b" tickLine={false} axisLine={false} />
-            <YAxis stroke="#64748b" tickLine={false} axisLine={false} tickFormatter={(v) => `${currencySymbol}${(v / 1000).toFixed(0)}k`} />
+            <YAxis width={yAxisWidth} stroke="#64748b" tickLine={false} axisLine={false} tickFormatter={(v) => `${currencySymbol}${(v / 1000).toFixed(0)}k`} />
             <Tooltip
               contentStyle={{ background: "#ffffff", border: "1px solid rgba(0,0,0,.08)", borderRadius: 8, color: "#1e293b" }}
               formatter={(v) => [`${currencySymbol}${Number(v).toLocaleString()}`, `Revenue (${currencyCode})`]}
@@ -118,31 +124,82 @@ export function CountryPerformanceChart({ data }: { data: CountryPerformance[] }
   );
 }
 
+const GSA_COLORS = ["#00AEEF", "#22c55e", "#f59e0b", "#a78bfa"];
+
 export function GsaPerformanceChart({ data }: { data: GsaPerformance[] }) {
   const { currency } = useCurrency();
   const { symbol, rate } = currency;
+  const fmt = (v: number) => `${symbol}${Math.round(v * rate).toLocaleString("en-US")}`;
   const fmtShort = (v: number) => `${symbol}${Math.round((v * rate) / 1000)}k`;
+
+  const total = data.reduce((s, d) => s + d.revenue, 0);
+  const pieData = data.map((d, i) => ({
+    name: d.gsaName,
+    value: d.revenue,
+    color: GSA_COLORS[i % GSA_COLORS.length],
+    pct: total > 0 ? Math.round((d.revenue / total) * 100) : 0,
+  }));
+
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Commissioned GSA performance</CardTitle>
+        <CardTitle>Sales channel revenue share</CardTitle>
       </CardHeader>
-      <CardContent className="h-80">
-        <ResponsiveContainer width="100%" height="100%">
-          <BarChart data={data} layout="vertical" margin={{ left: 24, right: 8 }}>
-            <CartesianGrid stroke="#e2e8f0" horizontal={false} />
-            <XAxis type="number" stroke="#64748b" tickLine={false} axisLine={false} tickFormatter={(v) => fmtShort(v)} />
-            <YAxis dataKey="gsaName" type="category" width={140} stroke="#64748b" tickLine={false} axisLine={false} />
-            <Tooltip
-              contentStyle={{ background: "#ffffff", border: "1px solid rgba(0,0,0,.08)", borderRadius: 8, color: "#1e293b" }}
-              formatter={(value, name) => {
-                if (name === "revenue") return [fmtShort(Number(value)), "Revenue"];
-                return [value, name];
-              }}
-            />
-            <Bar dataKey="revenue" fill="#22c55e" radius={[0, 6, 6, 0]} />
-          </BarChart>
-        </ResponsiveContainer>
+      <CardContent>
+        <div className="flex items-center gap-6">
+          {/* Donut */}
+          <div className="relative shrink-0" style={{ width: 180, height: 180 }}>
+            <ResponsiveContainer width="100%" height="100%">
+              <PieChart>
+                <Pie
+                  data={pieData}
+                  cx="50%"
+                  cy="50%"
+                  innerRadius={58}
+                  outerRadius={82}
+                  paddingAngle={2}
+                  dataKey="value"
+                  strokeWidth={0}
+                >
+                  {pieData.map((entry) => (
+                    <Cell key={entry.name} fill={entry.color} />
+                  ))}
+                </Pie>
+                <Tooltip
+                  contentStyle={{ background: "#ffffff", border: "1px solid rgba(0,0,0,.08)", borderRadius: 8, color: "#1e293b" }}
+                  formatter={(value, name) => [fmtShort(Number(value)), name]}
+                />
+              </PieChart>
+            </ResponsiveContainer>
+            {/* Centre label */}
+            <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">
+              <p className="text-[10px] font-semibold uppercase tracking-[0.1em] text-ink-muted">Total</p>
+              <p className="text-sm font-bold text-ink">{fmtShort(total)}</p>
+            </div>
+          </div>
+
+          {/* Legend with values */}
+          <div className="flex-1 space-y-3">
+            {pieData.map((entry) => (
+              <div key={entry.name} className="flex items-center gap-3">
+                <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ background: entry.color }} />
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-xs font-medium text-ink">{entry.name}</p>
+                  <div className="mt-1 h-1.5 overflow-hidden rounded-full bg-surface2">
+                    <div
+                      className="h-full rounded-full transition-all duration-500"
+                      style={{ width: `${entry.pct}%`, background: entry.color }}
+                    />
+                  </div>
+                </div>
+                <div className="shrink-0 text-right">
+                  <p className="text-xs font-semibold text-ink">{entry.pct}%</p>
+                  <p className="text-[10px] text-ink-muted">{fmtShort(entry.value)}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
       </CardContent>
     </Card>
   );
