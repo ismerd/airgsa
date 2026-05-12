@@ -109,7 +109,7 @@ export default function ChangesPage() {
                   <div>
                     <label className="mb-1.5 block text-xs font-semibold text-ink-muted">Current flight / date</label>
                     <Input
-                      placeholder="e.g. ABR214 / May 6"
+                      placeholder="e.g. SV803 / May 6"
                       value={form.currentFlight}
                       onChange={(e) => setForm((f) => ({ ...f, currentFlight: e.target.value }))}
                     />
@@ -117,7 +117,7 @@ export default function ChangesPage() {
                   <div>
                     <label className="mb-1.5 block text-xs font-semibold text-ink-muted">Requested flight / date</label>
                     <Input
-                      placeholder="e.g. ABR214 / May 8"
+                      placeholder="e.g. SV803 / May 8"
                       value={form.requestedFlight}
                       onChange={(e) => setForm((f) => ({ ...f, requestedFlight: e.target.value }))}
                     />

@@ -21,11 +21,11 @@ const myFlightIds = new Set(myShipments.map((s) => s.flightId));
 const myFlights = dummyFlights.filter((f) => myFlightIds.has(f.id));
 
 const recentAwbs = [
-  { awb: "235-12345678", origin: "FRA", destination: "DXB", airline: "AeroBridge Cargo", flight: "ABR214", weightKg: 2340, product: "Pharma",        status: "in-transit", eta: "May 7, 2026" },
-  { awb: "235-98765432", origin: "MUC", destination: "SIN", airline: "AeroBridge Cargo", flight: "ABR601", weightKg: 560,  product: "High Value",     status: "in-transit", eta: "May 8, 2026" },
-  { awb: "176-44556677", origin: "IST", destination: "FRA", airline: "Turkish Cargo",    flight: "TKC403", weightKg: 1280, product: "General Cargo",   status: "delivered",  eta: "May 5, 2026" },
-  { awb: "080-77889900", origin: "MAD", destination: "JFK", airline: "NorthStar Airways",flight: "NSA921", weightKg: 890,  product: "Perishables",    status: "delayed",    eta: "May 9, 2026" },
-  { awb: "074-11223344", origin: "OSL", destination: "ICN", airline: "PolarLine Cargo",  flight: "PLC509", weightKg: 3100, product: "Seafood",         status: "booked",     eta: "May 12, 2026" },
+  { awb: "619-80012345", origin: "FRA", destination: "JED", airline: "Saudia Cargo",    flight: "SV804",  weightKg: 1840, product: "Pharma",        status: "in-transit", eta: "May 7, 2026" },
+  { awb: "619-80098765", origin: "JED", destination: "HKG", airline: "Saudia Cargo",    flight: "SV813",  weightKg: 2100, product: "High Value",    status: "in-transit", eta: "May 8, 2026" },
+  { awb: "235-12345678", origin: "FRA", destination: "DXB", airline: "Etihad Cargo",    flight: "EY768",  weightKg: 2340, product: "General Cargo", status: "delivered",  eta: "May 5, 2026" },
+  { awb: "080-77889900", origin: "JED", destination: "JFK", airline: "Saudia Cargo",    flight: "SV809",  weightKg: 890,  product: "Perishables",  status: "delayed",    eta: "May 9, 2026" },
+  { awb: "074-11223344", origin: "OSL", destination: "ICN", airline: "Qatar Cargo",     flight: "QR8001", weightKg: 3100, product: "Seafood",       status: "booked",     eta: "May 12, 2026" },
 ];
 
 const statusVariant: Record<string, "success" | "warning" | "danger" | "default" | "muted"> = {

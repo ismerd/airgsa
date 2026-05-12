@@ -3,19 +3,43 @@ import { Building2, Package, Plane, Shield } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 
 const roles = [
-  { label: "Airline", href: "/airline", icon: Plane, description: "Run tenders, compare GSA partners, manage contracts, and monitor KPIs." },
-  { label: "GSA", href: "/gsa", icon: Building2, description: "Find open tenders, apply to opportunities, maintain your profile, and track performance." },
-  { label: "Freight Forwarder", href: "/freightforwarder", icon: Package, description: "Book cargo space, track AWBs in real time, manage flight changes, and request statements." },
-  { label: "Admin", href: "/admin", icon: Shield, description: "Review platform data, manage accounts, sources, and operations governance." },
+  {
+    label: "Airline",
+    href: "/airline",
+    icon: Plane,
+    description: "Run tenders, compare GSA partners, manage contracts, and monitor cargo KPIs.",
+  },
+  {
+    label: "GSA",
+    href: "/gsa",
+    icon: Building2,
+    description: "Find open airline tenders, submit applications, maintain your profile, and track performance.",
+  },
+  {
+    label: "Freight Forwarder",
+    href: "/freightforwarder",
+    icon: Package,
+    description: "Book cargo space, track AWBs in real time, manage flight changes, and request statements.",
+  },
+  {
+    label: "Admin",
+    href: "/admin",
+    icon: Shield,
+    description: "Review platform data, manage accounts, intelligence sources, and operations governance.",
+  },
 ];
 
 export default function RoleSelectionPage() {
   return (
     <main className="min-h-screen bg-page px-5 py-12">
       <div className="mx-auto max-w-5xl">
-        <Link href="/" className="text-sm font-semibold uppercase tracking-[0.24em] text-brand">AirGSA</Link>
+        <Link href="/" className="text-sm font-semibold uppercase tracking-[0.24em] text-brand">
+          AirGSA
+        </Link>
         <h1 className="mt-10 text-4xl font-semibold text-ink">Choose your workspace</h1>
-        <p className="mt-3 max-w-2xl text-ink-muted">Each role opens a clickable MVP area backed by realistic mock data.</p>
+        <p className="mt-3 max-w-2xl text-ink-muted">
+          Select the workspace that matches your role to access your dashboard.
+        </p>
         <div className="mt-8 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
           {roles.map((role) => (
             <Link key={role.label} href={role.href}>

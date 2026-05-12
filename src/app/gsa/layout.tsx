@@ -1,4 +1,4 @@
-import { BarChart3, Bell, Building2, Megaphone, Newspaper, PanelLeft, Search } from "lucide-react";
+import { BarChart3, Bell, Building2, FileSpreadsheet, Megaphone, Newspaper, PanelLeft, Search } from "lucide-react";
 import { Sidebar, type NavGroup } from "@/components/dashboard/sidebar";
 
 const nav: NavGroup[] = [
@@ -19,6 +19,7 @@ const nav: NavGroup[] = [
     heading: "Analytics",
     items: [
       { label: "Performance", href: "/gsa/performance", icon: BarChart3 },
+      { label: "Monthly reports", href: "/gsa/monthly-reports", icon: FileSpreadsheet },
     ],
   },
   {

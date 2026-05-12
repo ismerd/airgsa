@@ -1,76 +1,92 @@
 "use client";
 
-import { useState } from "react";
-import { Building2, CheckCircle2, PlaneTakeoff, UserCheck, Users, XCircle } from "lucide-react";
+import { useEffect, useState } from "react";
+import {
+  Building2,
+  CheckCircle2,
+  MessageSquare,
+  PlaneTakeoff,
+  RefreshCw,
+  UserCheck,
+  Users,
+  XCircle,
+} from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Textarea } from "@/components/ui/textarea";
 import { Topbar } from "@/components/dashboard/topbar";
+import { realGsaPartners } from "@/lib/real-gsa-data";
+import type { Registration } from "@/lib/registrations";
 
-type PendingReg = {
-  id: string;
-  name: string;
-  company: string;
-  role: "airline" | "gsa";
-  email: string;
-  registeredAt: string;
-};
-
-type Account = {
-  id: string;
-  name: string;
-  company: string;
-  role: "airline" | "gsa";
-  email: string;
-  status: "active" | "suspended";
-};
-
-const initialPending: PendingReg[] = [
-  { id: "reg-001", name: "Sophie Laurent", company: "AlpineAir Cargo", role: "airline", email: "s.laurent@alpineair.com", registeredAt: "May 4, 2026" },
-  { id: "reg-002", name: "Mikael Bergström", company: "Nordic Cargo Sales", role: "gsa", email: "m.bergstrom@nordiccargo.se", registeredAt: "May 5, 2026" },
-  { id: "reg-003", name: "Amara Diallo", company: "WestAfrica Freight Partners", role: "gsa", email: "a.diallo@wafp.net", registeredAt: "May 5, 2026" },
-  { id: "reg-004", name: "Lucas Bianchi", company: "Adriatica Airlines", role: "airline", email: "l.bianchi@adriatica.it", registeredAt: "May 6, 2026" },
+// Static approved accounts (would come from DB in production)
+const APPROVED_ACCOUNTS = [
+  { id: "acc-001", name: "Ahmed Al-Rashid", company: "Saudia Cargo", role: "airline" as const, email: "saudia@airgsa.demo", status: "active" as const },
+  ...realGsaPartners.map((partner, index) => ({
+    id: `acc-${String(index + 7).padStart(3, "0")}`,
+    name: partner.contactName,
+    company: partner.name,
+    role: "gsa" as const,
+    email: partner.email,
+    status: "active" as const,
+  })),
 ];
-
-const allAccounts: Account[] = [
-  { id: "acc-001", name: "Thomas Weber", company: "AeroBridge Cargo", role: "airline", email: "t.weber@aerobridge.com", status: "active" },
-  { id: "acc-002", name: "Maria Kovacs", company: "BlueWing Cargo Solutions", role: "gsa", email: "m.kovacs@bluewing.de", status: "active" },
-  { id: "acc-003", name: "James Osei", company: "Atlantic AirCargo Partners", role: "gsa", email: "j.osei@atlanticac.com", status: "active" },
-  { id: "acc-004", name: "Elena Petrov", company: "NorthStar Airways", role: "airline", email: "e.petrov@northstar.aero", status: "active" },
-  { id: "acc-005", name: "Lars Hansen", company: "NordicLift Aviation Services", role: "gsa", email: "l.hansen@nordiclift.dk", status: "active" },
-  { id: "acc-006", name: "Zara Ahmed", company: "PolarLine Cargo", role: "airline", email: "z.ahmed@polarline.no", status: "suspended" },
-  { id: "acc-007", name: "Isabel Ferreira", company: "Lusitania AirCargo Services", role: "gsa", email: "i.ferreira@lusitania.pt", status: "active" },
-  { id: "acc-008", name: "Anders Lindqvist", company: "Skandia Cargo Network", role: "gsa", email: "a.lindqvist@skandia.se", status: "active" },
-];
-
 function RoleBadge({ role }: { role: "airline" | "gsa" }) {
   return role === "airline" ? (
     <span className="inline-flex items-center gap-1 rounded-full border border-brand/30 bg-brand-light px-2.5 py-1 text-xs font-semibold text-brand">
       <PlaneTakeoff className="h-3 w-3" /> Airline
     </span>
   ) : (
-    <span className="inline-flex items-center gap-1 rounded-full border border-violet-300/30 bg-violet-300/10 px-2.5 py-1 text-xs font-semibold text-violet-200">
+    <span className="inline-flex items-center gap-1 rounded-full border border-violet-400/20 bg-violet-400/10 px-2.5 py-1 text-xs font-semibold text-violet-400">
       <Building2 className="h-3 w-3" /> GSA
     </span>
   );
 }
 
+function formatDate(iso: string) {
+  return new Date(iso).toLocaleDateString("en-GB", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+  });
+}
+
 export default function AccountsPage() {
-  const [pending, setPending] = useState<PendingReg[]>(initialPending);
-  const [approved, setApproved] = useState<Set<string>>(new Set());
-  const [rejected, setRejected] = useState<Set<string>>(new Set());
+  const [registrations, setRegistrations] = useState<Registration[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [notes, setNotes] = useState<Record<string, string>>({});
+  const [reviewStates, setReviewStates] = useState<Record<string, "idle" | "loading" | "done">>({});
 
-  function approve(id: string) {
-    setApproved((prev) => new Set(prev).add(id));
-    setRejected((prev) => { const s = new Set(prev); s.delete(id); return s; });
+  async function load() {
+    setLoading(true);
+    try {
+      const res = await fetch("/api/admin/registrations");
+      const data = await res.json();
+      setRegistrations(data);
+    } finally {
+      setLoading(false);
+    }
   }
 
-  function reject(id: string) {
-    setRejected((prev) => new Set(prev).add(id));
-    setApproved((prev) => { const s = new Set(prev); s.delete(id); return s; });
+  useEffect(() => { load(); }, []);
+
+  async function review(id: string, action: "approve" | "reject") {
+    setReviewStates((s) => ({ ...s, [id]: "loading" }));
+    try {
+      await fetch(`/api/admin/registrations/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action, note: notes[id] ?? "" }),
+      });
+      setReviewStates((s) => ({ ...s, [id]: "done" }));
+      await load();
+    } catch {
+      setReviewStates((s) => ({ ...s, [id]: "idle" }));
+    }
   }
 
-  const pendingCount = pending.filter((r) => !approved.has(r.id) && !rejected.has(r.id)).length;
+  const pending = registrations.filter((r) => r.status === "pending");
+  const reviewed = registrations.filter((r) => r.status !== "pending");
 
   return (
     <>
@@ -78,62 +94,95 @@ export default function AccountsPage() {
       <main className="px-5 py-8">
         <div className="mx-auto max-w-5xl space-y-8">
 
-          {/* Pending approvals */}
+          {/* ── Pending approvals ── */}
           <Card>
             <CardHeader className="flex flex-row items-center justify-between">
               <CardTitle className="flex items-center gap-2">
                 <UserCheck className="h-5 w-5 text-brand" />
                 Pending approvals
               </CardTitle>
-              {pendingCount > 0 && (
-                <Badge variant="warning">{pendingCount} awaiting review</Badge>
-              )}
+              <div className="flex items-center gap-3">
+                {pending.length > 0 && (
+                  <Badge variant="warning">{pending.length} awaiting review</Badge>
+                )}
+                <Button variant="ghost" size="sm" onClick={load} disabled={loading}>
+                  <RefreshCw className={`h-3.5 w-3.5 ${loading ? "animate-spin" : ""}`} />
+                </Button>
+              </div>
             </CardHeader>
             <CardContent>
-              {pending.length === 0 ? (
-                <p className="text-sm text-ink-muted">No pending registrations.</p>
+              {loading ? (
+                <div className="space-y-3">
+                  {[1, 2].map((i) => <div key={i} className="h-20 animate-pulse rounded-xl bg-surface2" />)}
+                </div>
+              ) : pending.length === 0 ? (
+                <div className="rounded-xl border border-border-ui bg-surface2 px-5 py-8 text-center">
+                  <CheckCircle2 className="mx-auto h-8 w-8 text-ink-muted/40" />
+                  <p className="mt-3 text-sm text-ink-muted">No pending registrations.</p>
+                </div>
               ) : (
                 <div className="divide-y divide-border-ui">
                   {pending.map((reg) => {
-                    const isApproved = approved.has(reg.id);
-                    const isRejected = rejected.has(reg.id);
+                    const isLoading = reviewStates[reg.id] === "loading";
                     return (
-                      <div key={reg.id} className="flex flex-col gap-3 py-4 sm:flex-row sm:items-center sm:justify-between">
-                        <div className="flex items-start gap-4">
-                          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-surface2 text-sm font-semibold text-ink">
-                            {reg.name[0]}
-                          </span>
-                          <div>
-                            <p className="text-sm font-semibold text-ink">{reg.name}</p>
-                            <p className="text-xs text-ink-muted">{reg.email}</p>
-                            <div className="mt-1 flex items-center gap-2">
-                              <RoleBadge role={reg.role} />
-                              <span className="text-xs text-ink-muted">{reg.company}</span>
+                      <div key={reg.id} className="py-5 space-y-4">
+                        <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+                          <div className="flex items-start gap-4">
+                            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-surface2 text-sm font-bold text-ink">
+                              {reg.name[0]}
+                            </div>
+                            <div>
+                              <p className="font-semibold text-ink">{reg.name}</p>
+                              <p className="text-sm text-ink-muted">{reg.email}</p>
+                              <div className="mt-1.5 flex flex-wrap items-center gap-2">
+                                <RoleBadge role={reg.role} />
+                                <span className="text-sm text-ink-muted">{reg.company}</span>
+                                <span className="text-xs text-ink-muted">· {reg.country}</span>
+                              </div>
+                              {reg.phone && (
+                                <p className="mt-1 text-xs text-ink-muted">{reg.phone}</p>
+                              )}
                             </div>
                           </div>
+                          <p className="shrink-0 text-xs text-ink-muted">
+                            {formatDate(reg.submittedAt)}
+                          </p>
                         </div>
-                        <div className="flex items-center gap-2 pl-13 sm:pl-0">
-                          <span className="text-xs text-ink-muted">{reg.registeredAt}</span>
-                          {isApproved && (
-                            <span className="inline-flex items-center gap-1 text-xs text-emerald-400">
-                              <CheckCircle2 className="h-3.5 w-3.5" /> Approved
-                            </span>
-                          )}
-                          {isRejected && (
-                            <span className="inline-flex items-center gap-1 text-xs text-rose-400">
-                              <XCircle className="h-3.5 w-3.5" /> Rejected
-                            </span>
-                          )}
-                          {!isApproved && !isRejected && (
-                            <>
-                              <Button size="sm" variant="outline" className="border-rose-500/40 text-rose-300 hover:bg-rose-500/10" onClick={() => reject(reg.id)}>
-                                Reject
-                              </Button>
-                              <Button size="sm" onClick={() => approve(reg.id)}>
-                                Approve
-                              </Button>
-                            </>
-                          )}
+
+                        {reg.message && (
+                          <div className="ml-14 flex gap-2 rounded-lg border border-border-ui bg-surface2 px-3 py-2.5">
+                            <MessageSquare className="mt-0.5 h-3.5 w-3.5 shrink-0 text-ink-muted" />
+                            <p className="text-xs leading-5 text-ink-muted">{reg.message}</p>
+                          </div>
+                        )}
+
+                        <div className="ml-14 space-y-2">
+                          <Textarea
+                            placeholder="Optional note (visible in audit log)…"
+                            className="text-xs"
+                            rows={2}
+                            value={notes[reg.id] ?? ""}
+                            onChange={(e) => setNotes((n) => ({ ...n, [reg.id]: e.target.value }))}
+                          />
+                          <div className="flex items-center gap-2">
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="border-rose-500/40 text-rose-400 hover:bg-rose-500/10"
+                              onClick={() => review(reg.id, "reject")}
+                              disabled={isLoading}
+                            >
+                              <XCircle className="h-3.5 w-3.5" /> Reject
+                            </Button>
+                            <Button
+                              size="sm"
+                              onClick={() => review(reg.id, "approve")}
+                              disabled={isLoading}
+                            >
+                              <CheckCircle2 className="h-3.5 w-3.5" />
+                              {isLoading ? "Processing…" : "Approve"}
+                            </Button>
+                          </div>
                         </div>
                       </div>
                     );
@@ -143,19 +192,63 @@ export default function AccountsPage() {
             </CardContent>
           </Card>
 
-          {/* All accounts */}
+          {/* ── Recent reviews (from real registrations) ── */}
+          {reviewed.length > 0 && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <CheckCircle2 className="h-5 w-5 text-ink-muted" />
+                  Reviewed registrations
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="divide-y divide-border-ui">
+                  {reviewed.map((reg) => (
+                    <div key={reg.id} className="flex flex-col gap-3 py-4 sm:flex-row sm:items-center sm:justify-between">
+                      <div className="flex items-start gap-3">
+                        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-surface2 text-sm font-bold text-ink">
+                          {reg.name[0]}
+                        </div>
+                        <div>
+                          <p className="text-sm font-semibold text-ink">{reg.name}</p>
+                          <p className="text-xs text-ink-muted">{reg.email} · {reg.company}</p>
+                          <div className="mt-1"><RoleBadge role={reg.role} /></div>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        {reg.status === "approved" ? (
+                          <span className="inline-flex items-center gap-1 text-xs font-semibold text-emerald-400">
+                            <CheckCircle2 className="h-3.5 w-3.5" /> Approved
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center gap-1 text-xs font-semibold text-rose-400">
+                            <XCircle className="h-3.5 w-3.5" /> Rejected
+                          </span>
+                        )}
+                        {reg.reviewedAt && (
+                          <span className="text-xs text-ink-muted">{formatDate(reg.reviewedAt)}</span>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* ── Active accounts ── */}
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Users className="h-5 w-5 text-brand" />
-                All accounts
+                Active accounts
               </CardTitle>
             </CardHeader>
             <CardContent>
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">
                   <thead>
-                    <tr className="border-b border-border-ui text-xs font-semibold uppercase tracking-wider text-ink-muted">
+                    <tr className="border-b border-border-ui text-[11px] font-semibold uppercase tracking-wider text-ink-muted">
                       <th className="pb-3 text-left">User</th>
                       <th className="pb-3 text-left">Company</th>
                       <th className="pb-3 text-left">Role</th>
@@ -163,18 +256,16 @@ export default function AccountsPage() {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-border-ui">
-                    {allAccounts.map((acc) => (
-                      <tr key={acc.id} className="text-ink-muted">
+                    {APPROVED_ACCOUNTS.map((acc) => (
+                      <tr key={acc.id}>
                         <td className="py-3">
                           <div>
                             <p className="font-medium text-ink">{acc.name}</p>
                             <p className="text-xs text-ink-muted">{acc.email}</p>
                           </div>
                         </td>
-                        <td className="py-3">{acc.company}</td>
-                        <td className="py-3">
-                          <RoleBadge role={acc.role} />
-                        </td>
+                        <td className="py-3 text-ink-muted">{acc.company}</td>
+                        <td className="py-3"><RoleBadge role={acc.role} /></td>
                         <td className="py-3">
                           <Badge variant={acc.status === "active" ? "success" : "danger"}>
                             {acc.status}

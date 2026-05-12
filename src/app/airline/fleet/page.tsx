@@ -1,141 +1,96 @@
+import type React from "react";
 import { Plane, PlaneTakeoff, Wrench } from "lucide-react";
 import { FlightWorldMap } from "@/components/dashboard/flight-world-map";
 import { Topbar } from "@/components/dashboard/topbar";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { dummyFlights, getFlightsForAirline } from "@/lib/dummy-flight-data";
+import { getSaudiaCargoFlights } from "@/lib/services/fr24";
+import type { FlightTrackerRecord } from "@/lib/dummy-flight-data";
 
-type AircraftStatus = "airborne" | "ground" | "maintenance";
+export const dynamic = "force-dynamic";
 
-type Aircraft = {
-  registration: string;
-  type: string;
-  status: AircraftStatus;
-  flightNumber?: string;
-  origin?: string;
-  destination?: string;
-  departed?: string;
-  eta?: string;
-  progressPct?: number;
-  loadFactor?: number;
-  tonnage?: number;
-  location?: string;
-  nextFlight?: string;
-  nextRoute?: string;
-  nextDeparture?: string;
-  maintenanceNote?: string;
-  maintenanceUntil?: string;
+const AIRCRAFT_TYPE_LABELS: Record<string, string> = {
+  B77F: "Boeing 777F",
+  B748: "Boeing 747-8F",
+  B74F: "Boeing 747-400F",
+  B77W: "Boeing 777-300ER",
+  B789: "Boeing 787-9",
+  B788: "Boeing 787-8",
+  A333: "Airbus A330-300",
+  A332: "Airbus A330-200",
+  A321: "Airbus A321",
+  A320: "Airbus A320",
+  A319: "Airbus A319",
+  B772: "Boeing 777-200",
+  B77L: "Boeing 777-200LR",
 };
 
-const fleet: Aircraft[] = [
-  {
-    registration: "D-ABCA",
-    type: "Boeing 777F",
-    status: "airborne",
-    flightNumber: "ABR214",
-    origin: "FRA",
-    destination: "DXB",
-    departed: "23:15",
-    eta: "06:40+1",
-    progressPct: 58,
-    loadFactor: 88,
-    tonnage: 21.6,
-  },
-  {
-    registration: "D-ABCB",
-    type: "Boeing 777F",
-    status: "airborne",
-    flightNumber: "ABR601",
-    origin: "MUC",
-    destination: "SIN",
-    departed: "22:00",
-    eta: "14:30+2",
-    progressPct: 41,
-    loadFactor: 81,
-    tonnage: 17.9,
-  },
-  {
-    registration: "D-ABCC",
-    type: "Boeing 747-8F",
-    status: "airborne",
-    flightNumber: "ABR332",
-    origin: "VIE",
-    destination: "DOH",
-    departed: "02:30",
-    eta: "08:45",
-    progressPct: 72,
-    loadFactor: 69,
-    tonnage: 12.7,
-  },
-  {
-    registration: "D-ABCD",
-    type: "Boeing 747-8F",
-    status: "airborne",
-    flightNumber: "ABR744",
-    origin: "BCN",
-    destination: "MEX",
-    departed: "13:10",
-    eta: "19:45",
-    progressPct: 63,
-    loadFactor: 71,
-    tonnage: 13.6,
-  },
-  {
-    registration: "D-ABCE",
-    type: "Airbus A330F",
-    status: "ground",
-    location: "FRA",
-    nextFlight: "ABR215",
-    nextRoute: "FRA → DXB",
-    nextDeparture: "May 8, 23:15",
-  },
-  {
-    registration: "D-ABCF",
-    type: "Boeing 777F",
-    status: "maintenance",
-    location: "MUC",
-    maintenanceNote: "C-check service",
-    maintenanceUntil: "May 9, 2026",
-  },
-];
+function typeLabel(icao: string | undefined) {
+  if (!icao) return "Unknown";
+  return AIRCRAFT_TYPE_LABELS[icao] ?? icao;
+}
 
-const statusConfig: Record<AircraftStatus, { label: string; variant: "default" | "muted" | "warning"; dot: string }> = {
-  airborne: { label: "Airborne", variant: "default", dot: "bg-brand animate-pulse" },
-  ground: { label: "On ground", variant: "muted", dot: "bg-slate-400" },
-  maintenance: { label: "Maintenance", variant: "warning", dot: "bg-amber-400" },
-};
+// Great-circle progress: how far along the route is the current position (0–100)
+function routeProgress(
+  origin: { lat: number; lng: number },
+  dest: { lat: number; lng: number },
+  current: { lat: number; lng: number }
+): number {
+  const total = haversineKm(origin, dest);
+  if (total === 0) return 0;
+  const flown = haversineKm(origin, current);
+  return Math.min(100, Math.round((flown / total) * 100));
+}
 
-const airborne = fleet.filter((a) => a.status === "airborne");
-const onGround = fleet.filter((a) => a.status === "ground");
-const inMaintenance = fleet.filter((a) => a.status === "maintenance");
-const avgLf = Math.round(airborne.reduce((s, a) => s + (a.loadFactor ?? 0), 0) / airborne.length);
-const totalTonnage = airborne.reduce((s, a) => s + (a.tonnage ?? 0), 0);
+function haversineKm(
+  a: { lat: number; lng: number },
+  b: { lat: number; lng: number }
+): number {
+  const R = 6371;
+  const dLat = toRad(b.lat - a.lat);
+  const dLon = toRad(b.lng - a.lng);
+  const x =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos(toRad(a.lat)) * Math.cos(toRad(b.lat)) * Math.sin(dLon / 2) ** 2;
+  return R * 2 * Math.atan2(Math.sqrt(x), Math.sqrt(1 - x));
+}
 
-const trackedFlights = getFlightsForAirline(dummyFlights, {
-  airlineName: "AeroBridge Cargo",
-  salesTeams: ["AeroBridge DACH Sales", "AeroBridge Austria Desk"],
-});
+function toRad(deg: number) {
+  return (deg * Math.PI) / 180;
+}
 
-export default function FleetPage() {
+export default async function FleetPage() {
+  const { flights } = await getSaudiaCargoFlights();
+
+  const freighters = flights.filter(f => f.flightType === "freighter");
+  const belly = flights.filter(f => f.flightType === "belly");
+  const totalTonnage = flights.reduce((s, f) => s + f.tonnage, 0);
+  const avgLf = flights.length > 0
+    ? Math.round(flights.reduce((s, f) => s + f.loadFactor, 0) / flights.length)
+    : 0;
+
   return (
     <>
-      <Topbar title="Fleet overview" subtitle="AeroBridge Cargo" />
+      <Topbar
+        title="Fleet overview"
+        subtitle="Saudia Cargo"
+      />
       <main className="space-y-6 p-5">
 
         {/* KPI row */}
         <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
           {[
-            { label: "Total fleet", value: String(fleet.length), sub: "6 registered aircraft", icon: Plane },
-            { label: "Airborne", value: String(airborne.length), sub: `${totalTonnage.toFixed(1)} t in the air`, icon: PlaneTakeoff },
-            { label: "On ground", value: String(onGround.length), sub: onGround.map((a) => a.location).join(", "), icon: Plane },
-            { label: "Maintenance", value: String(inMaintenance.length), sub: inMaintenance[0]?.maintenanceNote ?? "–", icon: Wrench },
+            { label: "Dedicated freighters", value: String(freighters.length), sub: "Boeing 777F · 747-8F airborne", icon: PlaneTakeoff },
+            { label: "Belly cargo", value: String(belly.length), sub: "Passenger aircraft with cargo", icon: Plane },
+            { label: "Total tonnage", value: flights.length > 0 ? `${totalTonnage.toFixed(1)} t` : "—", sub: "Estimated payload in transit", icon: Wrench },
+            { label: "Avg load factor", value: flights.length > 0 ? `${avgLf}%` : "—", sub: "Across all active flights", icon: Plane },
           ].map((item) => (
-            <Card key={item.label} className="bg-white text-slate-950">
+            <Card key={item.label}>
               <CardContent className="p-5">
                 <div className="flex items-start justify-between">
                   <div>
                     <p className="text-sm font-medium text-ink-muted">{item.label}</p>
-                    <p className="mt-2 text-3xl font-semibold">{item.value}</p>
+                    <p className="mt-2 text-3xl font-semibold text-ink">{item.value}</p>
                   </div>
                   <div className="rounded-md bg-brand-light p-2 text-brand">
                     <item.icon className="h-5 w-5" />
@@ -150,166 +105,194 @@ export default function FleetPage() {
         {/* Live map */}
         <FlightWorldMap
           title="Live fleet positions"
-          subtitle="AeroBridge Cargo aircraft currently airborne. Click an aircraft for flight details."
-          flights={trackedFlights}
-          markerColorMode="gsa"
+          subtitle="All Saudia Cargo flights — dedicated freighters and belly cargo. Click an aircraft for details."
+          flights={flights}
+          markerColorMode="airline"
         />
 
-        {/* Fleet schedule table */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Plane className="h-5 w-5 text-brand" />
-              Fleet schedule
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-border-ui text-xs font-semibold uppercase tracking-wider text-ink-muted">
-                  <th className="pb-3 text-left">Aircraft</th>
-                  <th className="pb-3 text-left">Status</th>
-                  <th className="pb-3 text-left">Flight</th>
-                  <th className="pb-3 text-left min-w-[220px]">Route progress</th>
-                  <th className="pb-3 text-left">Dep / ETA</th>
-                  <th className="pb-3 text-left">Load factor</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-border-ui">
-                {fleet.map((aircraft) => {
-                  const cfg = statusConfig[aircraft.status];
-                  return (
-                    <tr key={aircraft.registration} className="align-top text-ink-muted">
-                      {/* Aircraft */}
-                      <td className="py-4">
-                        <p className="font-mono font-semibold text-ink">{aircraft.registration}</p>
-                        <p className="mt-0.5 text-xs text-ink-muted">{aircraft.type}</p>
-                      </td>
+        {/* Dedicated freighters table */}
+        <FleetTable
+          title="Dedicated freighters"
+          icon={<PlaneTakeoff className="h-5 w-5 text-brand" />}
+          flights={freighters}
+          emptyLabel="No dedicated freighters (B777F · B747-8F) currently airborne"
+          emptyNote="Freighters typically depart 20:00–02:00 Jeddah time (UTC+3)"
+        />
 
-                      {/* Status */}
-                      <td className="py-4">
-                        <span className="flex items-center gap-2">
-                          <span className={`h-2 w-2 shrink-0 rounded-full ${cfg.dot}`} />
-                          <Badge variant={cfg.variant}>{cfg.label}</Badge>
-                        </span>
-                      </td>
+        {/* Belly cargo table */}
+        <FleetTable
+          title="Belly cargo"
+          icon={<Plane className="h-5 w-5 text-cyan-500" />}
+          flights={belly}
+          emptyLabel="No belly cargo flights currently tracked"
+          emptyNote="Belly capacity on B777-368ER, A330-300, B787-9, A321, A320"
+        />
 
-                      {/* Flight */}
-                      <td className="py-4">
-                        {aircraft.status === "airborne" && (
-                          <>
-                            <p className="font-semibold text-ink">{aircraft.flightNumber}</p>
-                            <p className="text-xs text-ink-muted">{aircraft.tonnage?.toFixed(1)} t</p>
-                          </>
-                        )}
-                        {aircraft.status === "ground" && (
-                          <>
-                            <p className="font-semibold text-ink">{aircraft.nextFlight}</p>
-                            <p className="text-xs text-ink-muted">Scheduled</p>
-                          </>
-                        )}
-                        {aircraft.status === "maintenance" && (
-                          <p className="text-ink-muted">—</p>
-                        )}
-                      </td>
-
-                      {/* Route progress */}
-                      <td className="py-4 pr-6">
-                        {aircraft.status === "airborne" && (
-                          <div>
-                            <div className="mb-1.5 flex items-center justify-between text-xs">
-                              <span className="font-mono text-ink-muted">{aircraft.origin}</span>
-                              <span className="text-brand">{aircraft.progressPct}% en route</span>
-                              <span className="font-mono text-ink-muted">{aircraft.destination}</span>
-                            </div>
-                            <div className="relative h-1.5 w-full overflow-visible rounded-full bg-black/10">
-                              <div
-                                className="h-full rounded-full bg-cyan-500/60"
-                                style={{ width: `${aircraft.progressPct}%` }}
-                              />
-                              {/* Plane icon at current position */}
-                              <span
-                                className="absolute -top-[7px] -translate-x-1/2 text-brand"
-                                style={{ left: `${aircraft.progressPct}%` }}
-                              >
-                                ✈
-                              </span>
-                            </div>
-                          </div>
-                        )}
-                        {aircraft.status === "ground" && (
-                          <div>
-                            <p className="text-xs text-ink-muted">{aircraft.nextRoute}</p>
-                            <p className="mt-1 text-xs text-ink-muted">Next departure: {aircraft.nextDeparture}</p>
-                          </div>
-                        )}
-                        {aircraft.status === "maintenance" && (
-                          <div>
-                            <p className="text-xs text-amber-600">{aircraft.maintenanceNote}</p>
-                            <p className="mt-1 text-xs text-ink-muted">Est. return: {aircraft.maintenanceUntil}</p>
-                          </div>
-                        )}
-                      </td>
-
-                      {/* Dep / ETA */}
-                      <td className="py-4">
-                        {aircraft.status === "airborne" && (
-                          <div className="space-y-0.5 text-xs">
-                            <p className="text-ink-muted">Dep <span className="text-ink">{aircraft.departed}</span></p>
-                            <p className="text-ink-muted">ETA <span className="text-ink">{aircraft.eta}</span></p>
-                          </div>
-                        )}
-                        {aircraft.status === "ground" && (
-                          <p className="text-xs text-ink-muted">{aircraft.location}</p>
-                        )}
-                        {aircraft.status === "maintenance" && (
-                          <p className="text-xs text-ink-muted">{aircraft.location}</p>
-                        )}
-                      </td>
-
-                      {/* Load factor */}
-                      <td className="py-4">
-                        {aircraft.loadFactor != null ? (
-                          <div>
-                            <p className={`font-semibold ${aircraft.loadFactor >= 80 ? "text-emerald-400" : aircraft.loadFactor >= 65 ? "text-amber-400" : "text-rose-400"}`}>
-                              {aircraft.loadFactor}%
-                            </p>
-                            <div className="mt-1 h-1 w-16 overflow-hidden rounded-full bg-black/10">
-                              <div
-                                className={`h-full rounded-full ${aircraft.loadFactor >= 80 ? "bg-emerald-400" : aircraft.loadFactor >= 65 ? "bg-amber-400" : "bg-rose-400"}`}
-                                style={{ width: `${aircraft.loadFactor}%` }}
-                              />
-                            </div>
-                          </div>
-                        ) : (
-                          <span className="text-ink-muted">—</span>
-                        )}
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </CardContent>
-        </Card>
-
-        {/* Avg fleet stats */}
-        <div className="grid gap-4 sm:grid-cols-3">
-          {[
-            { label: "Avg load factor (airborne)", value: `${avgLf}%` },
-            { label: "Total tonnage in transit", value: `${totalTonnage.toFixed(1)} t` },
-            { label: "Flights today", value: String(airborne.length) },
-          ].map((s) => (
-            <Card key={s.label}>
-              <CardContent className="p-4">
-                <p className="text-xs text-ink-muted">{s.label}</p>
-                <p className="mt-1 text-xl font-semibold text-ink">{s.value}</p>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
+        {flights.length === 0 && (
+          <EmptyState />
+        )}
 
       </main>
     </>
   );
 }
+
+function FleetTable({
+  title, icon, flights, emptyLabel, emptyNote,
+}: {
+  title: string;
+  icon: React.ReactNode;
+  flights: FlightTrackerRecord[];
+  emptyLabel: string;
+  emptyNote: string;
+}) {
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2">
+          {icon}
+          {title}
+          <span className="ml-auto text-sm font-normal text-ink-muted">{flights.length} active</span>
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="overflow-x-auto">
+        {flights.length === 0 ? (
+          <div className="flex flex-col items-center gap-2 py-8 text-center">
+            <p className="text-sm font-medium text-ink-muted">{emptyLabel}</p>
+            <p className="text-xs text-ink-muted/60">{emptyNote}</p>
+          </div>
+        ) : (
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="border-b border-border-ui text-xs font-semibold uppercase tracking-wider text-ink-muted">
+                <th className="pb-3 text-left">Aircraft</th>
+                <th className="pb-3 text-left">Status</th>
+                <th className="pb-3 text-left">Flight</th>
+                <th className="pb-3 text-left min-w-[220px]">Route progress</th>
+                <th className="pb-3 text-left">Altitude / Speed</th>
+                <th className="pb-3 text-left">Load factor</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-border-ui">
+              {flights.map((flight) => (
+                <FleetRow key={flight.id} flight={flight} />
+              ))}
+            </tbody>
+          </table>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+function FleetRow({ flight }: { flight: FlightTrackerRecord }) {
+  const progress = routeProgress(flight.origin, flight.destination, flight.currentPosition);
+  const sameAirport = flight.origin.airportCode === flight.destination.airportCode;
+
+  return (
+    <tr className="align-top text-ink-muted">
+      {/* Aircraft */}
+      <td className="py-4">
+        <p className="font-mono font-semibold text-ink">{flight.registration ?? "—"}</p>
+        <p className="mt-0.5 text-xs text-ink-muted">{typeLabel(flight.aircraftType)}</p>
+      </td>
+
+      {/* Status */}
+      <td className="py-4">
+        <span className="flex items-center gap-2">
+          <span className="h-2 w-2 shrink-0 rounded-full bg-brand animate-pulse" />
+          <Badge variant="default">Airborne</Badge>
+        </span>
+      </td>
+
+      {/* Flight */}
+      <td className="py-4">
+        <p className="font-semibold text-ink">{flight.flightNumber}</p>
+        <p className="text-xs text-ink-muted">{flight.tonnage.toFixed(1)} t est.</p>
+      </td>
+
+      {/* Route progress */}
+      <td className="py-4 pr-6">
+        {sameAirport ? (
+          <p className="text-xs text-ink-muted">Route resolving…</p>
+        ) : (
+          <div>
+            <div className="mb-1.5 flex items-center justify-between text-xs">
+              <span className="font-mono text-ink-muted">{flight.origin.airportCode}</span>
+              <span className="text-brand">{progress}%</span>
+              <span className="font-mono text-ink-muted">{flight.destination.airportCode}</span>
+            </div>
+            <div className="relative h-1.5 w-full overflow-visible rounded-full bg-black/10">
+              <div className="h-full rounded-full bg-cyan-500/60" style={{ width: `${progress}%` }} />
+              <span
+                className="absolute -top-[7px] -translate-x-1/2 text-brand"
+                style={{ left: `${progress}%` }}
+              >✈</span>
+            </div>
+          </div>
+        )}
+      </td>
+
+      {/* Altitude / Speed */}
+      <td className="py-4">
+        <div className="space-y-0.5 text-xs">
+          {flight.altitude != null ? (
+            <p className="text-ink">
+              {Math.round(flight.altitude / 100) * 100} ft
+            </p>
+          ) : (
+            <p className="text-ink-muted">— ft</p>
+          )}
+          {flight.gspeed != null ? (
+            <p className="text-ink-muted">{flight.gspeed} kts</p>
+          ) : (
+            <p className="text-ink-muted">— kts</p>
+          )}
+        </div>
+      </td>
+
+      {/* Load factor */}
+      <td className="py-4">
+        <p className={`font-semibold ${flight.loadFactor >= 80 ? "text-emerald-400" : flight.loadFactor >= 65 ? "text-amber-400" : "text-rose-400"}`}>
+          {flight.loadFactor}%
+        </p>
+        <div className="mt-1 h-1 w-16 overflow-hidden rounded-full bg-black/10">
+          <div
+            className={`h-full rounded-full ${flight.loadFactor >= 80 ? "bg-emerald-400" : flight.loadFactor >= 65 ? "bg-amber-400" : "bg-rose-400"}`}
+            style={{ width: `${flight.loadFactor}%` }}
+          />
+        </div>
+      </td>
+    </tr>
+  );
+}
+
+function EmptyState() {
+  // Show local Jeddah time (UTC+3) so it is clear whether it is a quiet cargo window.
+  const jedTime = new Date(Date.now() + 3 * 60 * 60 * 1000);
+  const jedHour = jedTime.getUTCHours();
+  const jedTimeStr = jedTime.toUTCString().slice(17, 22); // HH:MM
+  const isTypicallyQuiet = jedHour >= 6 && jedHour < 20;
+
+  return (
+    <div className="flex flex-col items-center gap-3 py-12 text-center">
+      <Plane className="h-9 w-9 text-ink-muted/30" />
+      <div>
+        <p className="font-semibold text-ink">No freighters airborne right now</p>
+        <p className="mt-1 text-sm text-ink-muted max-w-sm">
+          Saudia Cargo dedicated freighters will appear here as soon as one departs.
+        </p>
+      </div>
+      {isTypicallyQuiet && (
+        <div className="mt-1 rounded-lg border border-amber-500/20 bg-amber-500/5 px-4 py-3 text-sm text-amber-400 max-w-sm">
+          <span className="font-semibold">Jeddah local time: {jedTimeStr}</span>
+          <span className="ml-2 text-amber-400/70">·</span>
+          <span className="ml-2 text-amber-400/80">
+            Cargo freighters typically depart 20:00–02:00 JED. Check back tonight.
+          </span>
+        </div>
+      )}
+    </div>
+  );
+}
+

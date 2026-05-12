@@ -13,6 +13,7 @@ import { StatusBadge } from "@/components/dashboard/status-badge";
 import { Topbar } from "@/components/dashboard/topbar";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { formatMoney, useCurrency } from "@/lib/currency-context";
+import { realGsaPartners } from "@/lib/real-gsa-data";
 import type { Status } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
@@ -38,7 +39,7 @@ type ContractRecord = {
 const CONTRACTS: ContractRecord[] = [
   {
     id: "bwcs",
-    partner: "BlueWing Cargo Solutions",
+    partner: realGsaPartners[0].name,
     market: "DACH",
     countries: "Germany · Austria · Switzerland",
     start: "2024-08-01",
@@ -54,7 +55,7 @@ const CONTRACTS: ContractRecord[] = [
   },
   {
     id: "nlас",
-    partner: "NordicLift Aviation Services",
+    partner: realGsaPartners[18].name,
     market: "Nordics",
     countries: "Sweden · Norway · Denmark · Finland",
     start: "2025-01-01",
@@ -70,7 +71,7 @@ const CONTRACTS: ContractRecord[] = [
   },
   {
     id: "aap",
-    partner: "Atlantic AirCargo Partners",
+    partner: realGsaPartners[12].name,
     market: "Iberia",
     countries: "Spain · Portugal · France",
     start: "2024-03-01",

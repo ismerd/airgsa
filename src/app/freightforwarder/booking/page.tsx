@@ -10,14 +10,14 @@ import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 
 const availableFlights = [
-  { id: "f1", flight: "ABR214", airline: "AeroBridge Cargo", origin: "FRA", destination: "DXB", departure: "May 8, 23:15", arrival: "May 9, 06:40", transit: "7h 25m", availableKg: 4800, ratePerKg: 2.83, direct: true },
-  { id: "f2", flight: "TKC403", airline: "Turkish Cargo", origin: "FRA", destination: "DXB", departure: "May 9, 01:45", arrival: "May 9, 09:10", transit: "7h 25m (via IST)", availableKg: 3200, ratePerKg: 2.61, direct: false },
-  { id: "f3", flight: "ABR601", airline: "AeroBridge Cargo", origin: "MUC", destination: "SIN", departure: "May 8, 22:00", arrival: "May 10, 14:30", transit: "16h 30m", availableKg: 6100, ratePerKg: 3.06, direct: true },
-  { id: "f4", flight: "NSA921", airline: "NorthStar Airways", origin: "MAD", destination: "JFK", departure: "May 9, 14:20", arrival: "May 9, 17:55", transit: "9h 35m", availableKg: 2900, ratePerKg: 2.46, direct: true },
-  { id: "f5", flight: "PLC509", airline: "PolarLine Cargo", origin: "OSL", destination: "ICN", departure: "May 10, 06:00", arrival: "May 11, 22:15", transit: "16h 15m", availableKg: 5400, ratePerKg: 3.01, direct: true },
+  { id: "f1", flight: "SV803",  airline: "Saudia Cargo",   origin: "JED", destination: "FRA", departure: "May 8, 01:30", arrival: "May 8, 07:10",  transit: "7h 40m",   availableKg: 14200, ratePerKg: 2.64, direct: true },
+  { id: "f2", flight: "SV805",  airline: "Saudia Cargo",   origin: "JED", destination: "LHR", departure: "May 8, 02:45", arrival: "May 8, 08:30",  transit: "7h 45m",   availableKg: 9800,  ratePerKg: 2.71, direct: true },
+  { id: "f3", flight: "SV813",  airline: "Saudia Cargo",   origin: "JED", destination: "HKG", departure: "May 8, 22:00", arrival: "May 9, 14:30",  transit: "8h 30m",   availableKg: 18600, ratePerKg: 2.98, direct: true },
+  { id: "f4", flight: "SV809",  airline: "Saudia Cargo",   origin: "JED", destination: "JFK", departure: "May 9, 03:15", arrival: "May 9, 11:45",  transit: "12h 30m",  availableKg: 11400, ratePerKg: 3.26, direct: true },
+  { id: "f5", flight: "EY6745", airline: "Etihad Cargo",   origin: "AUH", destination: "FRA", departure: "May 10, 06:20", arrival: "May 10, 11:05", transit: "6h 45m", availableKg: 3200, ratePerKg: 2.41, direct: true },
 ];
 
-const airports = ["FRA – Frankfurt", "MUC – Munich", "VIE – Vienna", "MAD – Madrid", "LIS – Lisbon", "OSL – Oslo", "CPH – Copenhagen", "DXB – Dubai", "SIN – Singapore", "JFK – New York", "ICN – Seoul", "PVG – Shanghai"];
+const airports = ["JED – Jeddah", "RUH – Riyadh", "FRA – Frankfurt", "LHR – London", "CDG – Paris", "AMS – Amsterdam", "JFK – New York", "ORD – Chicago", "HKG – Hong Kong", "SIN – Singapore", "NRT – Tokyo", "BOM – Mumbai"];
 const products = ["General Cargo", "Pharma / GDP", "Perishables", "Seafood", "High Value", "E-commerce", "Dangerous Goods", "Automotive"];
 
 export default function BookingPage() {

@@ -15,17 +15,17 @@ export default function CreateTenderPage() {
 
   return (
     <>
-      <Topbar title="Create tender" subtitle="Airline tender desk" />
+      <Topbar title="Create tender" subtitle="Saudia Cargo" />
       <main className="p-5">
         <Card className="max-w-4xl">
           <CardHeader>
             <CardTitle>RFP brief</CardTitle>
           </CardHeader>
           <CardContent className="grid gap-4 md:grid-cols-2">
-            <Input placeholder="Tender title" defaultValue="Central Europe GSA representation" />
-            <Input placeholder="Expected annual tonnage" defaultValue="18400" />
-            <Input placeholder="Markets" defaultValue="Germany, Austria, Switzerland" />
-            <Input placeholder="Core lanes" defaultValue="FRA, MUC, VIE to DXB, DOH, SIN" />
+            <Input placeholder="Tender title" defaultValue="DACH & Benelux GSA representation" />
+            <Input placeholder="Expected annual tonnage" defaultValue="22400" />
+            <Input placeholder="Markets" defaultValue="Germany, Austria, Switzerland, Netherlands, Belgium" />
+            <Input placeholder="Core lanes" defaultValue="FRA, MUC, VIE, AMS to JED, RUH" />
             <Select defaultValue="open">
               <option value="draft">Draft</option>
               <option value="open">Open</option>

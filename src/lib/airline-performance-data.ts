@@ -1,3 +1,15 @@
+import { realGsaPartners } from "./real-gsa-data";
+
+export type RouteBreakdown = {
+  route: string;
+  destination: string;
+  revenue: number;
+  tonnage: number;
+  loadFactor: number;
+  yieldPerKg: number;
+  flightCount: number;
+};
+
 export type AirportBreakdown = {
   airportCode: string;
   airportName: string;
@@ -8,6 +20,7 @@ export type AirportBreakdown = {
   yieldPerKg: number;
   flightCount: number;
   topRoute: string;
+  routes: RouteBreakdown[];
 };
 
 export type CountryPerformance = {
@@ -57,6 +70,18 @@ export const performancePeriodOptions: { id: PerformancePeriod; label: string; d
   { id: "yearly", label: "Yearly", description: "Projected year" },
 ];
 
+function routeBreakdown(
+  origin: string,
+  routes: Array<{ destination: string; revenue: number; tonnage: number; loadFactor: number; yieldPerKg: number; flightCount: number }>,
+): RouteBreakdown[] {
+  return routes
+    .map((route) => ({
+      ...route,
+      route: `${origin}-${route.destination}`,
+    }))
+    .sort((a, b) => b.revenue - a.revenue);
+}
+
 const monthlyCountryPerformance: CountryPerformance[] = [
   {
     country: "Germany",
@@ -69,9 +94,23 @@ const monthlyCountryPerformance: CountryPerformance[] = [
     tonnage: 179.8,
     topLane: "FRA-DXB",
     airports: [
-      { airportCode: "FRA", airportName: "Frankfurt Airport", city: "Frankfurt", revenue: 265100, tonnage: 98.9, loadFactor: 86, yieldPerKg: 2.68, flightCount: 23, topRoute: "FRA-DXB" },
-      { airportCode: "MUC", airportName: "Munich Airport", city: "Munich", revenue: 168700, tonnage: 62.9, loadFactor: 83, yieldPerKg: 2.68, flightCount: 15, topRoute: "MUC-SIN" },
-      { airportCode: "DUS", airportName: "Düsseldorf Airport", city: "Düsseldorf", revenue: 48200, tonnage: 18.0, loadFactor: 78, yieldPerKg: 2.68, flightCount: 5, topRoute: "DUS-IST" },
+      { airportCode: "FRA", airportName: "Frankfurt Airport", city: "Frankfurt", revenue: 265100, tonnage: 98.9, loadFactor: 86, yieldPerKg: 2.68, flightCount: 23, topRoute: "FRA-DXB", routes: routeBreakdown("FRA", [
+        { destination: "DXB", revenue: 112400, tonnage: 41.7, loadFactor: 89, yieldPerKg: 2.70, flightCount: 9 },
+        { destination: "JED", revenue: 78600, tonnage: 29.6, loadFactor: 86, yieldPerKg: 2.66, flightCount: 7 },
+        { destination: "RUH", revenue: 48100, tonnage: 18.2, loadFactor: 82, yieldPerKg: 2.64, flightCount: 5 },
+        { destination: "HKG", revenue: 26000, tonnage: 9.4, loadFactor: 78, yieldPerKg: 2.77, flightCount: 2 },
+      ]) },
+      { airportCode: "MUC", airportName: "Munich Airport", city: "Munich", revenue: 168700, tonnage: 62.9, loadFactor: 83, yieldPerKg: 2.68, flightCount: 15, topRoute: "MUC-SIN", routes: routeBreakdown("MUC", [
+        { destination: "SIN", revenue: 68400, tonnage: 24.8, loadFactor: 87, yieldPerKg: 2.76, flightCount: 6 },
+        { destination: "JED", revenue: 50200, tonnage: 19.1, loadFactor: 83, yieldPerKg: 2.63, flightCount: 5 },
+        { destination: "DXB", revenue: 32100, tonnage: 12.3, loadFactor: 79, yieldPerKg: 2.61, flightCount: 3 },
+        { destination: "DMM", revenue: 18000, tonnage: 6.7, loadFactor: 74, yieldPerKg: 2.69, flightCount: 1 },
+      ]) },
+      { airportCode: "DUS", airportName: "Düsseldorf Airport", city: "Düsseldorf", revenue: 48200, tonnage: 18.0, loadFactor: 78, yieldPerKg: 2.68, flightCount: 5, topRoute: "DUS-IST", routes: routeBreakdown("DUS", [
+        { destination: "IST", revenue: 21100, tonnage: 7.9, loadFactor: 81, yieldPerKg: 2.67, flightCount: 2 },
+        { destination: "JED", revenue: 16800, tonnage: 6.2, loadFactor: 76, yieldPerKg: 2.71, flightCount: 2 },
+        { destination: "DXB", revenue: 10300, tonnage: 3.9, loadFactor: 72, yieldPerKg: 2.64, flightCount: 1 },
+      ]) },
     ],
     mapCenter: { lat: 51.1657, lng: 10.4515 },
     mapFootprint: [
@@ -94,7 +133,12 @@ const monthlyCountryPerformance: CountryPerformance[] = [
     tonnage: 90.7,
     topLane: "VIE-DOH",
     airports: [
-      { airportCode: "VIE", airportName: "Vienna International Airport", city: "Vienna", revenue: 218500, tonnage: 90.7, loadFactor: 76, yieldPerKg: 2.41, flightCount: 18, topRoute: "VIE-DOH" },
+      { airportCode: "VIE", airportName: "Vienna International Airport", city: "Vienna", revenue: 218500, tonnage: 90.7, loadFactor: 76, yieldPerKg: 2.41, flightCount: 18, topRoute: "VIE-DOH", routes: routeBreakdown("VIE", [
+        { destination: "DOH", revenue: 81100, tonnage: 33.1, loadFactor: 79, yieldPerKg: 2.45, flightCount: 7 },
+        { destination: "JED", revenue: 64200, tonnage: 27.3, loadFactor: 76, yieldPerKg: 2.35, flightCount: 5 },
+        { destination: "DXB", revenue: 47900, tonnage: 19.6, loadFactor: 74, yieldPerKg: 2.44, flightCount: 4 },
+        { destination: "RUH", revenue: 25300, tonnage: 10.7, loadFactor: 70, yieldPerKg: 2.36, flightCount: 2 },
+      ]) },
     ],
     mapCenter: { lat: 47.5162, lng: 14.5501 },
     mapFootprint: [
@@ -116,8 +160,17 @@ const monthlyCountryPerformance: CountryPerformance[] = [
     tonnage: 65.3,
     topLane: "ZRH-SIN",
     airports: [
-      { airportCode: "ZRH", airportName: "Zurich Airport", city: "Zurich", revenue: 152960, tonnage: 52.2, loadFactor: 83, yieldPerKg: 2.93, flightCount: 14, topRoute: "ZRH-SIN" },
-      { airportCode: "GVA", airportName: "Geneva Airport", city: "Geneva", revenue: 38240, tonnage: 13.1, loadFactor: 76, yieldPerKg: 2.92, flightCount: 4, topRoute: "GVA-DXB" },
+      { airportCode: "ZRH", airportName: "Zurich Airport", city: "Zurich", revenue: 152960, tonnage: 52.2, loadFactor: 83, yieldPerKg: 2.93, flightCount: 14, topRoute: "ZRH-SIN", routes: routeBreakdown("ZRH", [
+        { destination: "SIN", revenue: 61200, tonnage: 20.3, loadFactor: 86, yieldPerKg: 3.01, flightCount: 5 },
+        { destination: "DXB", revenue: 47240, tonnage: 16.2, loadFactor: 83, yieldPerKg: 2.92, flightCount: 4 },
+        { destination: "JED", revenue: 28600, tonnage: 9.9, loadFactor: 79, yieldPerKg: 2.89, flightCount: 3 },
+        { destination: "HKG", revenue: 15920, tonnage: 5.8, loadFactor: 75, yieldPerKg: 2.74, flightCount: 2 },
+      ]) },
+      { airportCode: "GVA", airportName: "Geneva Airport", city: "Geneva", revenue: 38240, tonnage: 13.1, loadFactor: 76, yieldPerKg: 2.92, flightCount: 4, topRoute: "GVA-DXB", routes: routeBreakdown("GVA", [
+        { destination: "DXB", revenue: 17400, tonnage: 5.9, loadFactor: 79, yieldPerKg: 2.95, flightCount: 2 },
+        { destination: "JED", revenue: 12840, tonnage: 4.4, loadFactor: 75, yieldPerKg: 2.92, flightCount: 1 },
+        { destination: "RUH", revenue: 8000, tonnage: 2.8, loadFactor: 70, yieldPerKg: 2.86, flightCount: 1 },
+      ]) },
     ],
     mapCenter: { lat: 46.8182, lng: 8.2275 },
     mapFootprint: [
@@ -139,8 +192,18 @@ const monthlyCountryPerformance: CountryPerformance[] = [
     tonnage: 105.1,
     topLane: "DXB-FRA",
     airports: [
-      { airportCode: "DXB", airportName: "Dubai International Airport", city: "Dubai", revenue: 198525, tonnage: 78.8, loadFactor: 81, yieldPerKg: 2.52, flightCount: 22, topRoute: "DXB-FRA" },
-      { airportCode: "AUH", airportName: "Abu Dhabi International Airport", city: "Abu Dhabi", revenue: 66175, tonnage: 26.3, loadFactor: 74, yieldPerKg: 2.52, flightCount: 8, topRoute: "AUH-LHR" },
+      { airportCode: "DXB", airportName: "Dubai International Airport", city: "Dubai", revenue: 198525, tonnage: 78.8, loadFactor: 81, yieldPerKg: 2.52, flightCount: 22, topRoute: "DXB-FRA", routes: routeBreakdown("DXB", [
+        { destination: "FRA", revenue: 82400, tonnage: 32.1, loadFactor: 84, yieldPerKg: 2.57, flightCount: 9 },
+        { destination: "MAD", revenue: 46325, tonnage: 18.9, loadFactor: 80, yieldPerKg: 2.45, flightCount: 5 },
+        { destination: "JNB", revenue: 39200, tonnage: 15.4, loadFactor: 79, yieldPerKg: 2.55, flightCount: 4 },
+        { destination: "HKG", revenue: 30600, tonnage: 12.4, loadFactor: 77, yieldPerKg: 2.47, flightCount: 4 },
+      ]) },
+      { airportCode: "AUH", airportName: "Abu Dhabi International Airport", city: "Abu Dhabi", revenue: 66175, tonnage: 26.3, loadFactor: 74, yieldPerKg: 2.52, flightCount: 8, topRoute: "AUH-LHR", routes: routeBreakdown("AUH", [
+        { destination: "LHR", revenue: 28100, tonnage: 11.0, loadFactor: 77, yieldPerKg: 2.55, flightCount: 3 },
+        { destination: "FRA", revenue: 18875, tonnage: 7.6, loadFactor: 73, yieldPerKg: 2.48, flightCount: 2 },
+        { destination: "JED", revenue: 11200, tonnage: 4.5, loadFactor: 72, yieldPerKg: 2.49, flightCount: 2 },
+        { destination: "MUC", revenue: 8000, tonnage: 3.2, loadFactor: 68, yieldPerKg: 2.50, flightCount: 1 },
+      ]) },
     ],
     mapCenter: { lat: 23.4241, lng: 53.8478 },
     mapFootprint: [
@@ -162,7 +225,12 @@ const monthlyCountryPerformance: CountryPerformance[] = [
     tonnage: 74.3,
     topLane: "SIN-MUC",
     airports: [
-      { airportCode: "SIN", airportName: "Singapore Changi Airport", city: "Singapore", revenue: 236400, tonnage: 74.3, loadFactor: 88, yieldPerKg: 3.18, flightCount: 19, topRoute: "SIN-MUC" },
+      { airportCode: "SIN", airportName: "Singapore Changi Airport", city: "Singapore", revenue: 236400, tonnage: 74.3, loadFactor: 88, yieldPerKg: 3.18, flightCount: 19, topRoute: "SIN-MUC", routes: routeBreakdown("SIN", [
+        { destination: "MUC", revenue: 89200, tonnage: 27.8, loadFactor: 91, yieldPerKg: 3.21, flightCount: 7 },
+        { destination: "FRA", revenue: 70400, tonnage: 22.1, loadFactor: 89, yieldPerKg: 3.19, flightCount: 6 },
+        { destination: "JED", revenue: 47800, tonnage: 15.0, loadFactor: 86, yieldPerKg: 3.19, flightCount: 4 },
+        { destination: "DXB", revenue: 29000, tonnage: 9.4, loadFactor: 82, yieldPerKg: 3.09, flightCount: 2 },
+      ]) },
     ],
     mapCenter: { lat: 1.3521, lng: 103.8198 },
     mapFootprint: [
@@ -183,9 +251,23 @@ const monthlyCountryPerformance: CountryPerformance[] = [
     tonnage: 64.8,
     topLane: "BCN-MEX",
     airports: [
-      { airportCode: "MAD", airportName: "Adolfo Suárez Madrid-Barajas", city: "Madrid", revenue: 79090, tonnage: 35.6, loadFactor: 70, yieldPerKg: 2.22, flightCount: 12, topRoute: "MAD-JFK" },
-      { airportCode: "BCN", airportName: "Barcelona-El Prat Airport", city: "Barcelona", revenue: 50330, tonnage: 22.7, loadFactor: 68, yieldPerKg: 2.22, flightCount: 8, topRoute: "BCN-MEX" },
-      { airportCode: "VLC", airportName: "Valencia Airport", city: "Valencia", revenue: 14380, tonnage: 6.5, loadFactor: 65, yieldPerKg: 2.21, flightCount: 3, topRoute: "VLC-LIM" },
+      { airportCode: "MAD", airportName: "Adolfo Suárez Madrid-Barajas", city: "Madrid", revenue: 79090, tonnage: 35.6, loadFactor: 70, yieldPerKg: 2.22, flightCount: 12, topRoute: "MAD-JFK", routes: routeBreakdown("MAD", [
+        { destination: "JFK", revenue: 31100, tonnage: 13.7, loadFactor: 73, yieldPerKg: 2.27, flightCount: 5 },
+        { destination: "DXB", revenue: 22990, tonnage: 10.4, loadFactor: 70, yieldPerKg: 2.21, flightCount: 3 },
+        { destination: "JED", revenue: 15000, tonnage: 6.8, loadFactor: 67, yieldPerKg: 2.21, flightCount: 2 },
+        { destination: "LIM", revenue: 10000, tonnage: 4.7, loadFactor: 63, yieldPerKg: 2.13, flightCount: 2 },
+      ]) },
+      { airportCode: "BCN", airportName: "Barcelona-El Prat Airport", city: "Barcelona", revenue: 50330, tonnage: 22.7, loadFactor: 68, yieldPerKg: 2.22, flightCount: 8, topRoute: "BCN-MEX", routes: routeBreakdown("BCN", [
+        { destination: "MEX", revenue: 20500, tonnage: 9.1, loadFactor: 71, yieldPerKg: 2.25, flightCount: 3 },
+        { destination: "JED", revenue: 14130, tonnage: 6.4, loadFactor: 68, yieldPerKg: 2.21, flightCount: 2 },
+        { destination: "DXB", revenue: 9900, tonnage: 4.5, loadFactor: 65, yieldPerKg: 2.20, flightCount: 2 },
+        { destination: "CAI", revenue: 5800, tonnage: 2.7, loadFactor: 61, yieldPerKg: 2.15, flightCount: 1 },
+      ]) },
+      { airportCode: "VLC", airportName: "Valencia Airport", city: "Valencia", revenue: 14380, tonnage: 6.5, loadFactor: 65, yieldPerKg: 2.21, flightCount: 3, topRoute: "VLC-LIM", routes: routeBreakdown("VLC", [
+        { destination: "LIM", revenue: 6400, tonnage: 2.9, loadFactor: 67, yieldPerKg: 2.21, flightCount: 1 },
+        { destination: "JED", revenue: 4880, tonnage: 2.2, loadFactor: 64, yieldPerKg: 2.22, flightCount: 1 },
+        { destination: "DXB", revenue: 3100, tonnage: 1.4, loadFactor: 61, yieldPerKg: 2.21, flightCount: 1 },
+      ]) },
     ],
     mapCenter: { lat: 40.4637, lng: -3.7492 },
     mapFootprint: [
@@ -198,45 +280,15 @@ const monthlyCountryPerformance: CountryPerformance[] = [
   },
 ];
 
-const monthlyGsaPerformance: GsaPerformance[] = [
-  {
-    gsaName: "BlueWing Cargo Solutions",
-    assignedMarkets: "Germany, Austria, Switzerland",
-    revenue: 658400,
-    yieldPerKg: 2.74,
-    loadFactor: 83,
-    tonnage: 240.2,
-    flightCount: 42,
-  },
-  {
-    gsaName: "Atlantic AirCargo Partners",
-    assignedMarkets: "Spain, Portugal, France",
-    revenue: 286900,
-    yieldPerKg: 2.31,
-    loadFactor: 71,
-    tonnage: 124.1,
-    flightCount: 27,
-  },
-  {
-    gsaName: "NordicLift Aviation Services",
-    assignedMarkets: "Nordics, Baltics",
-    revenue: 352600,
-    yieldPerKg: 2.96,
-    loadFactor: 80,
-    tonnage: 119.1,
-    flightCount: 31,
-  },
-  {
-    gsaName: "Direct airline sales",
-    assignedMarkets: "Key accounts and strategic lanes",
-    revenue: 412500,
-    yieldPerKg: 2.85,
-    loadFactor: 86,
-    tonnage: 144.7,
-    flightCount: 35,
-  },
-];
-
+const monthlyGsaPerformance: GsaPerformance[] = realGsaPartners.map((partner, index) => ({
+  gsaName: partner.name,
+  assignedMarkets: partner.markets.join(", "),
+  revenue: Math.round(118000 + partner.networkScore * 4200 + index * 9100),
+  yieldPerKg: Math.round((2.05 + partner.complianceScore / 100 + (index % 5) * 0.04) * 100) / 100,
+  loadFactor: Math.min(93, Math.max(64, Math.round((partner.networkScore + partner.complianceScore) / 2 - 8 + (index % 4)))),
+  tonnage: Math.round((42 + partner.networkScore * 0.9 + index * 2.6) * 10) / 10,
+  flightCount: 8 + (index % 7) + Math.round(partner.networkScore / 12),
+}));
 const periodConfigs: Record<PerformancePeriod, { label: string; factor: number; yieldDelta: number; loadFactorDelta: number }> = {
   daily: { label: "Daily average", factor: 1 / 30, yieldDelta: -0.09, loadFactorDelta: -3 },
   weekly: { label: "Weekly average", factor: 7 / 30, yieldDelta: -0.04, loadFactorDelta: -1 },
@@ -313,6 +365,14 @@ function scaleCountryPerformance(row: CountryPerformance, period: PerformancePer
       loadFactor: clampLoadFactor(a.loadFactor + config.loadFactorDelta),
       tonnage: roundToOne(a.tonnage * config.factor),
       flightCount: Math.max(1, Math.round(a.flightCount * config.factor)),
+      routes: a.routes.map((route) => ({
+        ...route,
+        revenue: Math.round(route.revenue * config.factor),
+        yieldPerKg: roundToTwo(route.yieldPerKg + config.yieldDelta),
+        loadFactor: clampLoadFactor(route.loadFactor + config.loadFactorDelta),
+        tonnage: roundToOne(route.tonnage * config.factor),
+        flightCount: Math.max(1, Math.round(route.flightCount * config.factor)),
+      })),
     })),
   };
 }

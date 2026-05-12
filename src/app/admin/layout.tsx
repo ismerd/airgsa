@@ -1,4 +1,4 @@
-import { Database, LayoutDashboard, Newspaper, Users } from "lucide-react";
+import { Database, LayoutDashboard, Newspaper, Users, Wifi } from "lucide-react";
 import { Sidebar, type NavGroup } from "@/components/dashboard/sidebar";
 
 const nav: NavGroup[] = [
@@ -14,6 +14,12 @@ const nav: NavGroup[] = [
       { label: "Accounts", href: "/admin/accounts", icon: Users },
       { label: "Sources", href: "/admin/sources", icon: Database },
       { label: "Content import", href: "/admin/content", icon: Newspaper },
+    ],
+  },
+  {
+    heading: "Integrations",
+    items: [
+      { label: "FR24 API test", href: "/admin/fr24", icon: Wifi },
     ],
   },
 ];

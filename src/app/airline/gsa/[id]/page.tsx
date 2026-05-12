@@ -1,9 +1,9 @@
 import { notFound } from "next/navigation";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Topbar } from "@/components/dashboard/topbar";
 import { getGsaProfileById } from "@/lib/services/platform";
+import { GsaDecisionPanel } from "./decision-panel";
 
 export default async function GsaProfilePage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -46,12 +46,7 @@ export default async function GsaProfilePage({ params }: { params: Promise<{ id:
             <CardTitle>Decision panel</CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
-            <Button className="w-full">Accept application</Button>
-            <Button className="w-full" variant="secondary">Move to shortlist</Button>
-            <Button className="w-full" variant="destructive">Reject application</Button>
-            <div className="rounded-md bg-surface2 border border-border-ui p-4 text-sm leading-6 text-ink-muted">
-              Recommended next step: request lane-level account plan and transition timeline for the first 90 days.
-            </div>
+            <GsaDecisionPanel gsaId={gsa.id} />
           </CardContent>
         </Card>
       </main>

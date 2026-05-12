@@ -1,12 +1,17 @@
 import { FlightWorldMap } from "@/components/dashboard/flight-world-map";
+import { GsaAssignedRoutesSummary } from "@/components/dashboard/gsa-assigned-routes-summary";
 import { TenderCard } from "@/components/dashboard/tender-card";
 import { Topbar } from "@/components/dashboard/topbar";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { getSession } from "@/lib/auth/session";
 import { dummyFlights, getFlightsForGsa } from "@/lib/dummy-flight-data";
+import { realGsaPartners } from "@/lib/real-gsa-data";
 import { newsPosts, tenders } from "@/lib/services/platform";
 
-export default function GsaMarketplacePage() {
-  const trackedFlights = getFlightsForGsa(dummyFlights, { gsaName: "BlueWing Cargo Solutions" });
+export default async function GsaMarketplacePage() {
+  const session = await getSession();
+  const demoGsa = realGsaPartners.find((partner) => partner.name === session?.company) ?? realGsaPartners[0];
+  const trackedFlights = getFlightsForGsa(dummyFlights, { gsaName: demoGsa.name });
 
   return (
     <>
@@ -17,9 +22,10 @@ export default function GsaMarketplacePage() {
           <Metric label="Matched markets" value="7" />
           <Metric label="New signals" value={String(newsPosts.length)} />
         </div>
+        <GsaAssignedRoutesSummary companyName={demoGsa.name} />
         <FlightWorldMap
           title="GSA shipment tracker"
-          subtitle="Only shipments sold or handled by BlueWing Cargo Solutions are shown."
+          subtitle={`Only shipments sold or handled by ${demoGsa.name} are shown.`}
           flights={trackedFlights}
           markerColorMode="gsa"
         />

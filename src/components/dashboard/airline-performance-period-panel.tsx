@@ -119,6 +119,7 @@ function CountryExpandableTable({
   rate: number;
 }) {
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
+  const [expandedAirports, setExpandedAirports] = useState<Set<string>>(new Set());
 
   const toggle = (code: string) => {
     setExpanded((prev) => {
@@ -129,7 +130,16 @@ function CountryExpandableTable({
     });
   };
 
-  const headers = ["Country", "Revenue", "Yield / kg", "Loadfactor", "Tonnage", "Top lane"];
+  const toggleAirport = (airportCode: string) => {
+    setExpandedAirports((prev) => {
+      const next = new Set(prev);
+      if (next.has(airportCode)) next.delete(airportCode);
+      else next.add(airportCode);
+      return next;
+    });
+  };
+
+  const headers = ["Country", "Revenue", "Yield / kg", "Loadfactor", "Tonnage"];
 
   return (
     <div className="overflow-hidden rounded-lg border border-border-ui">
@@ -145,7 +155,7 @@ function CountryExpandableTable({
           <tbody className="divide-y divide-border-ui">
             {countries.map((country) => {
               const isOpen = expanded.has(country.code);
-              const hasAirports = country.airports.length > 1;
+              const hasAirports = country.airports.length > 0;
               return (
                 <React.Fragment key={country.code}>
                   <tr
@@ -174,36 +184,79 @@ function CountryExpandableTable({
                     <td className="px-4 py-4 align-middle">{symbol}{(country.yieldPerKg * rate).toFixed(2)}</td>
                     <td className="px-4 py-4 align-middle">{country.loadFactor}%</td>
                     <td className="px-4 py-4 align-middle">{country.tonnage.toFixed(1)} t</td>
-                    <td className="px-4 py-4 align-middle">{country.topLane}</td>
                   </tr>
 
-                  {isOpen && country.airports.map((airport, i) => (
-                    <tr key={airport.airportCode} className="bg-surface2/40 text-ink-muted">
-                      <td className="px-4 py-3 align-middle">
-                        <div className="flex items-center gap-2 pl-5">
-                          <div className="flex flex-col items-center self-stretch">
-                            <div className="w-px flex-1 bg-border-ui" />
-                            {i === country.airports.length - 1 && <div className="h-0" />}
-                          </div>
-                          <div className="ml-1.5">
-                            <p className="font-mono text-xs font-bold tracking-wider text-brand">{airport.airportCode}</p>
-                            <p className="text-xs text-ink-muted">{airport.city}</p>
-                          </div>
-                        </div>
-                      </td>
-                      <td className="px-4 py-3 align-middle text-xs font-semibold text-ink">
-                        {fmt(airport.revenue)}
-                        <p className="font-normal text-ink-muted">{Math.round(airport.revenue / country.revenue * 100)}% of country</p>
-                      </td>
-                      <td className="px-4 py-3 align-middle text-xs">{symbol}{(airport.yieldPerKg * rate).toFixed(2)}</td>
-                      <td className="px-4 py-3 align-middle text-xs">{airport.loadFactor}%</td>
-                      <td className="px-4 py-3 align-middle text-xs">
-                        {airport.tonnage.toFixed(1)} t
-                        <p className="text-ink-muted">{airport.flightCount} flights</p>
-                      </td>
-                      <td className="px-4 py-3 align-middle text-xs">{airport.topRoute}</td>
-                    </tr>
-                  ))}
+                  {isOpen && country.airports.map((airport, i) => {
+                    const airportOpen = expandedAirports.has(airport.airportCode);
+                    const routes = [...airport.routes].sort((a, b) => b.revenue - a.revenue);
+                    const hasRoutes = routes.length > 0;
+
+                    return (
+                      <React.Fragment key={airport.airportCode}>
+                        <tr
+                          className={cn(
+                            "bg-surface2/40 text-ink-muted transition-colors",
+                            hasRoutes && "cursor-pointer hover:bg-surface2",
+                          )}
+                          onClick={() => hasRoutes && toggleAirport(airport.airportCode)}
+                        >
+                          <td className="px-4 py-3 align-middle">
+                            <div className="flex items-center gap-2 pl-5">
+                              <div className="flex flex-col items-center self-stretch">
+                                <div className="w-px flex-1 bg-border-ui" />
+                                {i === country.airports.length - 1 && <div className="h-0" />}
+                              </div>
+                              {hasRoutes ? (
+                                <ChevronRight
+                                  className={cn("ml-1 h-3.5 w-3.5 shrink-0 text-ink-muted transition-transform duration-200", airportOpen && "rotate-90")}
+                                />
+                              ) : (
+                                <span className="ml-1 h-3.5 w-3.5 shrink-0" />
+                              )}
+                              <div className="ml-1">
+                                <p className="font-mono text-xs font-bold tracking-wider text-brand">{airport.airportCode}</p>
+                                <p className="text-xs text-ink-muted">{airport.city}</p>
+                              </div>
+                            </div>
+                          </td>
+                          <td className="px-4 py-3 align-middle text-xs font-semibold text-ink">
+                            {fmt(airport.revenue)}
+                            <p className="font-normal text-ink-muted">{Math.round(airport.revenue / country.revenue * 100)}% of country</p>
+                          </td>
+                          <td className="px-4 py-3 align-middle text-xs">{symbol}{(airport.yieldPerKg * rate).toFixed(2)}</td>
+                          <td className="px-4 py-3 align-middle text-xs">{airport.loadFactor}%</td>
+                          <td className="px-4 py-3 align-middle text-xs">
+                            {airport.tonnage.toFixed(1)} t
+                            <p className="text-ink-muted">{airport.flightCount} flights</p>
+                          </td>
+                        </tr>
+
+                        {airportOpen && routes.map((route, routeIndex) => (
+                          <tr key={route.route} className="bg-surface text-ink-muted">
+                            <td className="px-4 py-2.5 align-middle">
+                              <div className="flex items-center gap-2 pl-14">
+                                <span className="h-px w-5 bg-border-ui" />
+                                <div>
+                                  <p className="font-mono text-xs font-bold text-ink">{route.route}</p>
+                                  <p className="text-[11px] text-ink-muted">Rank #{routeIndex + 1} from {airport.city}</p>
+                                </div>
+                              </div>
+                            </td>
+                            <td className="px-4 py-2.5 align-middle text-xs font-semibold text-ink">
+                              {fmt(route.revenue)}
+                              <p className="font-normal text-ink-muted">{Math.round(route.revenue / airport.revenue * 100)}% of city</p>
+                            </td>
+                            <td className="px-4 py-2.5 align-middle text-xs">{symbol}{(route.yieldPerKg * rate).toFixed(2)}</td>
+                            <td className="px-4 py-2.5 align-middle text-xs">{route.loadFactor}%</td>
+                            <td className="px-4 py-2.5 align-middle text-xs">
+                              {route.tonnage.toFixed(1)} t
+                              <p className="text-ink-muted">{route.flightCount} flights</p>
+                            </td>
+                          </tr>
+                        ))}
+                      </React.Fragment>
+                    );
+                  })}
                 </React.Fragment>
               );
             })}

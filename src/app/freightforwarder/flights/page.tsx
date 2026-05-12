@@ -17,16 +17,16 @@ type FlightRow = {
 };
 
 const flights: FlightRow[] = [
-  { flight: "ABR214", airline: "AeroBridge Cargo", origin: "FRA", destination: "DXB", departure: "23:15", arrival: "06:40+1", frequency: "Daily", availableKg: 4800, ratePerKg: 2.83, status: "on-time" },
-  { flight: "ABR601", airline: "AeroBridge Cargo", origin: "MUC", destination: "SIN", departure: "22:00", arrival: "14:30+2", frequency: "5x weekly", availableKg: 6100, ratePerKg: 3.06, status: "on-time" },
-  { flight: "ABR332", airline: "AeroBridge Cargo", origin: "VIE", destination: "DOH", departure: "02:30", arrival: "08:45", frequency: "4x weekly", availableKg: 3900, ratePerKg: 2.25, status: "on-time" },
-  { flight: "TKC403", airline: "Turkish Cargo", origin: "IST", destination: "FRA", departure: "06:20", arrival: "08:55", frequency: "Daily", availableKg: 3200, ratePerKg: 2.31, status: "on-time" },
-  { flight: "TKC711", airline: "Turkish Cargo", origin: "IST", destination: "MAD", departure: "10:40", arrival: "14:05", frequency: "3x weekly", availableKg: 2700, ratePerKg: 2.33, status: "delayed" },
-  { flight: "NSA921", airline: "NorthStar Airways", origin: "MAD", destination: "JFK", departure: "14:20", arrival: "17:55", frequency: "Daily", availableKg: 2900, ratePerKg: 2.46, status: "on-time" },
-  { flight: "NSA117", airline: "NorthStar Airways", origin: "LIS", destination: "ORD", departure: "11:55", arrival: "15:10", frequency: "5x weekly", availableKg: 2100, ratePerKg: 2.19, status: "on-time" },
-  { flight: "PLC509", airline: "PolarLine Cargo", origin: "OSL", destination: "ICN", departure: "06:00", arrival: "22:15+1", frequency: "4x weekly", availableKg: 5400, ratePerKg: 3.01, status: "on-time" },
-  { flight: "PLC778", airline: "PolarLine Cargo", origin: "CPH", destination: "PVG", departure: "08:30", arrival: "06:15+2", frequency: "3x weekly", availableKg: 4200, ratePerKg: 2.84, status: "cancelled" },
-  { flight: "ABR744", airline: "AeroBridge Cargo", origin: "BCN", destination: "MEX", departure: "13:10", arrival: "19:45", frequency: "Weekly", availableKg: 3600, ratePerKg: 2.34, status: "on-time" },
+  { flight: "SV803", airline: "Saudia Cargo",  origin: "JED", destination: "FRA", departure: "01:30", arrival: "07:10",  frequency: "Daily",     availableKg: 14200, ratePerKg: 2.64, status: "on-time" },
+  { flight: "SV805", airline: "Saudia Cargo",  origin: "JED", destination: "LHR", departure: "02:45", arrival: "08:30",  frequency: "Daily",     availableKg: 9800,  ratePerKg: 2.71, status: "on-time" },
+  { flight: "SV807", airline: "Saudia Cargo",  origin: "JED", destination: "CDG", departure: "03:00", arrival: "09:15",  frequency: "5x weekly", availableKg: 11200, ratePerKg: 2.68, status: "on-time" },
+  { flight: "SV813", airline: "Saudia Cargo",  origin: "JED", destination: "HKG", departure: "22:00", arrival: "14:30+1", frequency: "4x weekly", availableKg: 18600, ratePerKg: 2.98, status: "on-time" },
+  { flight: "SV809", airline: "Saudia Cargo",  origin: "JED", destination: "JFK", departure: "03:15", arrival: "11:45",  frequency: "Daily",     availableKg: 11400, ratePerKg: 3.26, status: "delayed" },
+  { flight: "SV817", airline: "Saudia Cargo",  origin: "JED", destination: "BOM", departure: "04:10", arrival: "08:40",  frequency: "5x weekly", availableKg: 8200,  ratePerKg: 2.28, status: "on-time" },
+  { flight: "EY6745", airline: "Etihad Cargo", origin: "AUH", destination: "FRA", departure: "06:20", arrival: "11:05",  frequency: "Daily",     availableKg: 3200,  ratePerKg: 2.41, status: "on-time" },
+  { flight: "QR8301", airline: "Qatar Cargo",  origin: "DOH", destination: "MAN", departure: "10:40", arrival: "15:30",  frequency: "3x weekly", availableKg: 2700,  ratePerKg: 2.33, status: "on-time" },
+  { flight: "MS768",  airline: "Egyptair Cargo", origin: "CAI", destination: "LHR", departure: "11:55", arrival: "15:40", frequency: "4x weekly", availableKg: 2100, ratePerKg: 2.19, status: "on-time" },
+  { flight: "SV815",  airline: "Saudia Cargo",  origin: "JED", destination: "NRT", departure: "23:30", arrival: "17:00+1", frequency: "3x weekly", availableKg: 5400, ratePerKg: 3.04, status: "on-time" },
 ];
 
 const statusVariant: Record<string, "success" | "warning" | "danger"> = {
@@ -36,10 +36,10 @@ const statusVariant: Record<string, "success" | "warning" | "danger"> = {
 };
 
 const airlineColor: Record<string, string> = {
-  "AeroBridge Cargo": "#00AEEF",
-  "Turkish Cargo": "#E30613",
-  "NorthStar Airways": "#8B5CF6",
-  "PolarLine Cargo": "#2DD4BF",
+  "Saudia Cargo":    "#006241",
+  "Etihad Cargo":    "#C5A028",
+  "Qatar Cargo":     "#5C0632",
+  "Egyptair Cargo":  "#00497C",
 };
 
 export default function FlightsPage() {
@@ -52,8 +52,8 @@ export default function FlightsPage() {
             {[
               { label: "Total routes", value: "10" },
               { label: "Airlines", value: "4" },
-              { label: "On-time today", value: "8 / 10" },
-              { label: "Total capacity", value: "38.9 t" },
+              { label: "On-time today", value: "9 / 10" },
+              { label: "Total capacity (est.)", value: "104.8 t" },
             ].map((m) => (
               <Card key={m.label} className="bg-white text-slate-950">
                 <CardContent className="p-5">
