@@ -1,75 +1,84 @@
 /**
- * Flightradar24 API v1 client — server-side only.
- * Explorer plan endpoints used:
- *   1. GET /api/live/flight-positions/full?painted_as=SVA&categories=C
- *      (live Saudia-painted flights classified by FR24 as cargo-only)
- *   2. GET /api/flight-summary/light?flight_ids=...
- *      (optional route enrichment when live records are incomplete)
+ * Flightradar24 API v1 client - server-side only.
  *
- * Credit strategy: 1 API call per 5-minute cache window in the normal path.
- * Origin/destination from FR24; coordinates from static AIRPORTS map.
- * Falls back to static schedule data when API key absent or calls fail.
+ * The FR24 API spec in this repo does not expose a complete airline fleet roster
+ * endpoint. We can query live aircraft by airline livery/operator and query
+ * historical flight summaries over a date range to infer seen registrations and
+ * airport arrivals.
  */
 
 import { unstable_cache } from "next/cache";
-import type { FlightTrackerRecord, AirportPoint } from "@/lib/dummy-flight-data";
+import type { AirportPoint, FlightTrackerRecord, LandedAirportCluster } from "@/lib/dummy-flight-data";
+import { AIRPORTS, ICAO_TO_IATA, SAUDIA_CARGO, SAUDIA_GSA_PARTNERS } from "@/lib/saudia-cargo-data";
 import {
-  SAUDIA_CARGO,
-  SAUDIA_GSA_PARTNERS,
-  AIRPORTS,
-  ICAO_TO_IATA,
-} from "@/lib/saudia-cargo-data";
-import {
-  generateSyntheticRevenue,
-  generateProductMix,
   generateCargoDestinations,
+  generateProductMix,
+  generateSyntheticRevenue,
 } from "@/lib/services/synthetic-revenue";
+import { getFr24Settings } from "@/lib/services/fr24-settings";
 
 const FR24_BASE = "https://fr24api.flightradar24.com";
 const API_KEY = process.env.FLIGHTRADAR24_API_KEY;
+const SAUDIA_ICAO = SAUDIA_CARGO.icao;
+const FR24_TIMEOUT_MS = 10_000;
+const PASSENGER_ALTITUDE_BUCKETS = [
+  "0-9999",
+  "10000-19999",
+  "20000-29999",
+  "30000-33999",
+  "34000-36999",
+  "37000-39999",
+  "40000-60000",
+];
 
-// ── FR24 types ────────────────────────────────────────────────────────────────
+type Fr24FlightCategory = "P" | "C" | "M" | "J" | "T" | "H" | "B" | "G" | "D" | "V" | "O" | "N";
 
 type Fr24LivePosition = {
   fr24_id: string;
-  flight?: string;
-  callsign?: string;
+  flight?: string | null;
+  callsign?: string | null;
   lat: number;
   lon: number;
-  track?: number;
-  alt?: number;
-  gspeed?: number;
-  type?: string;
-  reg?: string;
-  painted_as?: string;
-  operating_as?: string;
-  orig_iata?: string;
-  orig_icao?: string;
-  dest_iata?: string;
-  dest_icao?: string;
-  dest_iata_actual?: string;
-  dest_icao_actual?: string;
+  track?: number | null;
+  alt?: number | null;
+  gspeed?: number | null;
+  type?: string | null;
+  reg?: string | null;
+  painted_as?: string | null;
+  operating_as?: string | null;
+  orig_iata?: string | null;
+  orig_icao?: string | null;
+  dest_iata?: string | null;
+  dest_icao?: string | null;
+  dest_iata_actual?: string | null;
+  dest_icao_actual?: string | null;
+  category?: Fr24FlightCategory | null;
 };
 
-type Fr24LiveResponse = { data: Fr24LivePosition[] };
+type Fr24LiveResponse = { data?: Fr24LivePosition[] };
 type Fr24LiveFetchResult = { data: Fr24LivePosition[]; fetchedAt: string };
 
 type Fr24SummaryRecord = {
   fr24_id: string;
-  flight?: string;
-  reg?: string;
-  type?: string;
-  orig_iata?: string;
-  orig_icao?: string;
-  dest_iata?: string;
-  dest_icao?: string;
-  dest_iata_actual?: string;
-  dest_icao_actual?: string;
+  flight?: string | null;
+  callsign?: string | null;
+  reg?: string | null;
+  type?: string | null;
+  painted_as?: string | null;
+  operating_as?: string | null;
+  orig_iata?: string | null;
+  orig_icao?: string | null;
+  dest_iata?: string | null;
+  dest_icao?: string | null;
+  dest_iata_actual?: string | null;
+  dest_icao_actual?: string | null;
+  datetime_landed?: string | null;
+  first_seen?: string | null;
+  last_seen?: string | null;
+  flight_ended?: boolean | null;
 };
 
-type Fr24SummaryResponse = { data: Fr24SummaryRecord[] };
-
-// ── HTTP helpers ──────────────────────────────────────────────────────────────
+type Fr24SummaryResponse = { data?: Fr24SummaryRecord[] };
 
 function headers(): HeadersInit {
   return {
@@ -79,74 +88,187 @@ function headers(): HeadersInit {
   };
 }
 
-// Saudia Cargo dedicated freighter ICAO codes
-const FREIGHTER_TYPES = new Set(["B77F", "B748", "B74F", "B74S", "MD11"]);
+const FREIGHTER_TYPES = new Set([
+  "B77F",
+  "B748",
+  "B74F",
+  "B74S",
+  "MD11",
+  "A332F",
+  "A33F",
+]);
 
-// Source: saudia-cargo.com/our-fleet — B777-368ER, A330-300, B777-268, B787-9, A321, A320
-const fetchLivePositions = unstable_cache(async (): Promise<Fr24LiveFetchResult> => {
-  const fetchedAt = new Date().toISOString();
-  const res = await fetch(
-    `${FR24_BASE}/api/live/flight-positions/full?painted_as=SVA&categories=C&limit=100`,
-    { headers: headers(), cache: "no-store" }
-  );
-  if (!res.ok) throw new Error(`live-positions HTTP ${res.status}`);
-  return { data: ((await res.json()) as Fr24LiveResponse).data ?? [], fetchedAt };
-}, ["fr24-saudia-cargo-live-positions-v2"], { revalidate: 300 });
+async function fetchLivePositionSet(
+  filter: "painted_as" | "operating_as",
+  category: Fr24FlightCategory,
+  altitudeRange?: string,
+): Promise<Fr24LivePosition[]> {
+  const params = new URLSearchParams({
+    [filter]: SAUDIA_ICAO,
+    categories: category,
+    limit: "500",
+  });
+  if (altitudeRange) params.set("altitude_ranges", altitudeRange);
 
-function resolveFlightType(icaoType: string | undefined, fr24CargoCategory = false): "freighter" | "belly" {
-  if (fr24CargoCategory) return "freighter";
-  if (!icaoType) return "belly";
-  return FREIGHTER_TYPES.has(icaoType) ? "freighter" : "belly";
+  const res = await fetch(`${FR24_BASE}/api/live/flight-positions/full?${params.toString()}`, {
+    headers: headers(),
+    cache: "no-store",
+    signal: AbortSignal.timeout(FR24_TIMEOUT_MS),
+  });
+
+  if (!res.ok) throw new Error(`live-positions ${filter} HTTP ${res.status}`);
+  const json = (await res.json()) as Fr24LiveResponse;
+  return (json.data ?? []).map((position) => ({ ...position, category: position.category ?? category }));
 }
+
+const fetchLivePositions = unstable_cache(
+  async (): Promise<Fr24LiveFetchResult> => {
+    const fetchedAt = new Date().toISOString();
+    const passengerQueries = PASSENGER_ALTITUDE_BUCKETS.flatMap((altitudeRange) => [
+      fetchLivePositionSet("painted_as", "P", altitudeRange),
+      fetchLivePositionSet("operating_as", "P", altitudeRange),
+    ]);
+    const results = await Promise.allSettled([
+      ...passengerQueries,
+      fetchLivePositionSet("painted_as", "C"),
+      fetchLivePositionSet("operating_as", "C"),
+      fetchLivePositionSet("painted_as", "N"),
+      fetchLivePositionSet("operating_as", "N"),
+    ]);
+
+    const positions = results.flatMap((result) => (result.status === "fulfilled" ? result.value : []));
+    if (positions.length === 0 && results.some((result) => result.status === "rejected")) {
+      const error = results.find((result) => result.status === "rejected") as PromiseRejectedResult | undefined;
+      throw error?.reason ?? new Error("live-positions HTTP error");
+    }
+
+    return { data: dedupeByFr24Id(positions), fetchedAt };
+  },
+  ["fr24-saudia-all-live-positions-v1"],
+  { revalidate: 300 },
+);
 
 async function fetchFlightSummary(fr24Ids: string[]): Promise<Map<string, Fr24SummaryRecord>> {
   if (fr24Ids.length === 0) return new Map();
 
-  // Max 15 IDs per call per API spec
-  const ids = fr24Ids.slice(0, 15).join(",");
-  const res = await fetch(
-    `${FR24_BASE}/api/flight-summary/light?flight_ids=${ids}&limit=50`,
-    { headers: headers(), next: { revalidate: 300 } }
+  const chunks = chunk(fr24Ids, 15);
+  const records = await Promise.all(
+    chunks.map(async (ids) => {
+      const params = new URLSearchParams({
+        flight_ids: ids.join(","),
+        limit: "50",
+      });
+      const res = await fetch(`${FR24_BASE}/api/flight-summary/light?${params.toString()}`, {
+        headers: headers(),
+        next: { revalidate: 300 },
+        signal: AbortSignal.timeout(FR24_TIMEOUT_MS),
+      });
+      if (!res.ok) return [];
+      const json = (await res.json()) as Fr24SummaryResponse;
+      return json.data ?? [];
+    }),
   );
-  if (!res.ok) return new Map();
-  const json = (await res.json()) as Fr24SummaryResponse;
-  return new Map((json.data ?? []).map((r) => [r.fr24_id, r]));
+
+  return new Map(records.flat().map((record) => [record.fr24_id, record]));
 }
 
-// ── Airport resolution ────────────────────────────────────────────────────────
+async function fetchSummarySet(filter: "painted_as" | "operating_as"): Promise<Fr24SummaryRecord[]> {
+  const now = new Date();
+  const from = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+  const params = new URLSearchParams({
+    [filter]: SAUDIA_ICAO,
+    flight_datetime_from: formatFr24Date(from),
+    flight_datetime_to: formatFr24Date(now),
+    sort: "desc",
+    limit: "300",
+  });
 
-function resolveByIcao(icao: string | undefined): AirportPoint | null {
+  const res = await fetch(`${FR24_BASE}/api/flight-summary/light?${params.toString()}`, {
+    headers: headers(),
+    next: { revalidate: 600 },
+    signal: AbortSignal.timeout(FR24_TIMEOUT_MS),
+  });
+
+  if (!res.ok) throw new Error(`flight-summary ${filter} HTTP ${res.status}`);
+  const json = (await res.json()) as Fr24SummaryResponse;
+  return json.data ?? [];
+}
+
+const fetchRecentFlightSummaries = unstable_cache(
+  async (): Promise<Fr24SummaryRecord[]> => {
+    const results = await Promise.allSettled([fetchSummarySet("painted_as"), fetchSummarySet("operating_as")]);
+    const summaries = results.flatMap((result) => (result.status === "fulfilled" ? result.value : []));
+    if (summaries.length === 0 && results.some((result) => result.status === "rejected")) {
+      const error = results.find((result) => result.status === "rejected") as PromiseRejectedResult | undefined;
+      throw error?.reason ?? new Error("flight-summary HTTP error");
+    }
+    return dedupeSummaries(summaries);
+  },
+  ["fr24-saudia-recent-flight-summaries-v1"],
+  { revalidate: 600 },
+);
+
+function resolveByIcao(icao: string | null | undefined): AirportPoint | null {
   if (!icao) return null;
   const iata = ICAO_TO_IATA[icao];
   return iata ? (AIRPORTS[iata] ?? null) : null;
 }
 
-function resolveByIata(iata: string | undefined): AirportPoint | null {
+function resolveByIata(iata: string | null | undefined): AirportPoint | null {
   return iata ? (AIRPORTS[iata] ?? null) : null;
 }
 
-// ── GSA assignment ────────────────────────────────────────────────────────────
+function resolveAirportFromSummary(record: Fr24SummaryRecord, direction: "origin" | "destination"): AirportPoint | null {
+  if (direction === "origin") {
+    return resolveByIcao(record.orig_icao) ?? resolveByIata(record.orig_iata);
+  }
+
+  return (
+    resolveByIcao(record.dest_icao_actual) ??
+    resolveByIcao(record.dest_icao) ??
+    resolveByIata(record.dest_iata_actual) ??
+    resolveByIata(record.dest_iata)
+  );
+}
 
 function pickGsa(flightNumber: string) {
-  const n = parseInt(flightNumber.replace(/\D/g, "")) || 0;
+  const n = parseInt(flightNumber.replace(/\D/g, ""), 10) || 0;
   return SAUDIA_GSA_PARTNERS[n % SAUDIA_GSA_PARTNERS.length];
 }
 
-// ── Record builder ────────────────────────────────────────────────────────────
+function resolveFlightType(
+  icaoType: string | null | undefined,
+  category?: Fr24FlightCategory | null,
+): "freighter" | "belly" {
+  if (category === "C") return "freighter";
+  if (!icaoType) return "belly";
+  return FREIGHTER_TYPES.has(icaoType) ? "freighter" : "belly";
+}
+
+function makeFallbackAirport(
+  code: string | null | undefined,
+  airportName: string,
+  position: { lat: number; lng: number },
+): AirportPoint {
+  return {
+    airportCode: code ?? "TBD",
+    airportName,
+    countryCode: "XX",
+    lat: position.lat,
+    lng: position.lng,
+  };
+}
 
 function buildRecord(
   pos: Fr24LivePosition,
   summary: Fr24SummaryRecord | undefined,
-  index: number
+  index: number,
 ): FlightTrackerRecord | null {
-  // Flight number: prefer summary, derive from callsign, fall back to index
   const flightNumber =
     summary?.flight ??
     pos.flight ??
     (pos.callsign ? pos.callsign.replace(/^SVA?/, "SV") : `SV${800 + index}`);
 
-  // Resolve origin/destination strictly from FR24 route fields.
-  // No static fallback — stale hardcoded routes cause wrong data.
   const origin =
     resolveByIcao(summary?.orig_icao) ??
     resolveByIcao(pos.orig_icao) ??
@@ -162,10 +284,30 @@ function buildRecord(
     resolveByIata(pos.dest_iata_actual) ??
     resolveByIata(pos.dest_iata);
 
-  // Drop flight if route can't be confirmed from live data
-  if (!origin || !destination) return null;
+  const currentPosition = { lat: pos.lat, lng: pos.lon };
+  const fallbackOrigin = makeFallbackAirport(
+    summary?.orig_iata ?? pos.orig_iata ?? summary?.orig_icao ?? pos.orig_icao,
+    "Origin resolving",
+    currentPosition,
+  );
+  const fallbackDestination = makeFallbackAirport(
+    summary?.dest_iata_actual ??
+      summary?.dest_iata ??
+      pos.dest_iata_actual ??
+      pos.dest_iata ??
+      summary?.dest_icao_actual ??
+      summary?.dest_icao ??
+      pos.dest_icao_actual ??
+      pos.dest_icao,
+    "Destination resolving",
+    currentPosition,
+  );
+  const resolvedOrigin = origin ?? fallbackOrigin;
+  const resolvedDestination = destination ?? fallbackDestination;
 
-  const rev = generateSyntheticRevenue(flightNumber, origin.airportCode, destination.airportCode);
+  const aircraftType = summary?.type ?? pos.type ?? undefined;
+  const flightType = resolveFlightType(aircraftType, pos.category);
+  const rev = generateSyntheticRevenue(flightNumber, resolvedOrigin.airportCode, resolvedDestination.airportCode);
   const gsa = pickGsa(flightNumber);
 
   return {
@@ -175,38 +317,41 @@ function buildRecord(
     airlineColor: SAUDIA_CARGO.color,
     gsaName: gsa.name,
     gsaColor: gsa.color,
-    origin,
-    destination,
-    currentPosition: { lat: pos.lat, lng: pos.lon },
-    track: pos.track,
-    altitude: pos.alt,
-    gspeed: pos.gspeed,
-    registration: summary?.reg ?? pos.reg,
-    aircraftType: summary?.type ?? pos.type,
-    flightType: resolveFlightType(summary?.type ?? pos.type, true),
+    origin: resolvedOrigin,
+    destination: resolvedDestination,
+    currentPosition,
+    track: pos.track ?? undefined,
+    altitude: pos.alt ?? undefined,
+    gspeed: pos.gspeed ?? undefined,
+    registration: summary?.reg ?? pos.reg ?? undefined,
+    aircraftType,
+    flightType,
     tonnage: rev.tonnage,
     loadFactor: rev.loadFactor,
     revenue: rev.revenue,
     averageYield: rev.averageYield,
-    products: generateProductMix(destination.airportCode),
+    products: generateProductMix(resolvedDestination.airportCode),
     soldBy: index % 3 === 0 ? "airline" : "gsa",
     salesTeam: gsa.name,
     responsibleGsa: gsa.name,
-    cargoDestinations: generateCargoDestinations(destination.airportCode, destination.countryCode),
+    cargoDestinations: generateCargoDestinations(resolvedDestination.airportCode, resolvedDestination.countryCode),
   };
 }
 
-// ── Public API ────────────────────────────────────────────────────────────────
-
-export type FlightDataSource = "live" | "no-key" | "no-flights" | "error";
+export type FlightDataSource = "live" | "disabled" | "no-key" | "no-flights" | "error";
 export type SaudiaFlightResult = {
   flights: FlightTrackerRecord[];
   source: FlightDataSource;
   fetchedAt: string;
 };
 
-export async function getSaudiaCargoFlights(): Promise<SaudiaFlightResult> {
+export async function getSaudiaFlights(): Promise<SaudiaFlightResult> {
   const fallbackFetchedAt = new Date().toISOString();
+  const settings = await getFr24Settings();
+
+  if (!settings.enabled) {
+    return { flights: [], source: "disabled", fetchedAt: fallbackFetchedAt };
+  }
 
   if (!API_KEY) {
     return { flights: [], source: "no-key", fetchedAt: fallbackFetchedAt };
@@ -215,24 +360,95 @@ export async function getSaudiaCargoFlights(): Promise<SaudiaFlightResult> {
   try {
     const liveResult = await fetchLivePositions();
     const fetchedAt = liveResult.fetchedAt;
-    const allPositions = liveResult.data;
-    // Exclude aircraft on the ground or taxiing (alt < 500 ft)
-    const positions = allPositions.filter((p) => (p.alt ?? 0) > 500);
+    const positions = liveResult.data.filter((position) => (position.alt ?? 0) > 500);
+
     if (positions.length === 0) {
       return { flights: [], source: "no-flights", fetchedAt };
     }
 
-    const missingRoutePositions = positions.filter(
-      (p) => !(p.orig_icao || p.orig_iata) || !(p.dest_icao_actual || p.dest_icao || p.dest_iata_actual || p.dest_iata)
-    );
-    const summaryMap = await fetchFlightSummary(missingRoutePositions.map((p) => p.fr24_id));
+    const summaryMap = await fetchFlightSummary(positions.map((position) => position.fr24_id));
     const flights = positions
-      .map((pos, i) => buildRecord(pos, summaryMap.get(pos.fr24_id), i))
-      .filter((f): f is FlightTrackerRecord => f !== null);
+      .map((position, index) => buildRecord(position, summaryMap.get(position.fr24_id), index))
+      .filter((flight): flight is FlightTrackerRecord => flight !== null);
 
     return { flights, source: flights.length > 0 ? "live" : "no-flights", fetchedAt };
   } catch (err) {
     console.warn("[fr24] API error:", (err as Error).message);
     return { flights: [], source: "error", fetchedAt: fallbackFetchedAt };
   }
+}
+
+export async function getSaudiaLandedAirportClusters(): Promise<LandedAirportCluster[]> {
+  const settings = await getFr24Settings();
+  if (!settings.enabled) return [];
+
+  if (!API_KEY) return [];
+
+  try {
+    const summaries = await fetchRecentFlightSummaries();
+    const clusters = new Map<string, LandedAirportCluster>();
+
+    for (const summary of summaries) {
+      if (!summary.datetime_landed) continue;
+
+      const airport = resolveAirportFromSummary(summary, "destination");
+      if (!airport) continue;
+
+      const flightNumber =
+        summary.flight ??
+        (summary.callsign ? summary.callsign.replace(/^SVA?/, "SV") : `SV-${summary.fr24_id.slice(-4)}`);
+      const cluster = clusters.get(airport.airportCode) ?? { airport, flights: [] };
+      cluster.flights.push({
+        id: summary.fr24_id,
+        flightNumber,
+        registration: summary.reg ?? undefined,
+        aircraftType: summary.type ?? undefined,
+        flightType: resolveFlightType(summary.type),
+        origin: resolveAirportFromSummary(summary, "origin") ?? undefined,
+        landedAt: summary.datetime_landed,
+      });
+      clusters.set(airport.airportCode, cluster);
+    }
+
+    return Array.from(clusters.values())
+      .map((cluster) => ({
+        ...cluster,
+        flights: cluster.flights.sort((a, b) => (b.landedAt ?? "").localeCompare(a.landedAt ?? "")),
+      }))
+      .sort((a, b) => b.flights.length - a.flights.length);
+  } catch (err) {
+    console.warn("[fr24] landed summary error:", (err as Error).message);
+    return [];
+  }
+}
+
+export async function getSaudiaCargoFlights(): Promise<SaudiaFlightResult> {
+  return getSaudiaFlights();
+}
+
+function dedupeByFr24Id(positions: Fr24LivePosition[]) {
+  const byId = new Map<string, Fr24LivePosition>();
+  for (const position of positions) {
+    const existing = byId.get(position.fr24_id);
+    if (!existing || existing.category !== "C") {
+      byId.set(position.fr24_id, position);
+    }
+  }
+  return Array.from(byId.values());
+}
+
+function dedupeSummaries(records: Fr24SummaryRecord[]) {
+  return Array.from(new Map(records.map((record) => [record.fr24_id, record])).values());
+}
+
+function chunk<T>(items: T[], size: number) {
+  const chunks: T[][] = [];
+  for (let i = 0; i < items.length; i += size) {
+    chunks.push(items.slice(i, i + size));
+  }
+  return chunks;
+}
+
+function formatFr24Date(date: Date) {
+  return date.toISOString().replace(/\.\d{3}Z$/, "");
 }

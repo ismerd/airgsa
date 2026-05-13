@@ -4,10 +4,11 @@ import { FlightWorldMap } from "@/components/dashboard/flight-world-map";
 import { Topbar } from "@/components/dashboard/topbar";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { getSaudiaCargoFlights } from "@/lib/services/fr24";
+import { getSaudiaFlights } from "@/lib/services/fr24";
 import type { FlightTrackerRecord } from "@/lib/dummy-flight-data";
 
 export const dynamic = "force-dynamic";
+const ENABLE_FLEET_MAP = false;
 
 const AIRCRAFT_TYPE_LABELS: Record<string, string> = {
   B77F: "Boeing 777F",
@@ -60,7 +61,7 @@ function toRad(deg: number) {
 }
 
 export default async function FleetPage() {
-  const { flights } = await getSaudiaCargoFlights();
+  const { flights } = await getSaudiaFlights();
 
   const freighters = flights.filter(f => f.flightType === "freighter");
   const belly = flights.filter(f => f.flightType === "belly");
@@ -102,12 +103,23 @@ export default async function FleetPage() {
           ))}
         </div>
 
-        {/* Live map */}
-        <FlightWorldMap
-          title="Live fleet positions"
-          subtitle="All Saudia Cargo flights — dedicated freighters and belly cargo. Click an aircraft for details."
+        {/* Fleet map is intentionally disabled for now. Keep this block so it can be re-enabled later. */}
+        {ENABLE_FLEET_MAP && (
+          <FlightWorldMap
+            title="Live fleet positions"
+            subtitle="All active Saudia aircraft currently visible on the worldmap."
+            flights={flights}
+            markerColorMode="airline"
+            enableFlightTypeFilter
+          />
+        )}
+
+        <FleetTable
+          title="Worldmap tracked fleet"
+          icon={<Plane className="h-5 w-5 text-brand" />}
           flights={flights}
-          markerColorMode="airline"
+          emptyLabel="No Saudia aircraft currently visible on the worldmap"
+          emptyNote="Aircraft will be added here as soon as they appear in the live worldmap feed"
         />
 
         {/* Dedicated freighters table */}
@@ -188,6 +200,7 @@ function FleetTable({
 function FleetRow({ flight }: { flight: FlightTrackerRecord }) {
   const progress = routeProgress(flight.origin, flight.destination, flight.currentPosition);
   const sameAirport = flight.origin.airportCode === flight.destination.airportCode;
+  const status = getFlightStatus(flight);
 
   return (
     <tr className="align-top text-ink-muted">
@@ -200,9 +213,10 @@ function FleetRow({ flight }: { flight: FlightTrackerRecord }) {
       {/* Status */}
       <td className="py-4">
         <span className="flex items-center gap-2">
-          <span className="h-2 w-2 shrink-0 rounded-full bg-brand animate-pulse" />
-          <Badge variant="default">Airborne</Badge>
+          <span className={`h-2 w-2 shrink-0 rounded-full ${status.dotClass}`} />
+          <Badge variant="default">{status.label}</Badge>
         </span>
+        <p className="mt-1 text-[11px] text-ink-muted">{status.detail}</p>
       </td>
 
       {/* Flight */}
@@ -265,6 +279,41 @@ function FleetRow({ flight }: { flight: FlightTrackerRecord }) {
       </td>
     </tr>
   );
+}
+
+function getFlightStatus(flight: FlightTrackerRecord) {
+  const altitude = flight.altitude ?? 0;
+  const speed = flight.gspeed ?? 0;
+
+  if (flight.altitude == null && flight.gspeed == null) {
+    return {
+      label: "Tracking",
+      detail: "Live position received",
+      dotClass: "bg-ink-muted",
+    };
+  }
+
+  if (altitude <= 500 && speed < 80) {
+    return {
+      label: "On ground",
+      detail: speed > 0 ? `${speed} kts ground speed` : "Airport surface",
+      dotClass: "bg-amber-400",
+    };
+  }
+
+  if (altitude < 10000) {
+    return {
+      label: "Low altitude",
+      detail: `${Math.round(altitude / 100) * 100} ft`,
+      dotClass: "bg-cyan-500 animate-pulse",
+    };
+  }
+
+  return {
+    label: "Airborne",
+    detail: `${Math.round(altitude / 100) * 100} ft${speed ? ` · ${speed} kts` : ""}`,
+    dotClass: "bg-brand animate-pulse",
+  };
 }
 
 function EmptyState() {

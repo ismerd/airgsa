@@ -1,10 +1,10 @@
 "use client";
 
 import dynamic from "next/dynamic";
-import { BarChart3, DollarSign, Plane, Scale } from "lucide-react";
+import { BarChart3, DollarSign, Plane, PlaneLanding, Scale } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import type { CargoDestination, FlightTrackerRecord, ProductMix } from "@/lib/dummy-flight-data";
+import type { CargoDestination, FlightTrackerRecord, LandedAirportCluster, ProductMix } from "@/lib/dummy-flight-data";
 import { formatCurrency } from "@/lib/utils";
 
 const FlightLeafletMap = dynamic(
@@ -24,7 +24,11 @@ type FlightWorldMapProps = {
   subtitle: string;
   flights: FlightTrackerRecord[];
   markerColorMode: "airline" | "gsa" | "seller";
+  enableFlightTypeFilter?: boolean;
+  landedAirportClusters?: LandedAirportCluster[];
 };
+
+type FlightTypeFilter = "all" | "belly" | "freighter";
 
 const productLabels: Record<keyof ProductMix, string> = {
   generalCargo: "GCR / General Cargo",
@@ -39,19 +43,33 @@ const productLabels: Record<keyof ProductMix, string> = {
   automotive: "Automotive",
 };
 
-export function FlightWorldMap({ title, subtitle, flights, markerColorMode }: FlightWorldMapProps) {
+export function FlightWorldMap({
+  title,
+  subtitle,
+  flights,
+  markerColorMode,
+  enableFlightTypeFilter = false,
+  landedAirportClusters = [],
+}: FlightWorldMapProps) {
   const [selectedFlightId, setSelectedFlightId] = useState<string>();
+  const [flightTypeFilter, setFlightTypeFilter] = useState<FlightTypeFilter>("all");
+  const filteredFlights = useMemo(
+    () => flights.filter((flight) => flightTypeFilter === "all" || flight.flightType === flightTypeFilter),
+    [flightTypeFilter, flights],
+  );
 
   useEffect(() => {
     setSelectedFlightId((currentFlightId) =>
-      currentFlightId && flights.some((flight) => flight.id === currentFlightId) ? currentFlightId : undefined,
+      currentFlightId && filteredFlights.some((flight) => flight.id === currentFlightId) ? currentFlightId : undefined,
     );
-  }, [flights]);
+  }, [filteredFlights]);
 
-  const selectedFlight = flights.find((flight) => flight.id === selectedFlightId);
-  const summary = useMemo(() => getFlightSummary(flights), [flights]);
-  const airlineLegend = useMemo(() => getLegendItems(flights, "airline"), [flights]);
-  const gsaLegend = useMemo(() => getLegendItems(flights, "gsa"), [flights]);
+  const selectedFlight = filteredFlights.find((flight) => flight.id === selectedFlightId);
+  const summary = useMemo(() => getFlightSummary(filteredFlights), [filteredFlights]);
+  const airlineLegend = useMemo(() => getLegendItems(filteredFlights, "airline"), [filteredFlights]);
+  const gsaLegend = useMemo(() => getLegendItems(filteredFlights, "gsa"), [filteredFlights]);
+  const filterOptions = useMemo(() => getFlightFilterOptions(flights), [flights]);
+  const landedFlightCount = landedAirportClusters.reduce((sum, cluster) => sum + cluster.flights.length, 0);
 
   return (
     <Card className="isolate overflow-hidden">
@@ -68,15 +86,46 @@ export function FlightWorldMap({ title, subtitle, flights, markerColorMode }: Fl
             <SummaryMetric icon={BarChart3} label="Avg LF" value={`${summary.averageLoadFactor}%`} />
           </div>
         </div>
+        {(enableFlightTypeFilter || landedAirportClusters.length > 0) && (
+          <div className="flex flex-col gap-3 border-t border-border-ui pt-4 sm:flex-row sm:items-center sm:justify-between">
+            {enableFlightTypeFilter && (
+              <div className="inline-flex w-fit rounded-md border border-border-ui bg-surface2 p-1">
+                {filterOptions.map((option) => (
+                  <button
+                    key={option.value}
+                    type="button"
+                    onClick={() => setFlightTypeFilter(option.value)}
+                    className={`rounded px-3 py-1.5 text-xs font-semibold transition-colors ${
+                      flightTypeFilter === option.value
+                        ? "bg-brand text-white shadow-sm"
+                        : "text-ink-muted hover:bg-surface hover:text-ink"
+                    }`}
+                  >
+                    {option.label}
+                  </button>
+                ))}
+              </div>
+            )}
+            {landedAirportClusters.length > 0 && (
+              <div className="flex items-center gap-2 text-xs text-ink-muted">
+                <PlaneLanding className="h-4 w-4 text-brand" />
+                <span>
+                  {landedFlightCount} landed at {landedAirportClusters.length} airports in the last 24h
+                </span>
+              </div>
+            )}
+          </div>
+        )}
       </CardHeader>
 
       <CardContent>
         <div className="relative overflow-hidden rounded-md border border-border-ui bg-surface2 min-h-[560px]">
-          {flights.length > 0 ? (
+          {filteredFlights.length > 0 || landedAirportClusters.length > 0 ? (
             <FlightLeafletMap
-              flights={flights}
+              flights={filteredFlights}
               markerColorMode={markerColorMode}
               selectedFlightId={selectedFlightId}
+              landedAirportClusters={landedAirportClusters}
               onFlightSelect={(flightId) =>
                 setSelectedFlightId((currentFlightId) => (currentFlightId === flightId ? undefined : flightId))
               }
@@ -200,6 +249,14 @@ function Detail({ label, value }: { label: string; value: string }) {
 }
 
 function CountryFlag({ code }: { code: string }) {
+  if (code === "XX") {
+    return (
+      <span className="inline-flex h-3 w-4 items-center justify-center rounded-[2px] bg-surface3 text-[8px] font-semibold text-ink-muted">
+        --
+      </span>
+    );
+  }
+
   return (
     <img
       src={`https://flagcdn.com/20x15/${code.toLowerCase()}.png`}
@@ -254,6 +311,17 @@ function getFlightSummary(flights: FlightTrackerRecord[]) {
     totalFlights === 0 ? 0 : Math.round(flights.reduce((sum, flight) => sum + flight.loadFactor, 0) / totalFlights);
 
   return { totalFlights, totalTonnage, totalRevenue, averageLoadFactor };
+}
+
+function getFlightFilterOptions(flights: FlightTrackerRecord[]) {
+  const belly = flights.filter((flight) => flight.flightType === "belly").length;
+  const freighter = flights.filter((flight) => flight.flightType === "freighter").length;
+
+  return [
+    { value: "all" as const, label: `All (${flights.length})` },
+    { value: "belly" as const, label: `PAX cargo (${belly})` },
+    { value: "freighter" as const, label: `Cargo only (${freighter})` },
+  ];
 }
 
 function getLegendItems(flights: FlightTrackerRecord[], mode: "airline" | "gsa") {

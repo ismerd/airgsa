@@ -3,12 +3,13 @@
 import L from "leaflet";
 import { useEffect, useState } from "react";
 import { CircleMarker, MapContainer, Marker, Polyline, TileLayer, Tooltip, useMap } from "react-leaflet";
-import type { FlightTrackerRecord } from "@/lib/dummy-flight-data";
+import type { FlightTrackerRecord, LandedAirportCluster } from "@/lib/dummy-flight-data";
 
 type FlightLeafletMapProps = {
   flights: FlightTrackerRecord[];
   selectedFlightId?: string;
   markerColorMode: "airline" | "gsa" | "seller";
+  landedAirportClusters?: LandedAirportCluster[];
   onFlightSelect: (flightId: string) => void;
 };
 
@@ -29,7 +30,13 @@ function useDarkMode() {
   return isDark;
 }
 
-export function FlightLeafletMap({ flights, selectedFlightId, markerColorMode, onFlightSelect }: FlightLeafletMapProps) {
+export function FlightLeafletMap({
+  flights,
+  selectedFlightId,
+  markerColorMode,
+  landedAirportClusters = [],
+  onFlightSelect,
+}: FlightLeafletMapProps) {
   const isDark = useDarkMode();
   const tileUrl = isDark
     ? "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
@@ -66,6 +73,10 @@ export function FlightLeafletMap({ flights, selectedFlightId, markerColorMode, o
           />
         );
       })}
+
+      {landedAirportClusters.map((cluster) => (
+        <LandedAirportMarker key={cluster.airport.airportCode} cluster={cluster} />
+      ))}
     </MapContainer>
   );
 }
@@ -177,16 +188,53 @@ function FlightLayer({
           <span className="ml-1 text-slate-500">
             {flight.origin.airportCode}–{flight.destination.airportCode}
           </span>
-          {(flight.altitude != null || flight.gspeed != null) && (
-            <span className="ml-2 text-slate-400 text-[11px]">
-              {flight.altitude != null ? `${(flight.altitude / 1000).toFixed(0)}k ft` : ""}
-              {flight.altitude != null && flight.gspeed != null ? " · " : ""}
-              {flight.gspeed != null ? `${flight.gspeed} kts` : ""}
-            </span>
-          )}
+          <span className="ml-2 text-slate-400 text-[11px]">
+            {flight.tonnage.toFixed(1)} t · {flight.loadFactor}% LF
+          </span>
         </Tooltip>
       </Marker>
     </>
+  );
+}
+
+function LandedAirportMarker({ cluster }: { cluster: LandedAirportCluster }) {
+  const count = cluster.flights.length;
+  const size = Math.min(46, 26 + count * 2);
+  const icon = L.divIcon({
+    className: "landed-airport-marker",
+    iconAnchor: [size / 2, size / 2],
+    iconSize: [size, size],
+    html: `<span class="landed-airport-cluster" style="width:${size}px;height:${size}px" aria-hidden="true">${count}</span>`,
+  });
+  const recentFlights = cluster.flights.slice(0, 8);
+
+  return (
+    <Marker icon={icon} position={[cluster.airport.lat, cluster.airport.lng]}>
+      <Tooltip direction="top" offset={[0, -16]} opacity={0.96}>
+        <div className="min-w-52">
+          <div className="font-semibold text-slate-900 dark:text-slate-100">
+            {cluster.airport.airportCode} - {cluster.airport.airportName}
+          </div>
+          <div className="mt-1 text-[11px] text-slate-500">
+            {count} landed {count === 1 ? "aircraft" : "aircraft"} in the last 24h
+          </div>
+          <div className="mt-2 space-y-1">
+            {recentFlights.map((flight) => (
+              <div key={flight.id} className="flex items-center justify-between gap-3 text-[11px]">
+                <span className="font-medium text-slate-700 dark:text-slate-200">
+                  {flight.origin?.airportCode ? `${flight.origin.airportCode}-` : ""}
+                  {cluster.airport.airportCode} {flight.flightNumber}
+                </span>
+                <span className="text-slate-400">{formatShortTime(flight.landedAt)}</span>
+              </div>
+            ))}
+          </div>
+          {count > recentFlights.length && (
+            <div className="mt-1 text-[11px] text-slate-400">+{count - recentFlights.length} more</div>
+          )}
+        </div>
+      </Tooltip>
+    </Marker>
   );
 }
 
@@ -238,4 +286,11 @@ function getFlightMarkerColor(flight: FlightTrackerRecord, markerColorMode: "air
   }
 
   return markerColorMode === "gsa" ? flight.gsaColor : flight.airlineColor;
+}
+
+function formatShortTime(value: string | undefined) {
+  if (!value) return "";
+  const date = new Date(value.endsWith("Z") ? value : `${value}Z`);
+  if (Number.isNaN(date.getTime())) return "";
+  return date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
 }

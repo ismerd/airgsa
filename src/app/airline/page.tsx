@@ -5,7 +5,7 @@ import { FlightWorldMap } from "@/components/dashboard/flight-world-map";
 import { KpiCard } from "@/components/dashboard/kpi-card";
 import { Topbar } from "@/components/dashboard/topbar";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { getSaudiaCargoFlights } from "@/lib/services/fr24";
+import { getSaudiaFlights } from "@/lib/services/fr24";
 import { kpiSeries } from "@/lib/services/platform";
 import { formatCurrency } from "@/lib/utils";
 
@@ -13,7 +13,7 @@ export const dynamic = "force-dynamic"; // always server-render; live flight fet
 
 export default async function AirlineDashboardPage() {
   const latest = kpiSeries.at(-1)!;
-  const { flights: trackedFlights } = await getSaudiaCargoFlights();
+  const { flights: trackedFlights } = await getSaudiaFlights();
 
   // Sales channel split
   const totalRevenue = trackedFlights.reduce((s, f) => s + f.revenue, 0);
@@ -66,9 +66,10 @@ export default async function AirlineDashboardPage() {
       <main className="space-y-6 p-5">
         <FlightWorldMap
           title="Live flight tracker"
-          subtitle="Active Saudia Cargo freighter flights and GSA-managed capacity."
+          subtitle="Active Saudia flights worldwide, including passenger aircraft used for belly cargo and pure cargo aircraft."
           flights={trackedFlights}
           markerColorMode="seller"
+          enableFlightTypeFilter
         />
 
         {/* KPIs */}

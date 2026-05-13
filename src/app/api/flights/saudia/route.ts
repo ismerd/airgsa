@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
-import { getSaudiaCargoFlights } from "@/lib/services/fr24";
+import { getSaudiaFlights } from "@/lib/services/fr24";
 
 export async function GET() {
-  const result = await getSaudiaCargoFlights();
+  const result = await getSaudiaFlights();
   return NextResponse.json(result);
 }

@@ -41,6 +41,11 @@ type TestResult = {
   endpoints?: { livePositions?: string; flightSummary?: string | null };
 };
 
+type Fr24Settings = {
+  enabled: boolean;
+  updatedAt?: string;
+};
+
 function JsonBlock({ data }: { data: unknown }) {
   const [open, setOpen] = useState(false);
   const str = JSON.stringify(data, null, 2);
@@ -66,12 +71,35 @@ export default function Fr24TestPage() {
   const [apiKey, setApiKey] = useState("");
   const [saved, setSaved] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [settingsLoading, setSettingsLoading] = useState(true);
+  const [settingsSaving, setSettingsSaving] = useState(false);
+  const [settings, setSettings] = useState<Fr24Settings>({ enabled: true });
   const [result, setResult] = useState<TestResult | null>(null);
 
   // Load persisted key on mount
   useEffect(() => {
     const stored = localStorage.getItem(LS_KEY);
     if (stored) setApiKey(stored);
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadSettings() {
+      setSettingsLoading(true);
+      try {
+        const res = await fetch("/api/admin/fr24-settings", { cache: "no-store" });
+        const data: Fr24Settings = await res.json();
+        if (!cancelled) setSettings(data);
+      } finally {
+        if (!cancelled) setSettingsLoading(false);
+      }
+    }
+
+    loadSettings();
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   function saveKey() {
@@ -100,6 +128,23 @@ export default function Fr24TestPage() {
     }
   }
 
+  async function toggleFr24() {
+    const nextEnabled = !settings.enabled;
+    setSettingsSaving(true);
+    setResult(null);
+    try {
+      const res = await fetch("/api/admin/fr24-settings", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ enabled: nextEnabled }),
+      });
+      const data: Fr24Settings = await res.json();
+      setSettings(data);
+    } finally {
+      setSettingsSaving(false);
+    }
+  }
+
   return (
     <>
       <Topbar title="FR24 API test" subtitle="Admin" />
@@ -124,6 +169,49 @@ export default function Fr24TestPage() {
               Railway environment variables for production — that takes precedence and nothing needs to be entered here.
             </p>
           </div>
+
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                {settings.enabled ? (
+                  <Wifi className="h-5 w-5 text-emerald-500" />
+                ) : (
+                  <WifiOff className="h-5 w-5 text-amber-500" />
+                )}
+                FR24 live API
+                <Badge variant={settings.enabled ? "success" : "warning"} className="ml-auto">
+                  {settingsLoading ? "Loading" : settings.enabled ? "Enabled" : "Disabled"}
+                </Badge>
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <p className="text-sm text-ink-muted">
+                  Turns live Flightradar24 calls on or off globally. When disabled, dashboard and fleet pages do not call FR24 or spend credits.
+                </p>
+                {settings.updatedAt && (
+                  <p className="mt-1 text-xs text-ink-muted">
+                    Last changed: {new Date(settings.updatedAt).toLocaleString()}
+                  </p>
+                )}
+              </div>
+              <Button
+                onClick={toggleFr24}
+                disabled={settingsLoading || settingsSaving}
+                variant={settings.enabled ? "outline" : "default"}
+                className="shrink-0"
+              >
+                {settingsSaving ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : settings.enabled ? (
+                  <WifiOff className="h-4 w-4" />
+                ) : (
+                  <Wifi className="h-4 w-4" />
+                )}
+                {settings.enabled ? "Disable API" : "Enable API"}
+              </Button>
+            </CardContent>
+          </Card>
 
           {/* Input */}
           <Card>
@@ -153,13 +241,18 @@ export default function Fr24TestPage() {
                   </Button>
                 </div>
               </div>
-              <Button onClick={runTest} disabled={loading} size="lg">
+              <Button onClick={runTest} disabled={loading || !settings.enabled} size="lg">
                 {loading ? (
                   <><Loader2 className="h-4 w-4 animate-spin" /> Running test…</>
                 ) : (
                   <><Plane className="h-4 w-4" /> Run connection test</>
                 )}
               </Button>
+              {!settings.enabled && (
+                <p className="text-xs text-amber-500">
+                  FR24 API is disabled. Enable it above before running a connection test.
+                </p>
+              )}
             </CardContent>
           </Card>
 

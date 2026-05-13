@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { getFr24Settings } from "@/lib/services/fr24-settings";
 
 const FR24_BASE = "https://fr24api.flightradar24.com";
 
@@ -17,6 +18,16 @@ type Fr24Position = {
 };
 
 export async function GET(req: NextRequest) {
+  const settings = await getFr24Settings();
+
+  if (!settings.enabled) {
+    return NextResponse.json({
+      ok: false,
+      statusCode: 409,
+      error: "FR24 API is disabled in admin settings.",
+    }, { status: 409 });
+  }
+
   const apiKey =
     req.nextUrl.searchParams.get("apiKey") ??
     process.env.FLIGHTRADAR24_API_KEY;

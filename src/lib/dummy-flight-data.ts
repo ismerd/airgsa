@@ -58,6 +58,19 @@ export type FlightTrackerRecord = {
   cargoDestinations: CargoDestination[];
 };
 
+export type LandedAirportCluster = {
+  airport: AirportPoint;
+  flights: {
+    id: string;
+    flightNumber: string;
+    registration?: string;
+    aircraftType?: string;
+    flightType: "freighter" | "belly";
+    origin?: AirportPoint;
+    landedAt?: string;
+  }[];
+};
+
 export const airlineBrands = [
   { name: "Turkish Cargo", color: "#E30613", salesTeams: ["Turkish Cargo Germany", "Turkish Cargo Benelux"] },
   { name: "AeroBridge Cargo", color: "#00AEEF", salesTeams: ["AeroBridge DACH Sales", "AeroBridge Austria Desk"] },

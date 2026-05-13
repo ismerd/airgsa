@@ -213,3 +213,26 @@ body {
   stroke: rgba(255,255,255,1);
   stroke-width: 4;
 }
+
+.landed-airport-marker {
+  background: transparent;
+  border: 0;
+}
+
+.landed-airport-cluster {
+  display: grid;
+  place-items: center;
+  border: 2px solid rgba(255,255,255,0.95);
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--brand) 88%, #00AADD);
+  color: #ffffff;
+  font-size: 12px;
+  font-weight: 800;
+  line-height: 1;
+  box-shadow: 0 8px 24px rgba(11,30,79,0.28);
+}
+
+html.dark .landed-airport-cluster {
+  border-color: rgba(228,236,255,0.9);
+  box-shadow: 0 8px 24px rgba(0,0,0,0.35);
+}
