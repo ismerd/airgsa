@@ -13,8 +13,8 @@ export default async function FleetPage() {
   await getSaudiaFlights();
   const fleet = await getStoredFleetAircraft();
 
-  const freighters = fleet.filter((aircraft) => isFreighterAircraft(aircraft.aircraft_type, aircraft.aircraft_model));
-  const belly = fleet.filter((aircraft) => !isFreighterAircraft(aircraft.aircraft_type, aircraft.aircraft_model));
+  const freighters = fleet.filter(isStoredFreighterAircraft);
+  const belly = fleet.filter((aircraft) => !isStoredFreighterAircraft(aircraft));
   const inAir = fleet.filter((aircraft) => aircraft.status === "in_air");
   const parked = fleet.filter((aircraft) => aircraft.status === "parked");
   const listItems = fleet.map(toFleetListItem);
@@ -68,8 +68,8 @@ function toFleetListItem(aircraft: StoredFleetAircraft): FleetAircraftListItem {
   return {
     registration: aircraft.registration,
     aircraft_type: aircraft.aircraft_type,
-    aircraft_model: aircraft.aircraft_model,
-    cargo_role: isFreighterAircraft(aircraft.aircraft_type, aircraft.aircraft_model) ? "freighter" : "mixed",
+    aircraft_model: getStoredAircraftModelLabel(aircraft),
+    cargo_role: isStoredFreighterAircraft(aircraft) ? "freighter" : "mixed",
     status: aircraft.status,
     current_fr24_id: aircraft.current_fr24_id,
     current_flight_number: aircraft.current_flight_number,
@@ -85,4 +85,48 @@ function toFleetListItem(aircraft: StoredFleetAircraft): FleetAircraftListItem {
     last_seen_live_at: aircraft.last_seen_live_at,
     updated_at: aircraft.updated_at,
   };
+}
+
+function isStoredFreighterAircraft(aircraft: StoredFleetAircraft) {
+  return (
+    isFreighterAircraft(aircraft.aircraft_type, aircraft.aircraft_model) ||
+    getRawString(aircraft, ["normalized", "flight_type"]) === "freighter" ||
+    getRawString(aircraft, ["live_position", "category"]) === "C" ||
+    getRawString(aircraft, ["live_position", "cargo_hint"]) === "freighter" ||
+    isLegacyCargoPrioritySighting(aircraft)
+  );
+}
+
+function getStoredAircraftModelLabel(aircraft: StoredFleetAircraft) {
+  if (isStoredFreighterAircraft(aircraft) && aircraft.aircraft_type === "B77L") {
+    return "Boeing 777-FFG";
+  }
+
+  return aircraft.aircraft_model;
+}
+
+function isLegacyCargoPrioritySighting(aircraft: StoredFleetAircraft) {
+  return (
+    getRawString(aircraft, ["live_position", "query_kind"]) === "cargo-priority" &&
+    getRawNumber(aircraft, ["live_position", "query_priority"]) === 0
+  );
+}
+
+function getRawString(aircraft: StoredFleetAircraft, path: string[]) {
+  const value = getRawValue(aircraft, path);
+  return typeof value === "string" ? value : undefined;
+}
+
+function getRawNumber(aircraft: StoredFleetAircraft, path: string[]) {
+  const value = getRawValue(aircraft, path);
+  return typeof value === "number" ? value : undefined;
+}
+
+function getRawValue(aircraft: StoredFleetAircraft, path: string[]) {
+  let current: unknown = aircraft.raw_payload;
+  for (const segment of path) {
+    if (!current || typeof current !== "object" || !(segment in current)) return undefined;
+    current = (current as Record<string, unknown>)[segment];
+  }
+  return current;
 }

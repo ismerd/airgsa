@@ -18,6 +18,7 @@ import {
 import { getFr24Settings } from "@/lib/services/fr24-settings";
 import {
   aircraftModelLabel,
+  getStoredFleetAircraft,
   isFreighterAircraft,
   syncFleetSightings,
   type FleetAircraftSighting,
@@ -27,15 +28,15 @@ const FR24_BASE = "https://fr24api.flightradar24.com";
 const API_KEY = process.env.FLIGHTRADAR24_API_KEY;
 const SAUDIA_ICAO = SAUDIA_CARGO.icao;
 const FR24_TIMEOUT_MS = 10_000;
+const FR24_LIVE_REQUEST_BUDGET = 10;
 const PASSENGER_ALTITUDE_BUCKETS = [
-  "0-9999",
-  "10000-19999",
-  "20000-29999",
-  "30000-33999",
+  "0-19999",
+  "20000-33999",
   "34000-36999",
   "37000-39999",
   "40000-60000",
 ];
+const FREIGHTER_AIRCRAFT_TYPES = ["B77F", "A33F", "A332F", "B74F"];
 
 type Fr24FlightCategory = "P" | "C" | "M" | "J" | "T" | "H" | "B" | "G" | "D" | "V" | "O" | "N";
 
@@ -59,10 +60,23 @@ type Fr24LivePosition = {
   dest_iata_actual?: string | null;
   dest_icao_actual?: string | null;
   category?: Fr24FlightCategory | null;
+  query_priority?: number;
+  query_kind?: "cargo-priority" | "passenger";
+  cargo_hint?: "freighter";
 };
 
 type Fr24LiveResponse = { data?: Fr24LivePosition[] };
 type Fr24LiveFetchResult = { data: Fr24LivePosition[]; fetchedAt: string };
+
+type LivePositionQuery = {
+  filter?: "painted_as" | "operating_as";
+  categories?: string;
+  altitudeRange?: string;
+  aircraftTypes?: string[];
+  registrations?: string[];
+  kind: "cargo-priority" | "passenger";
+  cargoHint?: "freighter";
+};
 
 type Fr24SummaryRecord = {
   fr24_id: string;
@@ -94,17 +108,15 @@ function headers(): HeadersInit {
   };
 }
 
-async function fetchLivePositionSet(
-  filter: "painted_as" | "operating_as",
-  category: Fr24FlightCategory,
-  altitudeRange?: string,
-): Promise<Fr24LivePosition[]> {
+async function fetchLivePositionSet(query: LivePositionQuery, priority: number): Promise<Fr24LivePosition[]> {
   const params = new URLSearchParams({
-    [filter]: SAUDIA_ICAO,
-    categories: category,
     limit: "500",
   });
-  if (altitudeRange) params.set("altitude_ranges", altitudeRange);
+  if (query.filter) params.set(query.filter, SAUDIA_ICAO);
+  if (query.categories) params.set("categories", query.categories);
+  if (query.altitudeRange) params.set("altitude_ranges", query.altitudeRange);
+  if (query.aircraftTypes?.length) params.set("aircraft", query.aircraftTypes.join(","));
+  if (query.registrations?.length) params.set("registrations", query.registrations.join(","));
 
   const res = await fetch(`${FR24_BASE}/api/live/flight-positions/full?${params.toString()}`, {
     headers: headers(),
@@ -112,35 +124,61 @@ async function fetchLivePositionSet(
     signal: AbortSignal.timeout(FR24_TIMEOUT_MS),
   });
 
-  if (!res.ok) throw new Error(`live-positions ${filter} HTTP ${res.status}`);
+  if (!res.ok) throw new Error(`live-positions ${params.toString()} HTTP ${res.status}`);
   const json = (await res.json()) as Fr24LiveResponse;
-  return (json.data ?? []).map((position) => ({ ...position, category: position.category ?? category }));
+  const fallbackCategory = query.categories?.includes(",")
+    ? undefined
+    : (query.categories as Fr24FlightCategory | undefined);
+  return (json.data ?? []).map((position) => ({
+    ...position,
+    category: position.category ?? fallbackCategory,
+    query_priority: priority,
+    query_kind: query.kind,
+    cargo_hint: query.cargoHint,
+  }));
 }
 
 const fetchLivePositions = unstable_cache(
   async (): Promise<Fr24LiveFetchResult> => {
     const fetchedAt = new Date().toISOString();
     // Explorer plan has a 20-row response limit and a 10-request rate limit.
-    // Keep this live fetch at 10 requests: 7 passenger altitude buckets + C/N/O.
-    const passengerQueries = PASSENGER_ALTITUDE_BUCKETS.map((altitudeRange) =>
-      fetchLivePositionSet("operating_as", "P", altitudeRange),
-    );
-    const results = await Promise.allSettled([
-      ...passengerQueries,
-      fetchLivePositionSet("operating_as", "C"),
-      fetchLivePositionSet("operating_as", "N"),
-      fetchLivePositionSet("operating_as", "O"),
-    ]);
+    // Run cargo-priority queries first so rate/row limits push out PAX traffic before freighters.
+    const knownFreighterRegistrations = await getKnownFreighterRegistrations();
+    const cargoPriorityQueries: LivePositionQuery[] = [
+      { filter: "operating_as", categories: "C", kind: "cargo-priority", cargoHint: "freighter" },
+      { filter: "painted_as", categories: "C", kind: "cargo-priority", cargoHint: "freighter" },
+      { filter: "operating_as", aircraftTypes: FREIGHTER_AIRCRAFT_TYPES, kind: "cargo-priority", cargoHint: "freighter" },
+      { filter: "painted_as", aircraftTypes: FREIGHTER_AIRCRAFT_TYPES, kind: "cargo-priority", cargoHint: "freighter" },
+      ...chunk(knownFreighterRegistrations, 15)
+        .slice(0, 2)
+        .map((registrations) => ({ registrations, kind: "cargo-priority" as const, cargoHint: "freighter" as const })),
+    ];
+    const remainingBudget = Math.max(0, FR24_LIVE_REQUEST_BUDGET - cargoPriorityQueries.length);
+    const passengerQueries: LivePositionQuery[] = PASSENGER_ALTITUDE_BUCKETS.slice(0, remainingBudget).map((altitudeRange) => ({
+      filter: "operating_as",
+      categories: "P",
+      altitudeRange,
+      kind: "passenger",
+    }));
+    const queries = [...cargoPriorityQueries, ...passengerQueries].slice(0, FR24_LIVE_REQUEST_BUDGET);
+    const positions: Fr24LivePosition[] = [];
+    const errors: unknown[] = [];
 
-    const positions = results.flatMap((result) => (result.status === "fulfilled" ? result.value : []));
-    if (positions.length === 0 && results.some((result) => result.status === "rejected")) {
-      const error = results.find((result) => result.status === "rejected") as PromiseRejectedResult | undefined;
-      throw error?.reason ?? new Error("live-positions HTTP error");
+    for (const [priority, query] of queries.entries()) {
+      try {
+        positions.push(...await fetchLivePositionSet(query, priority));
+      } catch (err) {
+        errors.push(err);
+      }
+    }
+
+    if (positions.length === 0 && errors.length > 0) {
+      throw errors[0] ?? new Error("live-positions HTTP error");
     }
 
     return { data: dedupeByFr24Id(positions), fetchedAt };
   },
-  ["fr24-saudia-all-live-positions-v1"],
+  ["fr24-saudia-all-live-positions-v2"],
   { revalidate: 300 },
 );
 
@@ -232,7 +270,11 @@ function pickGsa(flightNumber: string) {
   return SAUDIA_GSA_PARTNERS[n % SAUDIA_GSA_PARTNERS.length];
 }
 
-function resolveFlightType(icaoType: string | null | undefined): "freighter" | "belly" {
+function resolveFlightType(
+  icaoType: string | null | undefined,
+  position?: Pick<Fr24LivePosition, "category" | "cargo_hint">,
+): "freighter" | "belly" {
+  if (position?.category === "C" || position?.cargo_hint === "freighter") return "freighter";
   return isFreighterAircraft(icaoType, aircraftModelLabel(icaoType)) ? "freighter" : "belly";
 }
 
@@ -297,7 +339,7 @@ function buildRecord(
   const resolvedDestination = destination ?? fallbackDestination;
 
   const aircraftType = summary?.type ?? pos.type ?? undefined;
-  const flightType = resolveFlightType(aircraftType);
+  const flightType = resolveFlightType(aircraftType, pos);
   const rev = generateSyntheticRevenue(flightNumber, resolvedOrigin.airportCode, resolvedDestination.airportCode);
   const gsa = pickGsa(flightNumber);
 
@@ -332,6 +374,7 @@ function buildRecord(
 function buildFleetSighting(
   pos: Fr24LivePosition,
   summary: Fr24SummaryRecord | undefined,
+  observedAt: string,
 ): FleetAircraftSighting {
   const aircraftType = summary?.type ?? pos.type ?? undefined;
   const destinationIata = summary?.dest_iata_actual ?? summary?.dest_iata ?? pos.dest_iata_actual ?? pos.dest_iata ?? undefined;
@@ -360,14 +403,14 @@ function buildFleetSighting(
     last_position_lng: pos.lon,
     last_altitude: pos.alt ?? undefined,
     last_ground_speed: pos.gspeed ?? undefined,
-    last_seen_live_at: new Date().toISOString(),
+    last_seen_live_at: observedAt,
     raw_payload: {
       live_position: pos,
       flight_summary: summary ?? null,
       normalized: {
         destination_airport: destinationAirport ?? null,
         aircraft_model: aircraftModelLabel(aircraftType),
-        flight_type: resolveFlightType(aircraftType),
+        flight_type: resolveFlightType(aircraftType, pos),
       },
     },
   };
@@ -403,7 +446,7 @@ export async function getSaudiaFlights(): Promise<SaudiaFlightResult> {
     }
 
     const summaryMap = await fetchFlightSummary(positions.map((position) => position.fr24_id));
-    await persistFleetSightings(positions.map((position) => buildFleetSighting(position, summaryMap.get(position.fr24_id))));
+    await persistFleetSightings(positions.map((position) => buildFleetSighting(position, summaryMap.get(position.fr24_id), fetchedAt)));
     const flights = positions
       .map((position, index) => buildRecord(position, summaryMap.get(position.fr24_id), index))
       .filter((flight): flight is FlightTrackerRecord => flight !== null);
@@ -475,11 +518,61 @@ function dedupeByFr24Id(positions: Fr24LivePosition[]) {
   const byId = new Map<string, Fr24LivePosition>();
   for (const position of positions) {
     const existing = byId.get(position.fr24_id);
-    if (!existing || existing.category !== "C") {
+    if (!existing || shouldReplacePosition(existing, position)) {
       byId.set(position.fr24_id, position);
     }
   }
   return Array.from(byId.values());
+}
+
+function shouldReplacePosition(existing: Fr24LivePosition, candidate: Fr24LivePosition) {
+  const existingFreighter = isCargoPriorityPosition(existing);
+  const candidateFreighter = isCargoPriorityPosition(candidate);
+
+  if (candidateFreighter && !existingFreighter) return true;
+  if (!candidateFreighter && existingFreighter) return false;
+
+  return (candidate.query_priority ?? Number.MAX_SAFE_INTEGER) < (existing.query_priority ?? Number.MAX_SAFE_INTEGER);
+}
+
+function isCargoPriorityPosition(position: Fr24LivePosition) {
+  return (
+    position.query_kind === "cargo-priority" ||
+    position.category === "C" ||
+    position.cargo_hint === "freighter" ||
+    isFreighterAircraft(position.type, aircraftModelLabel(position.type))
+  );
+}
+
+async function getKnownFreighterRegistrations() {
+  try {
+    const storedFleet = await getStoredFleetAircraft(SAUDIA_ICAO);
+    return storedFleet
+      .filter((aircraft) => isStoredFleetFreighter(aircraft))
+      .map((aircraft) => aircraft.registration)
+      .filter(Boolean)
+      .slice(0, 30);
+  } catch {
+    return [];
+  }
+}
+
+function isStoredFleetFreighter(aircraft: Awaited<ReturnType<typeof getStoredFleetAircraft>>[number]) {
+  return (
+    isFreighterAircraft(aircraft.aircraft_type, aircraft.aircraft_model) ||
+    getNestedString(aircraft.raw_payload, ["normalized", "flight_type"]) === "freighter" ||
+    getNestedString(aircraft.raw_payload, ["live_position", "category"]) === "C" ||
+    getNestedString(aircraft.raw_payload, ["live_position", "cargo_hint"]) === "freighter"
+  );
+}
+
+function getNestedString(payload: Record<string, unknown>, path: string[]) {
+  let current: unknown = payload;
+  for (const segment of path) {
+    if (!current || typeof current !== "object" || !(segment in current)) return undefined;
+    current = (current as Record<string, unknown>)[segment];
+  }
+  return typeof current === "string" ? current : undefined;
 }
 
 function dedupeSummaries(records: Fr24SummaryRecord[]) {

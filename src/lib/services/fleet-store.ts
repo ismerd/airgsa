@@ -3,6 +3,7 @@ import path from "node:path";
 import { createSupabaseAdminClient } from "@/lib/supabase/client";
 
 const STORE_PATH = path.join(process.cwd(), "data", "airline-fleet-aircraft.json");
+const FILE_STORE_LIVE_WRITE_INTERVAL_MS = 60_000;
 
 export type FleetStatus = "in_air" | "parked" | "tracking";
 
@@ -182,13 +183,7 @@ async function syncFleetSightingsToFile(sightings: StoredFleetAircraft[]) {
 
   for (const sighting of sightings) {
     const previous = byRegistration.get(sighting.registration);
-    byRegistration.set(sighting.registration, {
-      ...previous,
-      ...sighting,
-      status: "in_air",
-      first_seen_at: previous?.first_seen_at ?? now,
-      updated_at: now,
-    });
+    byRegistration.set(sighting.registration, mergeLiveSighting(previous, sighting, now));
   }
 
   for (const aircraft of byRegistration.values()) {
@@ -200,7 +195,63 @@ async function syncFleetSightingsToFile(sightings: StoredFleetAircraft[]) {
     }
   }
 
-  await writeFileStore(Array.from(byRegistration.values()));
+  const nextRecords = Array.from(byRegistration.values());
+  if (JSON.stringify(existing) !== JSON.stringify(nextRecords)) {
+    await writeFileStore(nextRecords);
+  }
+}
+
+function mergeLiveSighting(
+  previous: StoredFleetAircraft | undefined,
+  sighting: StoredFleetAircraft,
+  now: string,
+): StoredFleetAircraft {
+  if (previous && shouldThrottleLiveFileUpdate(previous, sighting, now)) {
+    return previous;
+  }
+
+  if (previous && isSameLiveSighting(previous, sighting)) {
+    return previous;
+  }
+
+  return {
+    ...previous,
+    ...sighting,
+    status: "in_air",
+    first_seen_at: previous?.first_seen_at ?? now,
+    updated_at: now,
+  };
+}
+
+function shouldThrottleLiveFileUpdate(previous: StoredFleetAircraft, sighting: StoredFleetAircraft, now: string) {
+  if (previous.status !== "in_air") return false;
+  if (previous.current_fr24_id !== sighting.current_fr24_id) return false;
+
+  const previousWrite = Date.parse(previous.updated_at);
+  const currentWrite = Date.parse(now);
+  if (!Number.isFinite(previousWrite) || !Number.isFinite(currentWrite)) return false;
+
+  return currentWrite - previousWrite < FILE_STORE_LIVE_WRITE_INTERVAL_MS;
+}
+
+function isSameLiveSighting(previous: StoredFleetAircraft, sighting: StoredFleetAircraft) {
+  return (
+    previous.status === "in_air" &&
+    previous.current_fr24_id === sighting.current_fr24_id &&
+    previous.current_flight_number === sighting.current_flight_number &&
+    previous.current_callsign === sighting.current_callsign &&
+    previous.aircraft_type === sighting.aircraft_type &&
+    previous.aircraft_model === sighting.aircraft_model &&
+    previous.origin_iata === sighting.origin_iata &&
+    previous.origin_icao === sighting.origin_icao &&
+    previous.destination_iata === sighting.destination_iata &&
+    previous.destination_icao === sighting.destination_icao &&
+    previous.last_position_lat === sighting.last_position_lat &&
+    previous.last_position_lng === sighting.last_position_lng &&
+    previous.last_altitude === sighting.last_altitude &&
+    previous.last_ground_speed === sighting.last_ground_speed &&
+    previous.last_seen_live_at === sighting.last_seen_live_at
+  );
 }
 
 function buildParkedPatch(aircraft: StoredFleetAircraft, now: string) {
