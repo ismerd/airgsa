@@ -1,5 +1,7 @@
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
+import type { Pool } from "pg";
+import { rowData, withPostgres } from "@/lib/services/postgres-store";
 import { createSupabaseAdminClient } from "@/lib/supabase/client";
 
 const STORE_PATH = path.join(process.cwd(), "data", "airline-fleet-aircraft.json");
@@ -81,6 +83,12 @@ export async function syncFleetSightings(sightings: FleetAircraftSighting[]) {
     .filter((sighting) => Boolean(sighting.registration?.trim()))
     .map((sighting) => normalizeSighting(sighting));
 
+  const savedToPostgres = await withPostgres(async (client) => {
+    await syncFleetSightingsToPostgres(client, normalized);
+    return true;
+  });
+  if (savedToPostgres) return;
+
   if (canUseSupabaseAdmin()) {
     try {
       await syncFleetSightingsToSupabase(normalized);
@@ -94,6 +102,26 @@ export async function syncFleetSightings(sightings: FleetAircraftSighting[]) {
 }
 
 export async function getStoredFleetAircraft(airlineIcao = "SVA"): Promise<StoredFleetAircraft[]> {
+  const dbRecords = await withPostgres(async (client) => {
+    const result = await client.query(
+      "select data from airline_fleet_aircraft where airline_icao = $1 order by updated_at desc",
+      [airlineIcao],
+    );
+    const records = result.rows.map((row) => normalizeStoredAircraft(rowData<StoredFleetAircraft>(row)));
+
+    if (records.length > 0) return records;
+
+    const fileRecords = await readFileStore();
+    const matchingFileRecords = fileRecords.filter((record) => record.airline_icao === airlineIcao);
+    if (matchingFileRecords.length > 0) {
+      await writeFleetRecordsToPostgres(client, fileRecords);
+      return matchingFileRecords.map(normalizeStoredAircraft).sort((a, b) => b.updated_at.localeCompare(a.updated_at));
+    }
+
+    return records;
+  });
+  if (dbRecords) return dbRecords;
+
   if (canUseSupabaseAdmin()) {
     const supabase = createSupabaseAdminClient();
     const { data, error } = await supabase
@@ -173,6 +201,62 @@ async function syncFleetSightingsToSupabase(sightings: StoredFleetAircraft[]) {
         .eq("registration", aircraft.registration),
     ),
   );
+}
+
+async function syncFleetSightingsToPostgres(client: Pool, sightings: StoredFleetAircraft[]) {
+  const now = new Date().toISOString();
+  const existing = await readFleetRecordsFromPostgres(client);
+  const byRegistration = new Map(existing.map((aircraft) => [aircraft.registration, aircraft]));
+  const liveRegistrations = new Set(sightings.map((sighting) => sighting.registration));
+
+  for (const sighting of sightings) {
+    const previous = byRegistration.get(sighting.registration);
+    byRegistration.set(sighting.registration, mergeLiveSighting(previous, sighting, now));
+  }
+
+  for (const aircraft of byRegistration.values()) {
+    if (aircraft.airline_icao === "SVA" && aircraft.status === "in_air" && !liveRegistrations.has(aircraft.registration)) {
+      byRegistration.set(aircraft.registration, {
+        ...aircraft,
+        ...buildParkedPatch(aircraft, now),
+      });
+    }
+  }
+
+  const nextRecords = Array.from(byRegistration.values());
+  if (JSON.stringify(existing) !== JSON.stringify(nextRecords)) {
+    await writeFleetRecordsToPostgres(client, nextRecords);
+  }
+}
+
+async function readFleetRecordsFromPostgres(client: Pool): Promise<StoredFleetAircraft[]> {
+  const result = await client.query("select data from airline_fleet_aircraft where airline_icao = $1 order by updated_at desc", ["SVA"]);
+  return result.rows.map((row) => normalizeStoredAircraft(rowData<StoredFleetAircraft>(row)));
+}
+
+async function writeFleetRecordsToPostgres(client: Pool, records: StoredFleetAircraft[]) {
+  const connection = await client.connect();
+  try {
+    await connection.query("begin");
+    await connection.query("delete from airline_fleet_aircraft where airline_icao = $1", ["SVA"]);
+
+    for (const aircraft of records.filter((record) => record.airline_icao === "SVA")) {
+      await connection.query(
+        `
+          insert into airline_fleet_aircraft (registration, airline_icao, status, updated_at, data)
+          values ($1, $2, $3, $4, $5::jsonb)
+        `,
+        [aircraft.registration, aircraft.airline_icao, aircraft.status, aircraft.updated_at, JSON.stringify(aircraft)],
+      );
+    }
+
+    await connection.query("commit");
+  } catch (err) {
+    await connection.query("rollback");
+    throw err;
+  } finally {
+    connection.release();
+  }
 }
 
 async function syncFleetSightingsToFile(sightings: StoredFleetAircraft[]) {

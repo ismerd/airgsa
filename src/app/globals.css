@@ -1,6 +1,15 @@
 @import "leaflet/dist/leaflet.css";
 @import "tailwindcss";
 
+@keyframes loading-bar {
+  0% {
+    transform: translateX(-110%);
+  }
+  100% {
+    transform: translateX(330%);
+  }
+}
+
 /* ── Design Token Palette ── */
 :root {
   --background: #F0F4FF;

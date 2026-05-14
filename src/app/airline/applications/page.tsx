@@ -17,6 +17,7 @@ export default function ApplicationsPage() {
   const [applications, setApplications] = useState<LiveTenderApplication[]>([]);
   const [tenders, setTenders] = useState<LiveTender[]>([]);
   const [loading, setLoading] = useState(true);
+  const [pendingApplicationId, setPendingApplicationId] = useState<string | null>(null);
   const workflowApplications = useMemo(() => applications.map(toWorkflowApplication), [applications]);
   const workflow = useAirlineGsaWorkflow(workflowApplications);
 
@@ -38,15 +39,20 @@ export default function ApplicationsPage() {
     : 0;
 
   async function updateStatus(application: LiveTenderApplication, status: Extract<Status, "pending" | "shortlisted" | "accepted" | "rejected">) {
-    const res = await fetch(`/api/applications/${application.id}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ status }),
-    });
-    if (!res.ok) return;
-    const data = await res.json();
-    setApplications((current) => current.map((item) => (item.id === application.id ? data.application : item)));
-    workflow.setApplicationStatus(toWorkflowApplication(application), status);
+    setPendingApplicationId(application.id);
+    try {
+      const res = await fetch(`/api/applications/${application.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status }),
+      });
+      if (!res.ok) return;
+      const data = await res.json();
+      setApplications((current) => current.map((item) => (item.id === application.id ? data.application : item)));
+      workflow.setApplicationStatus(toWorkflowApplication(application), status);
+    } finally {
+      setPendingApplicationId(null);
+    }
   }
 
   const columns: Column<LiveTenderApplication>[] = [
@@ -102,21 +108,22 @@ export default function ApplicationsPage() {
       className: "min-w-[280px]",
       cell: (row) => {
         const isAccepted = row.status === "accepted";
+        const isPending = pendingApplicationId === row.id;
         return (
           <div className="flex flex-wrap gap-2">
             <Button
               size="sm"
               variant="secondary"
-              disabled={isAccepted}
+              disabled={isAccepted || isPending}
               onClick={() => updateStatus(row, row.status === "shortlisted" ? "pending" : "shortlisted")}
             >
-              {row.status === "shortlisted" ? "Remove shortlist" : "Shortlist"}
+              {isPending ? "Updating..." : row.status === "shortlisted" ? "Remove shortlist" : "Shortlist"}
             </Button>
-            <Button size="sm" disabled={isAccepted} onClick={() => updateStatus(row, "accepted")}>
-              {isAccepted ? <><CheckCircle2 className="h-3.5 w-3.5" /> Accepted</> : "Accept"}
+            <Button size="sm" disabled={isAccepted || isPending} onClick={() => updateStatus(row, "accepted")}>
+              {isPending ? "Updating..." : isAccepted ? <><CheckCircle2 className="h-3.5 w-3.5" /> Accepted</> : "Accept"}
             </Button>
-            <Button size="sm" variant="destructive" onClick={() => updateStatus(row, "rejected")}>
-              Reject
+            <Button size="sm" variant="destructive" disabled={isPending} onClick={() => updateStatus(row, "rejected")}>
+              {isPending ? "Updating..." : "Reject"}
             </Button>
             {isAccepted && (
               <Button asChild size="sm" variant="outline">

@@ -1,6 +1,7 @@
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { realGsaPartners } from "@/lib/real-gsa-data";
+import { rowData, withPostgres } from "@/lib/services/postgres-store";
 import type { Status } from "@/lib/types";
 
 const STORE_PATH = path.join(process.cwd(), "data", "tender-workflow.json");
@@ -192,6 +193,33 @@ export async function updateLiveApplicationStatus(
 }
 
 async function readStore(): Promise<TenderWorkflowStore> {
+  const dbStore = await withPostgres(async (client) => {
+    const [tendersResult, applicationsResult] = await Promise.all([
+      client.query("select data from live_tenders order by created_at desc"),
+      client.query("select data from live_applications order by submitted_at desc"),
+    ]);
+
+    return {
+      tenders: tendersResult.rows.map((row) => rowData<LiveTender>(row)),
+      applications: applicationsResult.rows.map((row) => rowData<LiveTenderApplication>(row)),
+    };
+  });
+  if (dbStore) {
+    if (dbStore.tenders.length > 0 || dbStore.applications.length > 0) return dbStore;
+
+    const fileStore = await readFileStore();
+    if (fileStore.tenders.length > 0 || fileStore.applications.length > 0) {
+      await writeStore(fileStore);
+      return fileStore;
+    }
+
+    return dbStore;
+  }
+
+  return readFileStore();
+}
+
+async function readFileStore(): Promise<TenderWorkflowStore> {
   try {
     const raw = await readFile(STORE_PATH, "utf-8");
     const parsed = JSON.parse(raw) as Partial<TenderWorkflowStore>;
@@ -205,6 +233,53 @@ async function readStore(): Promise<TenderWorkflowStore> {
 }
 
 async function writeStore(store: TenderWorkflowStore) {
+  const saved = await withPostgres(async (client) => {
+    const connection = await client.connect();
+    try {
+      await connection.query("begin");
+      await connection.query("delete from live_tenders");
+      await connection.query("delete from live_applications");
+
+      for (const tender of store.tenders) {
+        await connection.query(
+          `
+            insert into live_tenders (id, status, created_at, updated_at, data)
+            values ($1, $2, $3, $4, $5::jsonb)
+          `,
+          [tender.id, tender.status, tender.createdAt, tender.updatedAt, JSON.stringify(tender)],
+        );
+      }
+
+      for (const application of store.applications) {
+        await connection.query(
+          `
+            insert into live_applications (id, tender_id, gsa_id, gsa_name, status, submitted_at, updated_at, data)
+            values ($1, $2, $3, $4, $5, $6, $7, $8::jsonb)
+          `,
+          [
+            application.id,
+            application.tenderId,
+            application.gsaId,
+            application.gsaName,
+            application.status,
+            application.submittedAt,
+            application.updatedAt,
+            JSON.stringify(application),
+          ],
+        );
+      }
+
+      await connection.query("commit");
+      return true;
+    } catch (err) {
+      await connection.query("rollback");
+      throw err;
+    } finally {
+      connection.release();
+    }
+  });
+  if (saved) return;
+
   await mkdir(path.dirname(STORE_PATH), { recursive: true });
   await writeFile(STORE_PATH, `${JSON.stringify(store, null, 2)}\n`, "utf-8");
 }

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Building2, Paperclip } from "lucide-react";
 import { DocumentList } from "@/components/dashboard/document-list";
@@ -163,7 +164,9 @@ export function ApplyTenderClient({ tenderId, gsa }: { tenderId: string; gsa: Re
                     ? "Update application"
                     : `Submit application${files.length ? ` · ${files.length} document${files.length > 1 ? "s" : ""}` : ""}`}
               </Button>
-              <Button variant="outline" onClick={() => router.push(`/gsa/tenders/${tenderId}`)}>Back to tender</Button>
+              <Button asChild variant="outline">
+                <Link href={`/gsa/tenders/${tenderId}`}>Back to tender</Link>
+              </Button>
             </div>
           </CardContent>
         </Card>

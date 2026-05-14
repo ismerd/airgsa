@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Outfit } from "next/font/google";
 import { JetBrains_Mono } from "next/font/google";
+import { NavigationLoadingIndicator } from "@/components/dashboard/navigation-loading-indicator";
 import "./globals.css";
 
 const outfit = Outfit({
@@ -34,7 +35,10 @@ export default function RootLayout({
       <head>
         <script dangerouslySetInnerHTML={{ __html: `try{if(localStorage.getItem('theme')==='dark'){document.documentElement.classList.add('dark')}}catch(e){}` }} />
       </head>
-      <body className="min-h-full bg-page text-ink">{children}</body>
+      <body className="min-h-full bg-page text-ink">
+        <NavigationLoadingIndicator />
+        {children}
+      </body>
     </html>
   );
 }
