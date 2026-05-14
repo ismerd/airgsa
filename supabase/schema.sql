@@ -15,6 +15,7 @@ create type public.news_category as enum (
 );
 create type public.source_status as enum ('active', 'paused');
 create type public.notification_status as enum ('unread', 'read');
+create type public.aircraft_fleet_status as enum ('in_air', 'parked', 'tracking');
 
 create table public.users (
   id uuid primary key references auth.users(id) on delete cascade,
@@ -177,12 +178,42 @@ create table public.notifications (
   created_at timestamptz not null default now()
 );
 
+create table public.airline_fleet_aircraft (
+  id uuid primary key default gen_random_uuid(),
+  registration text not null unique,
+  airline_icao text not null,
+  airline_name text not null,
+  aircraft_type text,
+  aircraft_model text,
+  status public.aircraft_fleet_status not null default 'tracking',
+  current_fr24_id text,
+  current_flight_number text,
+  current_callsign text,
+  origin_iata text,
+  origin_icao text,
+  destination_iata text,
+  destination_icao text,
+  parked_airport_iata text,
+  parked_airport_icao text,
+  parked_airport_name text,
+  last_position_lat numeric(10,6),
+  last_position_lng numeric(10,6),
+  last_altitude integer,
+  last_ground_speed integer,
+  last_seen_live_at timestamptz,
+  first_seen_at timestamptz not null default now(),
+  raw_payload jsonb not null default '{}'::jsonb,
+  updated_at timestamptz not null default now()
+);
+
 create index tenders_status_deadline_idx on public.tenders(status, deadline);
 create index tender_applications_tender_idx on public.tender_applications(tender_id);
 create index kpi_reports_contract_period_idx on public.kpi_reports(contract_id, period_start);
 create index news_posts_category_published_idx on public.news_posts(category, published_at desc);
 create index news_posts_external_id_idx on public.news_posts(external_id);
 create index notifications_user_status_idx on public.notifications(user_id, status);
+create index airline_fleet_aircraft_airline_status_idx on public.airline_fleet_aircraft(airline_icao, status);
+create index airline_fleet_aircraft_updated_idx on public.airline_fleet_aircraft(updated_at desc);
 
 alter table public.users enable row level security;
 alter table public.companies enable row level security;
@@ -196,6 +227,7 @@ alter table public.news_posts enable row level security;
 alter table public.linkedin_sources enable row level security;
 alter table public.linkedin_import_configs enable row level security;
 alter table public.notifications enable row level security;
+alter table public.airline_fleet_aircraft enable row level security;
 
 create policy "authenticated read companies" on public.companies for select to authenticated using (true);
 create policy "authenticated read profiles" on public.airline_profiles for select to authenticated using (true);
@@ -205,6 +237,11 @@ create policy "users read own profile" on public.users for select to authenticat
 create policy "users read own notifications" on public.notifications for select to authenticated using (user_id = auth.uid());
 create policy "authenticated read news" on public.news_posts for select to authenticated using (true);
 create policy "authenticated read linkedin sources" on public.linkedin_sources for select to authenticated using (true);
+create policy "authenticated read airline fleet aircraft" on public.airline_fleet_aircraft for select to authenticated using (true);
+create policy "admins manage airline fleet aircraft" on public.airline_fleet_aircraft
+  for all to authenticated
+  using (exists (select 1 from public.users where id = auth.uid() and role = 'admin'))
+  with check (exists (select 1 from public.users where id = auth.uid() and role = 'admin'));
 create policy "admins manage linkedin import configs" on public.linkedin_import_configs
   for all to authenticated
   using (exists (select 1 from public.users where id = auth.uid() and role = 'admin'))

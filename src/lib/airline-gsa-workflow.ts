@@ -1,6 +1,6 @@
 import type { Status } from "./types";
 
-export const AIRLINE_GSA_WORKFLOW_STORAGE_KEY = "airgsa-airline-gsa-workflow-v1";
+export const AIRLINE_GSA_WORKFLOW_STORAGE_KEY = "airgsa-airline-gsa-workflow-v2";
 
 export type AssignableRoute = {
   id: string;
@@ -15,6 +15,8 @@ export type AssignableRoute = {
 export type AssignedGsa = {
   gsaId: string;
   acceptedAt: string;
+  contractStart?: string;
+  contractEnd?: string;
   routeIds: string[];
 };
 

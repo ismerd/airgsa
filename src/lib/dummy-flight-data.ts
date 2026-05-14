@@ -45,7 +45,7 @@ export type FlightTrackerRecord = {
   altitude?: number;     // ft AMSL
   gspeed?: number;       // knots
   registration?: string; // e.g. HZ-AI1
-  aircraftType?: string; // ICAO type code, e.g. B77F, B748
+  aircraftType?: string; // ICAO type code, e.g. B77F, B77W
   flightType: "freighter" | "belly"; // dedicated freighter or belly-cargo passenger aircraft
   tonnage: number;
   loadFactor: number;

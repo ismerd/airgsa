@@ -1,0 +1,90 @@
+{
+  "tenders": [
+    {
+      "title": "asdfas",
+      "countryScope": "dfasdfas",
+      "regions": [
+        "dfasdfas"
+      ],
+      "lanes": "ASDF-ASDFA",
+      "annualTonnage": 321234,
+      "productMix": "dfasdfasd",
+      "deadline": "2026-05-28",
+      "expectedStart": "2026-06-04",
+      "status": "open",
+      "requirements": [
+        "adfasdfasdffadf"
+      ],
+      "commercialExpectations": "asdfasdfasdf",
+      "routes": [
+        {
+          "origin": "ASDF",
+          "destination": "ASDFA",
+          "operatingDays": "fasdf",
+          "frequencyPerWeek": 1,
+          "aircraft": "asdf",
+          "id": "route-1"
+        }
+      ],
+      "attachments": [],
+      "airline": "Saudia Cargo",
+      "airlineEmail": "saudia@airgsa.demo",
+      "id": "tnd-mp4rib6c",
+      "createdAt": "2026-05-14T00:40:37.140Z",
+      "updatedAt": "2026-05-14T00:40:37.140Z"
+    }
+  ],
+  "applications": [
+    {
+      "id": "app-mp4rj7rg",
+      "tenderId": "tnd-mp4rib6c",
+      "gsaId": "gsa-forto",
+      "gsaName": "Forto Logistics",
+      "contactName": "Christopher Braun",
+      "email": "forto@airgsa.demo",
+      "headquarters": "Germany",
+      "coverage": [
+        "Germany",
+        "Europe",
+        "Asia trade lanes"
+      ],
+      "markets": [
+        "DACH",
+        "Asia"
+      ],
+      "certifications": [
+        "IATA",
+        "CASS",
+        "ISO 9001"
+      ],
+      "cargoFocus": "Digital freight, e-commerce, general cargo",
+      "networkScore": 89,
+      "financialScore": 88,
+      "complianceScore": 87,
+      "winRate": 36,
+      "proposedCommission": "asdfasd",
+      "launchTimeline": "fasdf",
+      "namedAccountCoverage": "asdfa",
+      "monthlySalesTarget": "sdfasdf",
+      "networkPlan": "asdfas",
+      "operationalReadiness": "dfasdf",
+      "documents": [
+        {
+          "id": "Saudia_Cargo_Sales_Strategy_DACH.pdf-13472-0.6992937036727441",
+          "name": "Saudia_Cargo_Sales_Strategy_DACH.pdf",
+          "size": 13472,
+          "mimeType": "application/pdf"
+        },
+        {
+          "id": "Company_Profile_GSA_2026.pdf-12810-0.5960675077094876",
+          "name": "Company_Profile_GSA_2026.pdf",
+          "size": 12810,
+          "mimeType": "application/pdf"
+        }
+      ],
+      "status": "pending",
+      "submittedAt": "2026-05-14T00:41:19.372Z",
+      "updatedAt": "2026-05-14T00:41:25.321Z"
+    }
+  ]
+}

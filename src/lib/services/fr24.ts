@@ -16,6 +16,12 @@ import {
   generateSyntheticRevenue,
 } from "@/lib/services/synthetic-revenue";
 import { getFr24Settings } from "@/lib/services/fr24-settings";
+import {
+  aircraftModelLabel,
+  isFreighterAircraft,
+  syncFleetSightings,
+  type FleetAircraftSighting,
+} from "@/lib/services/fleet-store";
 
 const FR24_BASE = "https://fr24api.flightradar24.com";
 const API_KEY = process.env.FLIGHTRADAR24_API_KEY;
@@ -88,16 +94,6 @@ function headers(): HeadersInit {
   };
 }
 
-const FREIGHTER_TYPES = new Set([
-  "B77F",
-  "B748",
-  "B74F",
-  "B74S",
-  "MD11",
-  "A332F",
-  "A33F",
-]);
-
 async function fetchLivePositionSet(
   filter: "painted_as" | "operating_as",
   category: Fr24FlightCategory,
@@ -124,16 +120,16 @@ async function fetchLivePositionSet(
 const fetchLivePositions = unstable_cache(
   async (): Promise<Fr24LiveFetchResult> => {
     const fetchedAt = new Date().toISOString();
-    const passengerQueries = PASSENGER_ALTITUDE_BUCKETS.flatMap((altitudeRange) => [
-      fetchLivePositionSet("painted_as", "P", altitudeRange),
+    // Explorer plan has a 20-row response limit and a 10-request rate limit.
+    // Keep this live fetch at 10 requests: 7 passenger altitude buckets + C/N/O.
+    const passengerQueries = PASSENGER_ALTITUDE_BUCKETS.map((altitudeRange) =>
       fetchLivePositionSet("operating_as", "P", altitudeRange),
-    ]);
+    );
     const results = await Promise.allSettled([
       ...passengerQueries,
-      fetchLivePositionSet("painted_as", "C"),
       fetchLivePositionSet("operating_as", "C"),
-      fetchLivePositionSet("painted_as", "N"),
       fetchLivePositionSet("operating_as", "N"),
+      fetchLivePositionSet("operating_as", "O"),
     ]);
 
     const positions = results.flatMap((result) => (result.status === "fulfilled" ? result.value : []));
@@ -236,13 +232,8 @@ function pickGsa(flightNumber: string) {
   return SAUDIA_GSA_PARTNERS[n % SAUDIA_GSA_PARTNERS.length];
 }
 
-function resolveFlightType(
-  icaoType: string | null | undefined,
-  category?: Fr24FlightCategory | null,
-): "freighter" | "belly" {
-  if (category === "C") return "freighter";
-  if (!icaoType) return "belly";
-  return FREIGHTER_TYPES.has(icaoType) ? "freighter" : "belly";
+function resolveFlightType(icaoType: string | null | undefined): "freighter" | "belly" {
+  return isFreighterAircraft(icaoType, aircraftModelLabel(icaoType)) ? "freighter" : "belly";
 }
 
 function makeFallbackAirport(
@@ -306,7 +297,7 @@ function buildRecord(
   const resolvedDestination = destination ?? fallbackDestination;
 
   const aircraftType = summary?.type ?? pos.type ?? undefined;
-  const flightType = resolveFlightType(aircraftType, pos.category);
+  const flightType = resolveFlightType(aircraftType);
   const rev = generateSyntheticRevenue(flightNumber, resolvedOrigin.airportCode, resolvedDestination.airportCode);
   const gsa = pickGsa(flightNumber);
 
@@ -338,6 +329,50 @@ function buildRecord(
   };
 }
 
+function buildFleetSighting(
+  pos: Fr24LivePosition,
+  summary: Fr24SummaryRecord | undefined,
+): FleetAircraftSighting {
+  const aircraftType = summary?.type ?? pos.type ?? undefined;
+  const destinationIata = summary?.dest_iata_actual ?? summary?.dest_iata ?? pos.dest_iata_actual ?? pos.dest_iata ?? undefined;
+  const destinationIcao = summary?.dest_icao_actual ?? summary?.dest_icao ?? pos.dest_icao_actual ?? pos.dest_icao ?? undefined;
+  const destinationAirport =
+    resolveByIata(destinationIata) ??
+    resolveByIcao(destinationIcao);
+
+  return {
+    registration: summary?.reg ?? pos.reg ?? "",
+    airline_icao: SAUDIA_CARGO.icao,
+    airline_name: SAUDIA_CARGO.name,
+    aircraft_type: aircraftType,
+    aircraft_model: aircraftModelLabel(aircraftType),
+    current_fr24_id: pos.fr24_id,
+    current_flight_number: summary?.flight ?? pos.flight ?? undefined,
+    current_callsign: summary?.callsign ?? pos.callsign ?? undefined,
+    origin_iata: summary?.orig_iata ?? pos.orig_iata ?? undefined,
+    origin_icao: summary?.orig_icao ?? pos.orig_icao ?? undefined,
+    destination_iata: destinationIata,
+    destination_icao: destinationIcao,
+    parked_airport_iata: destinationAirport?.airportCode ?? destinationIata,
+    parked_airport_icao: destinationIcao,
+    parked_airport_name: destinationAirport?.airportName,
+    last_position_lat: pos.lat,
+    last_position_lng: pos.lon,
+    last_altitude: pos.alt ?? undefined,
+    last_ground_speed: pos.gspeed ?? undefined,
+    last_seen_live_at: new Date().toISOString(),
+    raw_payload: {
+      live_position: pos,
+      flight_summary: summary ?? null,
+      normalized: {
+        destination_airport: destinationAirport ?? null,
+        aircraft_model: aircraftModelLabel(aircraftType),
+        flight_type: resolveFlightType(aircraftType),
+      },
+    },
+  };
+}
+
 export type FlightDataSource = "live" | "disabled" | "no-key" | "no-flights" | "error";
 export type SaudiaFlightResult = {
   flights: FlightTrackerRecord[];
@@ -363,10 +398,12 @@ export async function getSaudiaFlights(): Promise<SaudiaFlightResult> {
     const positions = liveResult.data.filter((position) => (position.alt ?? 0) > 500);
 
     if (positions.length === 0) {
+      await persistFleetSightings([]);
       return { flights: [], source: "no-flights", fetchedAt };
     }
 
     const summaryMap = await fetchFlightSummary(positions.map((position) => position.fr24_id));
+    await persistFleetSightings(positions.map((position) => buildFleetSighting(position, summaryMap.get(position.fr24_id))));
     const flights = positions
       .map((position, index) => buildRecord(position, summaryMap.get(position.fr24_id), index))
       .filter((flight): flight is FlightTrackerRecord => flight !== null);
@@ -375,6 +412,14 @@ export async function getSaudiaFlights(): Promise<SaudiaFlightResult> {
   } catch (err) {
     console.warn("[fr24] API error:", (err as Error).message);
     return { flights: [], source: "error", fetchedAt: fallbackFetchedAt };
+  }
+}
+
+async function persistFleetSightings(sightings: FleetAircraftSighting[]) {
+  try {
+    await syncFleetSightings(sightings);
+  } catch (err) {
+    console.warn("[fleet] persistence error:", (err as Error).message);
   }
 }
 

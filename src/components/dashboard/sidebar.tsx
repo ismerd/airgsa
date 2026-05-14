@@ -2,12 +2,14 @@ import Image from "next/image";
 import Link from "next/link";
 import type { LucideIcon } from "lucide-react";
 import { Plane } from "lucide-react";
+import { LogoutButton } from "@/components/dashboard/logout-button";
 import { NavLink } from "@/components/dashboard/nav-link";
 
 export type NavItem = {
   label: string;
   href: string;
   icon: LucideIcon;
+  badgeCount?: number;
 };
 
 export type NavGroup = {
@@ -58,7 +60,7 @@ export function Sidebar({
             </p>
             <div className="flex flex-col gap-0.5">
               {group.items.map((item) => (
-                <NavLink key={item.href} href={item.href}>
+                <NavLink key={item.href} href={item.href} badgeCount={item.badgeCount}>
                   <item.icon className="h-4 w-4 shrink-0 transition-colors" />
                   {item.label}
                 </NavLink>
@@ -68,9 +70,9 @@ export function Sidebar({
         ))}
       </nav>
 
-      {/* Airline brand + user identity */}
-      {brand && (
-        <div className="mt-auto pt-4 border-t border-white/[0.08]">
+      <div className="mt-auto pt-4 border-t border-white/[0.08]">
+        {brand ? (
+          <>
           {/* Airline chip */}
           <div className="mb-2 flex items-center gap-2.5 rounded-lg px-2 py-2">
             <span
@@ -88,7 +90,7 @@ export function Sidebar({
               <p className="text-[10px] font-mono text-white/40">{brand.iata}</p>
             </div>
           </div>
-          {/* User row → links to profile */}
+          {/* User profile link */}
           <Link
             href={brand.profileHref}
             className="flex items-center gap-2.5 rounded-lg px-2 py-2 transition-colors hover:bg-white/[0.06]"
@@ -101,8 +103,15 @@ export function Sidebar({
               <p className="text-[10px] text-white/35">View profile</p>
             </div>
           </Link>
-        </div>
-      )}
+          </>
+        ) : (
+          <div className="mb-2 rounded-lg px-2 py-2">
+            <p className="text-xs font-semibold text-white">{role} workspace</p>
+            <p className="text-[10px] text-white/35">Signed in</p>
+          </div>
+        )}
+        <LogoutButton />
+      </div>
     </aside>
   );
 }

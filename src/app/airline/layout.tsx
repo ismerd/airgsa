@@ -14,9 +14,11 @@ import {
 import { Sidebar, type NavGroup } from "@/components/dashboard/sidebar";
 import { getSession } from "@/lib/auth/session";
 import { getAirlineProfile } from "@/lib/services/airline-profile";
+import { listLiveApplications } from "@/lib/services/tender-workflow-store";
 import { SAUDIA_CARGO } from "@/lib/saudia-cargo-data";
 
-const nav: NavGroup[] = [
+function getNav(pendingApplications: number): NavGroup[] {
+  return [
   {
     heading: "Overview",
     items: [
@@ -34,7 +36,7 @@ const nav: NavGroup[] = [
     heading: "GSA Management",
     items: [
       { label: "Tenders", href: "/airline/tenders", icon: PlaneTakeoff },
-      { label: "Applications", href: "/airline/applications", icon: Users },
+      { label: "Applications", href: "/airline/applications", icon: Users, badgeCount: pendingApplications },
       { label: "Partner profiles", href: "/airline/gsa/overview", icon: Handshake },
     ],
   },
@@ -58,14 +60,16 @@ const nav: NavGroup[] = [
       { label: "Profile", href: "/airline/profile", icon: UserCircle },
     ],
   },
-];
+  ];
+}
 
 export default async function AirlineLayout({ children }: { children: React.ReactNode }) {
-  const [session, profile] = await Promise.all([getSession(), Promise.resolve(getAirlineProfile())]);
+  const [session, profile, applications] = await Promise.all([getSession(), Promise.resolve(getAirlineProfile()), listLiveApplications()]);
+  const pendingApplications = applications.filter((application) => application.status === "pending").length;
   return (
     <div className="flex min-h-screen bg-page">
       <Sidebar
-        groups={nav}
+        groups={getNav(pendingApplications)}
         role="Airline"
         brand={{
           name: SAUDIA_CARGO.name,
@@ -73,7 +77,7 @@ export default async function AirlineLayout({ children }: { children: React.Reac
           iata: SAUDIA_CARGO.iata,
           logoSrc: profile.logoPath,
           profileHref: "/airline/profile",
-          userName: session?.name ?? "—",
+          userName: session?.name ?? "-",
         }}
       />
       <div className="min-w-0 flex-1">{children}</div>

@@ -8,6 +8,7 @@ export type DroppedFile = {
   name: string;
   size: number;
   mimeType: string;
+  dataUrl?: string;
 };
 
 type Props = {
@@ -58,17 +59,20 @@ export function FileDropzone({ files, onChange, hint }: Props) {
   const [dragging, setDragging] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  const absorb = useCallback((incoming: FileList | null) => {
+  const absorb = useCallback(async (incoming: FileList | null) => {
     if (!incoming) return;
     const existing = new Set(files.map((f) => f.name));
-    const next: DroppedFile[] = Array.from(incoming)
-      .filter((f) => !existing.has(f.name))
-      .map((f) => ({
-        id: `${f.name}-${f.size}-${Math.random()}`,
-        name: f.name,
-        size: f.size,
-        mimeType: f.type || "application/octet-stream",
-      }));
+    const next: DroppedFile[] = await Promise.all(
+      Array.from(incoming)
+        .filter((f) => !existing.has(f.name))
+        .map(async (f) => ({
+          id: `${f.name}-${f.size}-${Math.random()}`,
+          name: f.name,
+          size: f.size,
+          mimeType: f.type || "application/octet-stream",
+          dataUrl: await readAsDataUrl(f),
+        })),
+    );
     if (next.length) onChange([...files, ...next]);
   }, [files, onChange]);
 
@@ -153,4 +157,13 @@ export function FileDropzone({ files, onChange, hint }: Props) {
       )}
     </div>
   );
+}
+
+function readAsDataUrl(file: File) {
+  return new Promise<string>((resolve) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(typeof reader.result === "string" ? reader.result : "");
+    reader.onerror = () => resolve("");
+    reader.readAsDataURL(file);
+  });
 }

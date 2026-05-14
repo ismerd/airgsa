@@ -23,7 +23,9 @@ export const DEMO_ACCOUNTS: DemoAccount[] = [
     name: "Ahmed Al-Rashid",
     company: "Saudia Cargo",
   },
-  ...realGsaPartners.map((partner) => ({
+  ...realGsaPartners
+    .filter((partner) => ["gsa-forto", "gsa-priority-freight", "gsa-air-menzies"].includes(partner.id))
+    .map((partner) => ({
     email: partner.email,
     password: "demo2026",
     role: "gsa" as const,

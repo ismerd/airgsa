@@ -1,0 +1,210 @@
+import { mkdir, readFile, writeFile } from "node:fs/promises";
+import path from "node:path";
+import { realGsaPartners } from "@/lib/real-gsa-data";
+import type { Status } from "@/lib/types";
+
+const STORE_PATH = path.join(process.cwd(), "data", "tender-workflow.json");
+
+export type TenderRouteFrequency = {
+  id: string;
+  origin: string;
+  destination: string;
+  operatingDays?: string;
+  weekday?: string;
+  frequencyPerWeek: number;
+  aircraft?: string;
+};
+
+export type TenderWorkflowDocument = {
+  id: string;
+  name: string;
+  size: number;
+  mimeType: string;
+  dataUrl?: string;
+};
+
+export type LiveTender = {
+  id: string;
+  title: string;
+  airline: string;
+  airlineEmail: string;
+  countryScope: string;
+  regions: string[];
+  lanes: string;
+  annualTonnage: number;
+  productMix: string;
+  deadline: string;
+  expectedStart: string;
+  status: Extract<Status, "draft" | "open" | "closed">;
+  requirements: string[];
+  commercialExpectations: string;
+  routes: TenderRouteFrequency[];
+  attachments: TenderWorkflowDocument[];
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type LiveTenderApplication = {
+  id: string;
+  tenderId: string;
+  gsaId: string;
+  gsaName: string;
+  contactName: string;
+  email: string;
+  headquarters: string;
+  coverage: string[];
+  markets: string[];
+  certifications: string[];
+  cargoFocus: string;
+  networkScore: number;
+  financialScore: number;
+  complianceScore: number;
+  winRate: number;
+  proposedCommission: string;
+  launchTimeline: string;
+  namedAccountCoverage: string;
+  monthlySalesTarget: string;
+  networkPlan: string;
+  operationalReadiness: string;
+  documents: TenderWorkflowDocument[];
+  status: Extract<Status, "pending" | "shortlisted" | "accepted" | "rejected">;
+  submittedAt: string;
+  updatedAt: string;
+};
+
+type TenderWorkflowStore = {
+  tenders: LiveTender[];
+  applications: LiveTenderApplication[];
+};
+
+export type TenderCreateInput = Omit<LiveTender, "id" | "createdAt" | "updatedAt">;
+export type ApplicationCreateInput = Pick<
+  LiveTenderApplication,
+  | "proposedCommission"
+  | "launchTimeline"
+  | "namedAccountCoverage"
+  | "monthlySalesTarget"
+  | "networkPlan"
+  | "operationalReadiness"
+  | "documents"
+>;
+
+export async function listLiveTenders() {
+  const store = await readStore();
+  return store.tenders.sort((left, right) => right.createdAt.localeCompare(left.createdAt));
+}
+
+export async function getLiveTender(id: string) {
+  const store = await readStore();
+  return store.tenders.find((tender) => tender.id === id) ?? null;
+}
+
+export async function createLiveTender(input: TenderCreateInput) {
+  const store = await readStore();
+  const now = new Date().toISOString();
+  const tender: LiveTender = {
+    ...input,
+    id: `tnd-${Date.now().toString(36)}`,
+    createdAt: now,
+    updatedAt: now,
+  };
+
+  store.tenders.unshift(tender);
+  await writeStore(store);
+  return tender;
+}
+
+export async function listLiveApplications() {
+  const store = await readStore();
+  return store.applications.sort((left, right) => right.submittedAt.localeCompare(left.submittedAt));
+}
+
+export async function getLiveApplication(id: string) {
+  const store = await readStore();
+  return store.applications.find((application) => application.id === id) ?? null;
+}
+
+export async function createLiveApplication(tenderId: string, gsaCompany: string, input: ApplicationCreateInput) {
+  const store = await readStore();
+  const tender = store.tenders.find((item) => item.id === tenderId);
+  if (!tender || tender.status !== "open") throw new Error("Tender is not open");
+
+  const partner = realGsaPartners.find((item) => item.name === gsaCompany);
+  if (!partner) throw new Error("GSA profile not found");
+
+  const now = new Date().toISOString();
+  const existingIndex = store.applications.findIndex(
+    (application) => application.tenderId === tenderId && application.gsaId === partner.id,
+  );
+  const existingApplication = existingIndex >= 0 ? store.applications[existingIndex] : null;
+  if (existingApplication && !canEditApplication(existingApplication)) {
+    throw new Error("Application edit window has expired");
+  }
+  const application: LiveTenderApplication = {
+    id: existingApplication?.id ?? `app-${Date.now().toString(36)}`,
+    tenderId,
+    gsaId: partner.id,
+    gsaName: partner.name,
+    contactName: partner.contactName,
+    email: partner.email,
+    headquarters: partner.headquarters,
+    coverage: partner.coverage,
+    markets: partner.markets,
+    certifications: partner.certifications,
+    cargoFocus: partner.cargoFocus,
+    networkScore: partner.networkScore,
+    financialScore: partner.financialScore,
+    complianceScore: partner.complianceScore,
+    winRate: partner.winRate,
+    ...input,
+    status: existingApplication?.status ?? "pending",
+    submittedAt: existingApplication?.submittedAt ?? now,
+    updatedAt: now,
+  };
+
+  if (existingIndex >= 0) store.applications[existingIndex] = application;
+  else store.applications.unshift(application);
+
+  await writeStore(store);
+  return application;
+}
+
+export function canEditApplication(application: Pick<LiveTenderApplication, "submittedAt" | "status">) {
+  if (application.status !== "pending") return false;
+  return Date.now() - new Date(application.submittedAt).getTime() < 24 * 60 * 60 * 1000;
+}
+
+export async function updateLiveApplicationStatus(
+  applicationId: string,
+  status: Extract<Status, "pending" | "shortlisted" | "accepted" | "rejected">,
+) {
+  const store = await readStore();
+  const index = store.applications.findIndex((application) => application.id === applicationId);
+  if (index < 0) return null;
+
+  store.applications[index] = {
+    ...store.applications[index],
+    status,
+    updatedAt: new Date().toISOString(),
+  };
+  await writeStore(store);
+  return store.applications[index];
+}
+
+async function readStore(): Promise<TenderWorkflowStore> {
+  try {
+    const raw = await readFile(STORE_PATH, "utf-8");
+    const parsed = JSON.parse(raw) as Partial<TenderWorkflowStore>;
+    return {
+      tenders: parsed.tenders ?? [],
+      applications: parsed.applications ?? [],
+    };
+  } catch {
+    return { tenders: [], applications: [] };
+  }
+}
+
+async function writeStore(store: TenderWorkflowStore) {
+  await mkdir(path.dirname(STORE_PATH), { recursive: true });
+  await writeFile(STORE_PATH, `${JSON.stringify(store, null, 2)}\n`, "utf-8");
+}
