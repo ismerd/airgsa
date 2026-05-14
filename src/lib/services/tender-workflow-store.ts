@@ -79,6 +79,7 @@ type TenderWorkflowStore = {
 };
 
 export type TenderCreateInput = Omit<LiveTender, "id" | "createdAt" | "updatedAt">;
+export type TenderUpdateInput = Partial<Omit<LiveTender, "id" | "airline" | "airlineEmail" | "createdAt" | "updatedAt">>;
 export type ApplicationCreateInput = Pick<
   LiveTenderApplication,
   | "proposedCommission"
@@ -113,6 +114,37 @@ export async function createLiveTender(input: TenderCreateInput) {
   store.tenders.unshift(tender);
   await writeStore(store);
   return tender;
+}
+
+export async function updateLiveTender(id: string, input: TenderUpdateInput) {
+  const store = await readStore();
+  const index = store.tenders.findIndex((tender) => tender.id === id);
+  if (index < 0) return null;
+
+  const tender: LiveTender = {
+    ...store.tenders[index],
+    ...input,
+    id,
+    airline: store.tenders[index].airline,
+    airlineEmail: store.tenders[index].airlineEmail,
+    createdAt: store.tenders[index].createdAt,
+    updatedAt: new Date().toISOString(),
+  };
+
+  store.tenders[index] = tender;
+  await writeStore(store);
+  return tender;
+}
+
+export async function deleteLiveTender(id: string) {
+  const store = await readStore();
+  const tender = store.tenders.find((item) => item.id === id);
+  if (!tender) return false;
+
+  store.tenders = store.tenders.filter((item) => item.id !== id);
+  store.applications = store.applications.filter((application) => application.tenderId !== id);
+  await writeStore(store);
+  return true;
 }
 
 export async function listLiveApplications() {

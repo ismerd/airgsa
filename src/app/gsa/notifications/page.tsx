@@ -14,10 +14,23 @@ export default function NotificationsPage() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    let active = true;
+
     fetch("/api/tenders")
-      .then((res) => res.json())
-      .then((data) => setTenders(data.tenders ?? []))
-      .finally(() => setLoading(false));
+      .then((res) => (res.ok ? res.json() : { tenders: [] }))
+      .then((data) => {
+        if (active) setTenders(data.tenders ?? []);
+      })
+      .catch(() => {
+        if (active) setTenders([]);
+      })
+      .finally(() => {
+        if (active) setLoading(false);
+      });
+
+    return () => {
+      active = false;
+    };
   }, []);
 
   return (

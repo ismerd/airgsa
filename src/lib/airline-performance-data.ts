@@ -280,15 +280,78 @@ const monthlyCountryPerformance: CountryPerformance[] = [
   },
 ];
 
-const monthlyGsaPerformance: GsaPerformance[] = realGsaPartners.map((partner, index) => ({
-  gsaName: partner.name,
-  assignedMarkets: partner.markets.join(", "),
-  revenue: Math.round(118000 + partner.networkScore * 4200 + index * 9100),
-  yieldPerKg: Math.round((2.05 + partner.complianceScore / 100 + (index % 5) * 0.04) * 100) / 100,
-  loadFactor: Math.min(93, Math.max(64, Math.round((partner.networkScore + partner.complianceScore) / 2 - 8 + (index % 4)))),
-  tonnage: Math.round((42 + partner.networkScore * 0.9 + index * 2.6) * 10) / 10,
-  flightCount: 8 + (index % 7) + Math.round(partner.networkScore / 12),
-}));
+const monthlyGsaPerformance: GsaPerformance[] = [
+  gsaPerformanceSeed("gsa-air-menzies", {
+    revenue: 1860000,
+    yieldPerKg: 3.18,
+    loadFactor: 91,
+    tonnage: 584.8,
+    flightCount: 46,
+  }),
+  gsaPerformanceSeed("gsa-aeb", {
+    revenue: 1435000,
+    yieldPerKg: 2.96,
+    loadFactor: 87,
+    tonnage: 484.8,
+    flightCount: 38,
+  }),
+  gsaPerformanceSeed("gsa-cargo-airlines-services", {
+    revenue: 1085000,
+    yieldPerKg: 2.88,
+    loadFactor: 84,
+    tonnage: 376.7,
+    flightCount: 31,
+  }),
+  gsaPerformanceSeed("gsa-forto", {
+    revenue: 835000,
+    yieldPerKg: 2.62,
+    loadFactor: 78,
+    tonnage: 318.7,
+    flightCount: 25,
+  }),
+  gsaPerformanceSeed("gsa-priority-freight", {
+    revenue: 675000,
+    yieldPerKg: 3.05,
+    loadFactor: 81,
+    tonnage: 221.3,
+    flightCount: 19,
+  }),
+  gsaPerformanceSeed("gsa-aerotrans", {
+    revenue: 492000,
+    yieldPerKg: 2.44,
+    loadFactor: 73,
+    tonnage: 201.6,
+    flightCount: 15,
+  }),
+  gsaPerformanceSeed("gsa-sky-art", {
+    revenue: 318000,
+    yieldPerKg: 2.28,
+    loadFactor: 68,
+    tonnage: 139.5,
+    flightCount: 11,
+  }),
+  gsaPerformanceSeed("gsa-teconja", {
+    revenue: 184000,
+    yieldPerKg: 2.11,
+    loadFactor: 61,
+    tonnage: 87.2,
+    flightCount: 7,
+  }),
+];
+
+function gsaPerformanceSeed(
+  partnerId: string,
+  metrics: Omit<GsaPerformance, "gsaName" | "assignedMarkets">,
+): GsaPerformance {
+  const partner = realGsaPartners.find((item) => item.id === partnerId);
+  if (!partner) throw new Error(`Missing GSA partner seed: ${partnerId}`);
+
+  return {
+    gsaName: partner.name,
+    assignedMarkets: partner.markets.join(", "),
+    ...metrics,
+  };
+}
 const periodConfigs: Record<PerformancePeriod, { label: string; factor: number; yieldDelta: number; loadFactorDelta: number }> = {
   daily: { label: "Daily average", factor: 1 / 30, yieldDelta: -0.09, loadFactorDelta: -3 },
   weekly: { label: "Weekly average", factor: 7 / 30, yieldDelta: -0.04, loadFactorDelta: -1 },

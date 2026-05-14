@@ -31,9 +31,18 @@ export default function AirlineGsaOverviewPage() {
   const [applications, setApplications] = useState<LiveTenderApplication[]>([]);
   const workflowApplications = useMemo(() => applications.map(toWorkflowApplication), [applications]);
   const workflow = useAirlineGsaWorkflow(workflowApplications);
+  const acceptedApplicationByGsaId = useMemo(() => {
+    const map = new Map<string, LiveTenderApplication>();
+    for (const application of applications) {
+      if (application.status !== "accepted") continue;
+      const current = map.get(application.gsaId);
+      if (!current || application.updatedAt > current.updatedAt) map.set(application.gsaId, application);
+    }
+    return map;
+  }, [applications]);
   const acceptedPartners = useMemo(
-    () => realGsaPartners.filter((partner) => workflow.state.acceptedGsas[partner.id]),
-    [workflow.state.acceptedGsas],
+    () => realGsaPartners.filter((partner) => acceptedApplicationByGsaId.has(partner.id)),
+    [acceptedApplicationByGsaId],
   );
   const [selectedGsaId, setSelectedGsaId] = useState<string>("");
   const [query, setQuery] = useState("");
@@ -42,9 +51,20 @@ export default function AirlineGsaOverviewPage() {
   const [pendingTransferRouteId, setPendingTransferRouteId] = useState<string | null>(null);
 
   useEffect(() => {
+    let active = true;
+
     fetch("/api/applications")
-      .then((res) => res.json())
-      .then((data) => setApplications(data.applications ?? []));
+      .then((res) => (res.ok ? res.json() : { applications: [] }))
+      .then((data) => {
+        if (active) setApplications(data.applications ?? []);
+      })
+      .catch(() => {
+        if (active) setApplications([]);
+      });
+
+    return () => {
+      active = false;
+    };
   }, []);
 
   useEffect(() => {
@@ -59,15 +79,22 @@ export default function AirlineGsaOverviewPage() {
   }, [acceptedPartners, selectedGsaId]);
 
   const selectedPartner = acceptedPartners.find((partner) => partner.id === selectedGsaId) ?? null;
-  const selectedAssignment = selectedPartner ? workflow.state.acceptedGsas[selectedPartner.id] : null;
-  const assignedRouteIds = new Set(Object.values(workflow.state.acceptedGsas).flatMap((assignment) => assignment.routeIds));
+  const visibleAssignments = useMemo(() => {
+    const acceptedPartnerIds = new Set(acceptedPartners.map((partner) => partner.id));
+    return Object.fromEntries(
+      Object.entries(workflow.state.acceptedGsas).filter(([gsaId]) => acceptedPartnerIds.has(gsaId)),
+    );
+  }, [acceptedPartners, workflow.state.acceptedGsas]);
+  const selectedAssignment = selectedPartner ? visibleAssignments[selectedPartner.id] : null;
+  const selectedApplication = selectedPartner ? acceptedApplicationByGsaId.get(selectedPartner.id) ?? null : null;
+  const assignedRouteIds = new Set(Object.values(visibleAssignments).flatMap((assignment) => assignment.routeIds));
   const assignedRouteCount = assignedRouteIds.size;
   const assignedRoutes = assignableRoutes.filter((route) => assignedRouteIds.has(route.id));
   const markets = Array.from(new Set(assignableRoutes.map((route) => route.market))).sort();
   const hasContractPeriod = Boolean(selectedAssignment?.contractStart && selectedAssignment?.contractEnd);
 
   const filteredRoutes = assignableRoutes.filter((route) => {
-    const owner = getRouteOwner(route.id, acceptedPartners, workflow.state.acceptedGsas);
+    const owner = getRouteOwner(route.id, acceptedPartners, visibleAssignments);
     const eligibility = selectedPartner ? getEligibility(route, selectedPartner, owner?.partner.id ?? null) : "no-selection";
     const searchable = `${route.id} ${route.market} ${route.origin} ${route.destination} ${owner?.partner.name ?? ""}`.toLowerCase();
 
@@ -88,7 +115,7 @@ export default function AirlineGsaOverviewPage() {
     ? assignableRoutes.find((route) => route.id === pendingTransferRouteId) ?? null
     : null;
   const pendingTransferOwner = pendingTransferRoute
-    ? getRouteOwner(pendingTransferRoute.id, acceptedPartners, workflow.state.acceptedGsas)
+    ? getRouteOwner(pendingTransferRoute.id, acceptedPartners, visibleAssignments)
     : null;
 
   return (
@@ -150,6 +177,11 @@ export default function AirlineGsaOverviewPage() {
                           <div>
                             <p className="font-semibold text-ink">{selectedPartner.name}</p>
                             <p className="mt-1 text-xs text-ink-muted">{selectedPartner.contactName}</p>
+                            {selectedApplication && (
+                              <p className="mt-1 text-xs text-ink-muted">
+                                Accepted application on {new Date(selectedApplication.updatedAt).toLocaleDateString("en-GB")}
+                              </p>
+                            )}
                           </div>
                           <Button asChild size="sm" variant="outline">
                             <Link href={`/airline/gsa/${selectedPartner.id}`}>Profile</Link>
@@ -256,7 +288,7 @@ export default function AirlineGsaOverviewPage() {
                     </thead>
                     <tbody className="divide-y divide-border-ui">
                       {filteredRoutes.map((route) => {
-                        const owner = getRouteOwner(route.id, acceptedPartners, workflow.state.acceptedGsas);
+                        const owner = getRouteOwner(route.id, acceptedPartners, visibleAssignments);
                         const eligibility = selectedPartner ? getEligibility(route, selectedPartner, owner?.partner.id ?? null) : "no-selection";
                         return (
                           <RouteRow

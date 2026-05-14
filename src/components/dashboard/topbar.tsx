@@ -7,6 +7,11 @@ import { Bell, Search } from "lucide-react";
 import { buttonVariants } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
+import {
+  isUnreadAirlineApplication,
+  markAirlineApplicationsSeen,
+  subscribeToAirlineApplicationsSeen,
+} from "@/lib/client-notification-state";
 import type { LiveTenderApplication } from "@/lib/services/tender-workflow-store";
 
 type NotificationItem = {
@@ -41,24 +46,42 @@ export function Topbar({
   }, []);
 
   useEffect(() => {
+    if (pathname.startsWith("/airline/applications")) {
+      markAirlineApplicationsSeen();
+      setNotifications([]);
+      setNotificationCount(0);
+    }
+  }, [pathname]);
+
+  useEffect(() => {
     if (isAirline) {
-      fetch("/api/applications")
-        .then((res) => (res.ok ? res.json() : null))
-        .then((data) => {
-          if (!data) return;
-          const items = ((data.applications ?? []) as LiveTenderApplication[])
-            .filter((item) => item.status === "pending")
-            .map((item) => ({
-              id: item.id,
-              title: `New application from ${item.gsaName}`,
-              body: item.proposedCommission || "Review the submitted proposal.",
-              href: `/airline/applications/${item.id}`,
-            }));
-          setNotifications(items);
-          setNotificationCount(items.length);
-        })
-        .catch(() => setNotificationCount(0));
-      return;
+      function loadAirlineNotifications() {
+        if (pathname.startsWith("/airline/applications")) {
+          setNotifications([]);
+          setNotificationCount(0);
+          return;
+        }
+
+        fetch("/api/applications")
+          .then((res) => (res.ok ? res.json() : null))
+          .then((data) => {
+            if (!data) return;
+            const items = ((data.applications ?? []) as LiveTenderApplication[])
+              .filter(isUnreadAirlineApplication)
+              .map((item) => ({
+                id: item.id,
+                title: `New application from ${item.gsaName}`,
+                body: item.proposedCommission || "Review the submitted proposal.",
+                href: `/airline/applications/${item.id}`,
+              }));
+            setNotifications(items);
+            setNotificationCount(items.length);
+          })
+          .catch(() => setNotificationCount(0));
+      }
+
+      loadAirlineNotifications();
+      return subscribeToAirlineApplicationsSeen(loadAirlineNotifications);
     }
 
     Promise.all([
@@ -82,7 +105,7 @@ export function Topbar({
         setNotificationCount(items.length);
       })
       .catch(() => setNotificationCount(0));
-  }, [isAirline]);
+  }, [isAirline, pathname]);
 
   return (
     <header className="sticky top-0 z-20 border-b border-border-ui bg-surface/90 px-6 py-4 shadow-[0_1px_12px_rgba(11,30,79,0.06)] backdrop-blur">

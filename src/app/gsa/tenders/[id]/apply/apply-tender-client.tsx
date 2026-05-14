@@ -32,11 +32,17 @@ export function ApplyTenderClient({ tenderId, gsa }: { tenderId: string; gsa: Re
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    Promise.all([
-      fetch(`/api/tenders/${tenderId}`).then((res) => res.json()),
-      fetch("/api/applications").then((res) => res.json()),
-    ])
+    let active = true;
+
+    async function fetchJson(url: string) {
+      const res = await fetch(url);
+      if (!res.ok) throw new Error(`${url} failed with ${res.status}`);
+      return res.json();
+    }
+
+    Promise.all([fetchJson(`/api/tenders/${tenderId}`), fetchJson("/api/applications")])
       .then(([tenderData, applicationData]) => {
+        if (!active) return;
         setTender(tenderData.tender ?? null);
         const existing = (applicationData.applications ?? []).find((item: LiveTenderApplication) => item.tenderId === tenderId) ?? null;
         setApplication(existing);
@@ -51,7 +57,14 @@ export function ApplyTenderClient({ tenderId, gsa }: { tenderId: string; gsa: Re
           });
           setFiles(existing.documents);
         }
+      })
+      .catch(() => {
+        if (active) setError("Tender data could not be loaded.");
       });
+
+    return () => {
+      active = false;
+    };
   }, [tenderId]);
 
   const canEdit = !application || (application.status === "pending" && Date.now() - new Date(application.submittedAt).getTime() < 24 * 60 * 60 * 1000);
@@ -77,6 +90,8 @@ export function ApplyTenderClient({ tenderId, gsa }: { tenderId: string; gsa: Re
       }
 
       router.push("/gsa");
+    } catch {
+      setError("Application could not be submitted. Please try again.");
     } finally {
       setSaving(false);
     }

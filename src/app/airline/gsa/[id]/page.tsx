@@ -1,20 +1,41 @@
 import { notFound } from "next/navigation";
+import Link from "next/link";
+import { ArrowLeft, Route } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Topbar } from "@/components/dashboard/topbar";
 import { getGsaProfileById } from "@/lib/services/platform";
-import { GsaDecisionPanel } from "./decision-panel";
+import { listLiveApplications, listLiveTenders } from "@/lib/services/tender-workflow-store";
 
 export default async function GsaProfilePage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const gsa = await getGsaProfileById(id);
+  const [gsa, applications, tenders] = await Promise.all([
+    getGsaProfileById(id),
+    listLiveApplications(),
+    listLiveTenders(),
+  ]);
 
   if (!gsa) notFound();
 
+  const acceptedApplications = applications.filter((application) => application.gsaId === id && application.status === "accepted");
+  const latestAcceptedApplication = acceptedApplications.sort((left, right) => right.updatedAt.localeCompare(left.updatedAt))[0];
+  if (!latestAcceptedApplication) notFound();
+
+  const tender = tenders.find((item) => item.id === latestAcceptedApplication.tenderId);
+
   return (
     <>
-      <Topbar title={gsa.name} subtitle="GSA profile detail" />
-      <main className="grid gap-5 p-5 xl:grid-cols-[1fr_.65fr]">
+      <Topbar title={gsa.name} subtitle="Accepted GSA profile" />
+      <main className="space-y-5 p-5">
+        <Button asChild variant="outline">
+          <Link href="/airline/gsa/overview">
+            <ArrowLeft className="h-4 w-4" />
+            Back to partner profiles
+          </Link>
+        </Button>
+
+        <div className="grid gap-5 xl:grid-cols-[1fr_.7fr]">
         <Card>
           <CardHeader>
             <CardTitle>Partner profile</CardTitle>
@@ -43,12 +64,32 @@ export default async function GsaProfilePage({ params }: { params: Promise<{ id:
 
         <Card>
           <CardHeader>
-            <CardTitle>Decision panel</CardTitle>
+            <CardTitle>Accepted application</CardTitle>
           </CardHeader>
-          <CardContent className="space-y-3">
-            <GsaDecisionPanel gsaId={gsa.id} />
+          <CardContent className="space-y-4">
+            <div className="rounded-lg border border-border-ui bg-success-bg p-4">
+              <p className="text-xs font-semibold uppercase tracking-wider text-success">Accepted</p>
+              <p className="mt-2 font-semibold text-ink">{tender?.title ?? latestAcceptedApplication.tenderId}</p>
+              <p className="mt-1 text-sm text-ink-muted">
+                Accepted on {new Date(latestAcceptedApplication.updatedAt).toLocaleDateString("en-GB")}
+              </p>
+            </div>
+
+            <ApplicationField label="Contact" value={`${latestAcceptedApplication.contactName} - ${latestAcceptedApplication.email}`} />
+            <ApplicationField label="Commission" value={latestAcceptedApplication.proposedCommission} />
+            <ApplicationField label="Launch timeline" value={latestAcceptedApplication.launchTimeline} />
+            <ApplicationField label="Monthly target" value={latestAcceptedApplication.monthlySalesTarget} />
+            <ApplicationField label="Network plan" value={latestAcceptedApplication.networkPlan} />
+
+            <Button asChild className="w-full">
+              <Link href="/airline/gsa/overview">
+                <Route className="h-4 w-4" />
+                Assign routes
+              </Link>
+            </Button>
           </CardContent>
         </Card>
+        </div>
       </main>
     </>
   );
@@ -59,6 +100,15 @@ function Metric({ label, value }: { label: string; value: number }) {
     <div className="rounded-md bg-white text-slate-950 p-4">
       <p className="text-sm text-ink-muted">{label}</p>
       <p className="mt-2 text-3xl font-semibold">{value}</p>
+    </div>
+  );
+}
+
+function ApplicationField({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded-lg border border-border-ui bg-surface2 p-3">
+      <p className="text-xs font-semibold uppercase tracking-wider text-ink-muted">{label}</p>
+      <p className="mt-1 text-sm leading-6 text-ink">{value}</p>
     </div>
   );
 }

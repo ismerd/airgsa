@@ -1,6 +1,7 @@
 import { BarChart3, Bell, Building2, FileSpreadsheet, Megaphone, Newspaper, PanelLeft } from "lucide-react";
 import { Sidebar, type NavGroup } from "@/components/dashboard/sidebar";
 import { getSession } from "@/lib/auth/session";
+import { realGsaPartners } from "@/lib/real-gsa-data";
 import { listLiveApplications, listLiveTenders } from "@/lib/services/tender-workflow-store";
 
 function getNav(notificationCount: number): NavGroup[] {
@@ -42,6 +43,8 @@ function getNav(notificationCount: number): NavGroup[] {
 
 export default async function GsaLayout({ children }: { children: React.ReactNode }) {
   const [session, tenders, applications] = await Promise.all([getSession(), listLiveTenders(), listLiveApplications()]);
+  const partner = realGsaPartners.find((item) => item.email === session?.email) ??
+    realGsaPartners.find((item) => item.name === session?.company);
   const appliedTenderIds = new Set(
     applications.filter((application) => application.gsaName === session?.company).map((application) => application.tenderId),
   );
@@ -49,7 +52,17 @@ export default async function GsaLayout({ children }: { children: React.ReactNod
 
   return (
     <div className="flex min-h-screen bg-page">
-      <Sidebar groups={getNav(notificationCount)} role="GSA" />
+      <Sidebar
+        groups={getNav(notificationCount)}
+        role="GSA"
+        brand={{
+          name: partner?.name ?? session?.company ?? "GSA",
+          color: partner?.color ?? "#2563EB",
+          iata: partner?.country ?? "GSA",
+          profileHref: "/gsa/profile",
+          userName: session?.name ?? partner?.contactName ?? "GSA user",
+        }}
+      />
       <div className="min-w-0 flex-1">{children}</div>
     </div>
   );

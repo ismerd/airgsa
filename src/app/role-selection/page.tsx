@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Building2, Package, Plane, Shield } from "lucide-react";
+import { Building2, Plane, Shield } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 
 const roles = [
@@ -14,12 +14,6 @@ const roles = [
     href: "/gsa",
     icon: Building2,
     description: "Find open airline tenders, submit applications, maintain your profile, and track performance.",
-  },
-  {
-    label: "Freight Forwarder",
-    href: "/freightforwarder",
-    icon: Package,
-    description: "Book cargo space, track AWBs in real time, manage flight changes, and request statements.",
   },
   {
     label: "Admin",
@@ -40,7 +34,7 @@ export default function RoleSelectionPage() {
         <p className="mt-3 max-w-2xl text-ink-muted">
           Select the workspace that matches your role to access your dashboard.
         </p>
-        <div className="mt-8 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="mt-8 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
           {roles.map((role) => (
             <Link key={role.label} href={role.href}>
               <Card className="h-full transition-colors hover:border-brand/50">

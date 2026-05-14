@@ -25,6 +25,10 @@ export function middleware(req: NextRequest) {
     return NextResponse.next();
   }
 
+  if (pathname.startsWith("/freightforwarder")) {
+    return NextResponse.redirect(new URL("/", req.url));
+  }
+
   const sessionCookie = req.cookies.get("airgsa-session")?.value;
   if (!sessionCookie) {
     const loginUrl = new URL("/login", req.url);

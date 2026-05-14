@@ -111,21 +111,21 @@ export function LoginForm() {
             />
             <DemoCredential
               label="GSA — Forto Logistics"
-              email="forto@airgsa.demo"
+              email="christopher.braun@forto.com"
               password="demo2026"
-              onFill={() => { setEmail("forto@airgsa.demo"); setPassword("demo2026"); }}
+              onFill={() => { setEmail("christopher.braun@forto.com"); setPassword("demo2026"); }}
             />
             <DemoCredential
               label="GSA — Priority Freight Europe"
-              email="priorityfreight@airgsa.demo"
+              email="marco.sauer@priorityfreight.com"
               password="demo2026"
-              onFill={() => { setEmail("priorityfreight@airgsa.demo"); setPassword("demo2026"); }}
+              onFill={() => { setEmail("marco.sauer@priorityfreight.com"); setPassword("demo2026"); }}
             />
             <DemoCredential
               label="GSA — Air Menzies International"
-              email="airmenzies@airgsa.demo"
+              email="samantha.leaper@airmenzies.com"
               password="demo2026"
-              onFill={() => { setEmail("airmenzies@airgsa.demo"); setPassword("demo2026"); }}
+              onFill={() => { setEmail("samantha.leaper@airmenzies.com"); setPassword("demo2026"); }}
             />
           </div>
         </CardContent>

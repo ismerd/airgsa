@@ -82,7 +82,7 @@ export function Sidebar({
               {brand.logoSrc ? (
                 <Image src={brand.logoSrc} alt={brand.name} fill className="object-contain p-0.5" unoptimized />
               ) : (
-                <Plane className="h-4 w-4 text-white" />
+                <span className="text-xs font-bold text-white">{brand.name.charAt(0).toUpperCase()}</span>
               )}
             </span>
             <div className="min-w-0">

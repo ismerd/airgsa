@@ -129,15 +129,16 @@ const GSA_COLORS = ["#00AEEF", "#22c55e", "#f59e0b", "#a78bfa"];
 export function GsaPerformanceChart({ data }: { data: GsaPerformance[] }) {
   const { currency } = useCurrency();
   const { symbol, rate } = currency;
-  const fmt = (v: number) => `${symbol}${Math.round(v * rate).toLocaleString("en-US")}`;
   const fmtShort = (v: number) => `${symbol}${Math.round((v * rate) / 1000)}k`;
 
   const total = data.reduce((s, d) => s + d.revenue, 0);
+  const maxRevenue = data.reduce((max, d) => Math.max(max, d.revenue), 0);
   const pieData = data.map((d, i) => ({
     name: d.gsaName,
     value: d.revenue,
     color: GSA_COLORS[i % GSA_COLORS.length],
     pct: total > 0 ? Math.round((d.revenue / total) * 100) : 0,
+    barPct: maxRevenue > 0 ? Math.round((d.revenue / maxRevenue) * 100) : 0,
   }));
 
   return (
@@ -188,7 +189,7 @@ export function GsaPerformanceChart({ data }: { data: GsaPerformance[] }) {
                   <div className="mt-1 h-1.5 overflow-hidden rounded-full bg-surface2">
                     <div
                       className="h-full rounded-full transition-all duration-500"
-                      style={{ width: `${entry.pct}%`, background: entry.color }}
+                      style={{ width: `${entry.barPct}%`, background: entry.color }}
                     />
                   </div>
                 </div>

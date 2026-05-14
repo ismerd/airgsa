@@ -1,47 +1,1671 @@
 {
   "tenders": [
     {
-      "title": "asdfas",
-      "countryScope": "dfasdfas",
+      "id": "tnd-demo-benelux-2026",
+      "title": "Saudi Cargo representation Benelux",
+      "countryScope": "Netherlands, Belgium, Luxembourg",
       "regions": [
-        "dfasdfas"
+        "Netherlands",
+        "Belgium",
+        "Luxembourg"
       ],
-      "lanes": "ASDF-ASDFA",
-      "annualTonnage": 321234,
-      "productMix": "dfasdfasd",
-      "deadline": "2026-05-28",
-      "expectedStart": "2026-06-04",
+      "lanes": "AMS-JED, BRU-RUH, LGG-JED",
+      "annualTonnage": 18500,
+      "productMix": "Pharma, perishables, e-commerce, general cargo",
+      "deadline": "2026-06-12",
+      "expectedStart": "2026-07-15",
       "status": "open",
       "requirements": [
-        "adfasdfasdffadf"
+        "IATA / CASS capability",
+        "GDP-qualified pharma sales coverage",
+        "Named forwarder account pipeline across AMS, BRU and LGG",
+        "Weekly pipeline and route performance reporting"
       ],
-      "commercialExpectations": "asdfasdfasdf",
+      "commercialExpectations": "Saudia Cargo is looking for a Benelux GSA with strong pharma and e-commerce account access, active sales coverage in Amsterdam, Brussels and Liege, and the ability to grow both freighter and belly cargo flows into JED and RUH.",
       "routes": [
         {
-          "origin": "ASDF",
-          "destination": "ASDFA",
-          "operatingDays": "fasdf",
+          "id": "route-ams-jed",
+          "origin": "AMS",
+          "destination": "JED",
+          "operatingDays": "Tue/Fri",
+          "frequencyPerWeek": 2,
+          "aircraft": "Belly and freighter feed"
+        },
+        {
+          "id": "route-bru-ruh",
+          "origin": "BRU",
+          "destination": "RUH",
+          "operatingDays": "Wed/Sat",
+          "frequencyPerWeek": 2,
+          "aircraft": "Pharma focus"
+        },
+        {
+          "id": "route-lgg-jed",
+          "origin": "LGG",
+          "destination": "JED",
+          "operatingDays": "Mon",
           "frequencyPerWeek": 1,
-          "aircraft": "asdf",
+          "aircraft": "Cargo uplift opportunity"
+        }
+      ],
+      "createdAt": "2026-05-14T18:05:00.000Z",
+      "attachments": [],
+      "airline": "Saudia Cargo",
+      "airlineEmail": "saudia@airgsa.demo",
+      "updatedAt": "2026-05-14T18:05:00.000Z"
+    },
+    {
+      "id": "tnd-demo-uk-ireland-2026",
+      "title": "Saudi Cargo UK and Ireland sales mandate",
+      "countryScope": "United Kingdom, Ireland",
+      "regions": [
+        "United Kingdom",
+        "Ireland"
+      ],
+      "lanes": "LHR-JED, MAN-RUH, DUB-JED",
+      "annualTonnage": 14200,
+      "productMix": "Express, mail, e-commerce, high-value cargo",
+      "deadline": "2026-06-20",
+      "expectedStart": "2026-08-01",
+      "status": "open",
+      "requirements": [
+        "UK and Ireland field sales coverage",
+        "Experience with express, mail and e-commerce cargo",
+        "Local customer service desk with airline handover process",
+        "Monthly sales forecast and key account conversion report"
+      ],
+      "commercialExpectations": "The selected GSA should build a focused sales pipeline for UK and Ireland forwarders, prioritize high-yield express and e-commerce traffic, and support a structured launch plan for LHR, MAN and DUB origin cargo.",
+      "routes": [
+        {
+          "id": "route-lhr-jed",
+          "origin": "LHR",
+          "destination": "JED",
+          "operatingDays": "Mon/Thu/Sun",
+          "frequencyPerWeek": 3,
+          "aircraft": "Belly cargo focus"
+        },
+        {
+          "id": "route-man-ruh",
+          "origin": "MAN",
+          "destination": "RUH",
+          "operatingDays": "Tue/Fri",
+          "frequencyPerWeek": 2,
+          "aircraft": "Express and e-commerce"
+        },
+        {
+          "id": "route-dub-jed",
+          "origin": "DUB",
+          "destination": "JED",
+          "operatingDays": "Sat",
+          "frequencyPerWeek": 1,
+          "aircraft": "RFS feed accepted"
+        }
+      ],
+      "createdAt": "2026-05-14T18:04:00.000Z",
+      "attachments": [],
+      "airline": "Saudia Cargo",
+      "airlineEmail": "saudia@airgsa.demo",
+      "updatedAt": "2026-05-14T18:04:00.000Z"
+    },
+    {
+      "id": "tnd-demo-france-2026",
+      "title": "Saudi Cargo France representation",
+      "countryScope": "France",
+      "regions": [
+        "France"
+      ],
+      "lanes": "CDG-JED, CDG-RUH, LYS-JED",
+      "annualTonnage": 16800,
+      "productMix": "Pharma, luxury goods, perishables, general cargo",
+      "deadline": "2026-06-18",
+      "expectedStart": "2026-08-05",
+      "status": "open",
+      "requirements": [
+        "France-wide forwarder coverage",
+        "Strong CDG cargo sales presence",
+        "Pharma and high-value cargo process knowledge",
+        "Named key-account plan for the first 90 days"
+      ],
+      "commercialExpectations": "The France mandate focuses on CDG-origin cargo with selective regional feed from Lyon and Marseille. Saudia expects disciplined account planning, weekly opportunity review, and fast conversion of high-yield pharma and luxury cargo.",
+      "routes": [
+        {
+          "id": "route-cdg-jed",
+          "origin": "CDG",
+          "destination": "JED",
+          "operatingDays": "Mon/Wed/Fri",
+          "frequencyPerWeek": 3,
+          "aircraft": "Belly and freighter capacity"
+        },
+        {
+          "id": "route-cdg-ruh",
+          "origin": "CDG",
+          "destination": "RUH",
+          "operatingDays": "Tue/Sat",
+          "frequencyPerWeek": 2,
+          "aircraft": "High-yield cargo focus"
+        },
+        {
+          "id": "route-lys-jed",
+          "origin": "LYS",
+          "destination": "JED",
+          "operatingDays": "Thu",
+          "frequencyPerWeek": 1,
+          "aircraft": "Regional feed"
+        }
+      ],
+      "createdAt": "2026-05-14T18:03:00.000Z",
+      "attachments": [],
+      "airline": "Saudia Cargo",
+      "airlineEmail": "saudia@airgsa.demo",
+      "updatedAt": "2026-05-14T18:03:00.000Z"
+    },
+    {
+      "id": "tnd-demo-dach-pharma-2026",
+      "title": "Saudia Cargo DACH pharma and industrial sales",
+      "countryScope": "Germany, Austria, Switzerland",
+      "regions": [
+        "Germany",
+        "Austria",
+        "Switzerland"
+      ],
+      "lanes": "FRA-JED, FRA-RUH, MUC-JED, ZRH-JED",
+      "annualTonnage": 23600,
+      "productMix": "Pharma, automotive, machinery, express cargo",
+      "deadline": "2026-06-05",
+      "expectedStart": "2026-07-01",
+      "status": "open",
+      "requirements": [
+        "DACH sales team with named account ownership",
+        "GDP-capable pharma commercial handling",
+        "Automotive and machinery shipper access",
+        "Weekly route pipeline and conversion reporting"
+      ],
+      "commercialExpectations": "This tender is designed for a GSA that can manage DACH as a structured sales territory, grow premium pharma and industrial cargo, and coordinate RFS feed into FRA, MUC and ZRH where direct uplift is not available.",
+      "routes": [
+        {
+          "id": "route-fra-jed",
+          "origin": "FRA",
+          "destination": "JED",
+          "operatingDays": "Daily",
+          "frequencyPerWeek": 7,
+          "aircraft": "Core gateway"
+        },
+        {
+          "id": "route-fra-ruh",
+          "origin": "FRA",
+          "destination": "RUH",
+          "operatingDays": "Tue/Thu/Sat",
+          "frequencyPerWeek": 3,
+          "aircraft": "Industrial cargo"
+        },
+        {
+          "id": "route-muc-jed",
+          "origin": "MUC",
+          "destination": "JED",
+          "operatingDays": "Mon/Fri",
+          "frequencyPerWeek": 2,
+          "aircraft": "RFS and belly feed"
+        },
+        {
+          "id": "route-zrh-jed",
+          "origin": "ZRH",
+          "destination": "JED",
+          "operatingDays": "Wed/Sun",
+          "frequencyPerWeek": 2,
+          "aircraft": "Pharma feed"
+        }
+      ],
+      "createdAt": "2026-05-14T18:02:00.000Z",
+      "attachments": [],
+      "airline": "Saudia Cargo",
+      "airlineEmail": "saudia@airgsa.demo",
+      "updatedAt": "2026-05-14T18:02:00.000Z"
+    },
+    {
+      "id": "tnd-demo-iberia-italy-2026",
+      "title": "Southern Europe GSA market scan",
+      "countryScope": "Spain, Portugal, Italy",
+      "regions": [
+        "Spain",
+        "Portugal",
+        "Italy"
+      ],
+      "lanes": "MAD-JED, BCN-RUH, MXP-JED, FCO-RUH",
+      "annualTonnage": 12100,
+      "productMix": "Fashion, perishables, pharma, general cargo",
+      "deadline": "2026-07-08",
+      "expectedStart": "2026-09-01",
+      "status": "draft",
+      "requirements": [
+        "Country-level sales coverage options",
+        "Forwarder pipeline by market",
+        "Launch plan with regional gateway priorities"
+      ],
+      "commercialExpectations": "Draft tender for internal review. The airline is comparing whether to appoint one Southern Europe GSA or split Spain, Portugal and Italy into separate country mandates.",
+      "routes": [
+        {
+          "id": "route-mad-jed",
+          "origin": "MAD",
+          "destination": "JED",
+          "operatingDays": "TBD",
+          "frequencyPerWeek": 2,
+          "aircraft": "Market scan"
+        },
+        {
+          "id": "route-mxp-jed",
+          "origin": "MXP",
+          "destination": "JED",
+          "operatingDays": "TBD",
+          "frequencyPerWeek": 2,
+          "aircraft": "Market scan"
+        }
+      ],
+      "createdAt": "2026-05-14T18:01:00.000Z",
+      "attachments": [],
+      "airline": "Saudia Cargo",
+      "airlineEmail": "saudia@airgsa.demo",
+      "updatedAt": "2026-05-14T18:01:00.000Z"
+    },
+    {
+      "id": "tnd-demo-nordics-closed-2026",
+      "title": "Nordics cargo representation review",
+      "countryScope": "Sweden, Denmark, Norway, Finland",
+      "regions": [
+        "Sweden",
+        "Denmark",
+        "Norway",
+        "Finland"
+      ],
+      "lanes": "CPH-JED, ARN-RUH, OSL-JED, HEL-JED",
+      "annualTonnage": 9700,
+      "productMix": "Pharma, seafood, e-commerce, general cargo",
+      "deadline": "2026-05-01",
+      "expectedStart": "2026-06-15",
+      "status": "closed",
+      "requirements": [
+        "Nordics-wide commercial representation",
+        "Cold-chain and seafood cargo knowledge",
+        "Consolidation plan into CPH and ARN"
+      ],
+      "commercialExpectations": "Closed evaluation round retained as a realistic historical tender for application and shortlist views.",
+      "routes": [
+        {
+          "id": "route-cph-jed",
+          "origin": "CPH",
+          "destination": "JED",
+          "operatingDays": "Tue/Fri",
+          "frequencyPerWeek": 2,
+          "aircraft": "Nordics gateway"
+        },
+        {
+          "id": "route-arn-ruh",
+          "origin": "ARN",
+          "destination": "RUH",
+          "operatingDays": "Thu",
+          "frequencyPerWeek": 1,
+          "aircraft": "Regional feed"
+        }
+      ],
+      "createdAt": "2026-05-14T18:00:00.000Z",
+      "attachments": [],
+      "airline": "Saudia Cargo",
+      "airlineEmail": "saudia@airgsa.demo",
+      "updatedAt": "2026-05-14T18:00:00.000Z"
+    },
+    {
+      "title": "Saudi Cargo representation Germany",
+      "countryScope": "Germany, Austria, Switzerland",
+      "regions": [
+        "Germany",
+        "Austria",
+        "Switzerland"
+      ],
+      "lanes": "JED-FRA",
+      "annualTonnage": 22000,
+      "productMix": "General cargo, pharma, express",
+      "deadline": "2026-05-28",
+      "expectedStart": "2026-06-11",
+      "status": "open",
+      "requirements": [
+        "IATA / CASS capability",
+        "Local sales team",
+        "Monthly KPI reporting"
+      ],
+      "commercialExpectations": "Describe target customers, service level, reporting, and handover expectations.",
+      "routes": [
+        {
+          "origin": "JED",
+          "destination": "FRA",
+          "operatingDays": "",
+          "frequencyPerWeek": 1,
+          "aircraft": "",
           "id": "route-1"
         }
       ],
       "attachments": [],
       "airline": "Saudia Cargo",
       "airlineEmail": "saudia@airgsa.demo",
-      "id": "tnd-mp4rib6c",
-      "createdAt": "2026-05-14T00:40:37.140Z",
-      "updatedAt": "2026-05-14T00:40:37.140Z"
+      "id": "tnd-mp5lc6b4",
+      "createdAt": "2026-05-14T14:35:39.376Z",
+      "updatedAt": "2026-05-14T14:35:39.376Z"
     }
   ],
   "applications": [
     {
-      "id": "app-mp4rj7rg",
-      "tenderId": "tnd-mp4rib6c",
+      "id": "app-demo-benelux-aeb",
+      "tenderId": "tnd-demo-benelux-2026",
+      "gsaId": "gsa-aeb",
+      "gsaName": "AEB",
+      "contactName": "Ian Crauwels",
+      "email": "ian.crauwels@aeb.com",
+      "headquarters": "Stuttgart, Germany",
+      "coverage": [
+        "Germany",
+        "DACH",
+        "Benelux"
+      ],
+      "markets": [
+        "DACH",
+        "Benelux"
+      ],
+      "certifications": [
+        "IATA",
+        "CASS",
+        "GDP"
+      ],
+      "cargoFocus": "General cargo, pharma, industrial freight",
+      "networkScore": 91,
+      "financialScore": 86,
+      "complianceScore": 94,
+      "winRate": 39,
+      "proposedCommission": "5.0% base commission plus 1.0% pharma growth accelerator",
+      "launchTimeline": "AEB can mobilize a dedicated Saudia Cargo sales desk within 30 days of award.",
+      "namedAccountCoverage": "AEB proposes named coverage for 25 priority forwarder and shipper accounts across Germany, DACH, Benelux.",
+      "monthlySalesTarget": "518 tons per month after ramp-up, with weekly pipeline review and monthly conversion reporting.",
+      "networkPlan": "The plan focuses on DACH, Benelux accounts, using AMS-JED, BRU-RUH, LGG-JED as the initial route scope. Sales activity is prioritized around general cargo, pharma, industrial freight with route-by-route opportunity tracking.",
+      "operationalReadiness": "IATA, CASS, GDP capability is in place. The proposed launch model includes customer onboarding, GHA handover, rate desk setup, and weekly performance cadence with Saudia Cargo.",
+      "documents": [
+        {
+          "id": "aeb-company-profile.txt-285",
+          "name": "aeb-company-profile.txt",
+          "size": 285,
+          "mimeType": "text/plain",
+          "dataUrl": "data:text/plain;base64,QUVCIGNvbXBhbnkgcHJvZmlsZQoKQ29udGFjdDogSWFuIENyYXV3ZWxzCkVtYWlsOiBpYW4uY3JhdXdlbHNAYWViLmNvbQpIZWFkcXVhcnRlcnM6IFN0dXR0Z2FydCwgR2VybWFueQpDb3ZlcmFnZTogR2VybWFueSwgREFDSCwgQmVuZWx1eApDZXJ0aWZpY2F0aW9uczogSUFUQSwgQ0FTUywgR0RQCgpHZXJtYW55LWJhc2VkIGNhcmdvIHNhbGVzIHBhcnRuZXIgd2l0aCBzdHJvbmcgREFDSCBmb3J3YXJkZXIgY292ZXJhZ2UgYW5kIHJlbGlhYmxlIHBoYXJtYS1jYXBhYmxlIGFjY291bnQgaGFuZGxpbmcu"
+        },
+        {
+          "id": "saudi-cargo-representation-benelux-sales-plan.txt-305",
+          "name": "saudi-cargo-representation-benelux-sales-plan.txt",
+          "size": 305,
+          "mimeType": "text/plain",
+          "dataUrl": "data:text/plain;base64,U2F1ZGkgQ2FyZ28gcmVwcmVzZW50YXRpb24gQmVuZWx1eCBzYWxlcyBwbGFuCgpUZW5kZXIgc2NvcGU6IE5ldGhlcmxhbmRzLCBCZWxnaXVtLCBMdXhlbWJvdXJnClJvdXRlczogQU1TLUpFRCwgQlJVLVJVSCwgTEdHLUpFRApQcm9kdWN0IGZvY3VzOiBQaGFybWEsIHBlcmlzaGFibGVzLCBlLWNvbW1lcmNlLCBnZW5lcmFsIGNhcmdvCgpBRUIgd2lsbCB0YXJnZXQgbmFtZWQgYWNjb3VudHMsIHdlZWtseSBwaXBlbGluZSByZXZpZXdzLCBhbmQgcm91dGUtc3BlY2lmaWMgY2FyZ28gY29udmVyc2lvbiBmb3IgdGhlIHRlbmRlciBzY29wZS4="
+        }
+      ],
+      "status": "shortlisted",
+      "submittedAt": "2026-05-14T19:00:00.000Z",
+      "updatedAt": "2026-05-14T19:00:00.000Z"
+    },
+    {
+      "id": "app-demo-benelux-share-logistics",
+      "tenderId": "tnd-demo-benelux-2026",
+      "gsaId": "gsa-share-logistics",
+      "gsaName": "Share Logistics GmbH",
+      "contactName": "Lucas Goesling",
+      "email": "lgs@sharelogistics.com",
+      "headquarters": "Hamburg, Germany",
+      "coverage": [
+        "Germany",
+        "Benelux",
+        "Global forwarding network"
+      ],
+      "markets": [
+        "DACH",
+        "Benelux"
+      ],
+      "certifications": [
+        "IATA",
+        "CASS",
+        "ISO 9001"
+      ],
+      "cargoFocus": "Consolidations, general cargo, project cargo",
+      "networkScore": 86,
+      "financialScore": 84,
+      "complianceScore": 88,
+      "winRate": 32,
+      "proposedCommission": "4.8% base commission with quarterly route-performance review",
+      "launchTimeline": "Share Logistics GmbH can mobilize a dedicated Saudia Cargo sales desk within 45 days of award.",
+      "namedAccountCoverage": "Share Logistics GmbH proposes named coverage for 20 priority forwarder and shipper accounts across Germany, Benelux, Global forwarding network.",
+      "monthlySalesTarget": "475 tons per month after ramp-up, with weekly pipeline review and monthly conversion reporting.",
+      "networkPlan": "The plan focuses on DACH, Benelux accounts, using AMS-JED, BRU-RUH, LGG-JED as the initial route scope. Sales activity is prioritized around consolidations, general cargo, project cargo with route-by-route opportunity tracking.",
+      "operationalReadiness": "IATA, CASS, ISO 9001 capability is in place. The proposed launch model includes customer onboarding, GHA handover, rate desk setup, and weekly performance cadence with Saudia Cargo.",
+      "documents": [
+        {
+          "id": "share-logistics-gmbh-company-profile.txt-326",
+          "name": "share-logistics-gmbh-company-profile.txt",
+          "size": 326,
+          "mimeType": "text/plain",
+          "dataUrl": "data:text/plain;base64,U2hhcmUgTG9naXN0aWNzIEdtYkggY29tcGFueSBwcm9maWxlCgpDb250YWN0OiBMdWNhcyBHb2VzbGluZwpFbWFpbDogbGdzQHNoYXJlbG9naXN0aWNzLmNvbQpIZWFkcXVhcnRlcnM6IEhhbWJ1cmcsIEdlcm1hbnkKQ292ZXJhZ2U6IEdlcm1hbnksIEJlbmVsdXgsIEdsb2JhbCBmb3J3YXJkaW5nIG5ldHdvcmsKQ2VydGlmaWNhdGlvbnM6IElBVEEsIENBU1MsIElTTyA5MDAxCgpOZXR3b3JrLWRyaXZlbiBmb3J3YXJkaW5nIHBhcnRuZXIgd2l0aCBzb2xpZCBjb25zb2xpZGF0aW9uIGZsb3dzIGFuZCBicm9hZCBhaXJsaW5lLWNvbXBhdGlibGUgYWNjb3VudCBjb3ZlcmFnZS4="
+        },
+        {
+          "id": "saudi-cargo-representation-benelux-sales-plan.txt-322",
+          "name": "saudi-cargo-representation-benelux-sales-plan.txt",
+          "size": 322,
+          "mimeType": "text/plain",
+          "dataUrl": "data:text/plain;base64,U2F1ZGkgQ2FyZ28gcmVwcmVzZW50YXRpb24gQmVuZWx1eCBzYWxlcyBwbGFuCgpUZW5kZXIgc2NvcGU6IE5ldGhlcmxhbmRzLCBCZWxnaXVtLCBMdXhlbWJvdXJnClJvdXRlczogQU1TLUpFRCwgQlJVLVJVSCwgTEdHLUpFRApQcm9kdWN0IGZvY3VzOiBQaGFybWEsIHBlcmlzaGFibGVzLCBlLWNvbW1lcmNlLCBnZW5lcmFsIGNhcmdvCgpTaGFyZSBMb2dpc3RpY3MgR21iSCB3aWxsIHRhcmdldCBuYW1lZCBhY2NvdW50cywgd2Vla2x5IHBpcGVsaW5lIHJldmlld3MsIGFuZCByb3V0ZS1zcGVjaWZpYyBjYXJnbyBjb252ZXJzaW9uIGZvciB0aGUgdGVuZGVyIHNjb3BlLg=="
+        }
+      ],
+      "status": "pending",
+      "submittedAt": "2026-05-14T19:08:00.000Z",
+      "updatedAt": "2026-05-14T19:08:00.000Z"
+    },
+    {
+      "id": "app-demo-benelux-neutral-freight",
+      "tenderId": "tnd-demo-benelux-2026",
+      "gsaId": "gsa-neutral-freight",
+      "gsaName": "Neutral Freight Services SAS",
+      "contactName": "Helene Dimopoulou",
+      "email": "helene@neutralfreight.com",
+      "headquarters": "Paris, France",
+      "coverage": [
+        "France",
+        "Europe",
+        "North Africa"
+      ],
+      "markets": [
+        "France",
+        "North Africa"
+      ],
+      "certifications": [
+        "IATA",
+        "CASS"
+      ],
+      "cargoFocus": "Neutral wholesale, consolidations, general cargo",
+      "networkScore": 85,
+      "financialScore": 82,
+      "complianceScore": 86,
+      "winRate": 31,
+      "proposedCommission": "4.6% base commission and consolidation bonus for LGG feed",
+      "launchTimeline": "Neutral Freight Services SAS can mobilize a dedicated Saudia Cargo sales desk within 45 days of award.",
+      "namedAccountCoverage": "Neutral Freight Services SAS proposes named coverage for 19 priority forwarder and shipper accounts across France, Europe, North Africa.",
+      "monthlySalesTarget": "469 tons per month after ramp-up, with weekly pipeline review and monthly conversion reporting.",
+      "networkPlan": "The plan focuses on France, North Africa accounts, using AMS-JED, BRU-RUH, LGG-JED as the initial route scope. Sales activity is prioritized around neutral wholesale, consolidations, general cargo with route-by-route opportunity tracking.",
+      "operationalReadiness": "IATA, CASS capability is in place. The proposed launch model includes customer onboarding, GHA handover, rate desk setup, and weekly performance cadence with Saudia Cargo.",
+      "documents": [
+        {
+          "id": "neutral-freight-services-sas-company-profile.txt-314",
+          "name": "neutral-freight-services-sas-company-profile.txt",
+          "size": 314,
+          "mimeType": "text/plain",
+          "dataUrl": "data:text/plain;base64,TmV1dHJhbCBGcmVpZ2h0IFNlcnZpY2VzIFNBUyBjb21wYW55IHByb2ZpbGUKCkNvbnRhY3Q6IEhlbGVuZSBEaW1vcG91bG91CkVtYWlsOiBoZWxlbmVAbmV1dHJhbGZyZWlnaHQuY29tCkhlYWRxdWFydGVyczogUGFyaXMsIEZyYW5jZQpDb3ZlcmFnZTogRnJhbmNlLCBFdXJvcGUsIE5vcnRoIEFmcmljYQpDZXJ0aWZpY2F0aW9uczogSUFUQSwgQ0FTUwoKTmV1dHJhbCBmcmVpZ2h0IHBhcnRuZXIgd2l0aCB3aG9sZXNhbGUgY29uc29saWRhdGlvbiByZWFjaCBhbmQgcHJhY3RpY2FsIGFjY2VzcyB0byBmb3J3YXJkZXItaGVhdnkgYWNjb3VudCBwb29scy4="
+        },
+        {
+          "id": "saudi-cargo-representation-benelux-sales-plan.txt-330",
+          "name": "saudi-cargo-representation-benelux-sales-plan.txt",
+          "size": 330,
+          "mimeType": "text/plain",
+          "dataUrl": "data:text/plain;base64,U2F1ZGkgQ2FyZ28gcmVwcmVzZW50YXRpb24gQmVuZWx1eCBzYWxlcyBwbGFuCgpUZW5kZXIgc2NvcGU6IE5ldGhlcmxhbmRzLCBCZWxnaXVtLCBMdXhlbWJvdXJnClJvdXRlczogQU1TLUpFRCwgQlJVLVJVSCwgTEdHLUpFRApQcm9kdWN0IGZvY3VzOiBQaGFybWEsIHBlcmlzaGFibGVzLCBlLWNvbW1lcmNlLCBnZW5lcmFsIGNhcmdvCgpOZXV0cmFsIEZyZWlnaHQgU2VydmljZXMgU0FTIHdpbGwgdGFyZ2V0IG5hbWVkIGFjY291bnRzLCB3ZWVrbHkgcGlwZWxpbmUgcmV2aWV3cywgYW5kIHJvdXRlLXNwZWNpZmljIGNhcmdvIGNvbnZlcnNpb24gZm9yIHRoZSB0ZW5kZXIgc2NvcGUu"
+        }
+      ],
+      "status": "pending",
+      "submittedAt": "2026-05-14T19:16:00.000Z",
+      "updatedAt": "2026-05-14T19:16:00.000Z"
+    },
+    {
+      "id": "app-demo-benelux-cargo-airlines-services",
+      "tenderId": "tnd-demo-benelux-2026",
+      "gsaId": "gsa-cargo-airlines-services",
+      "gsaName": "Cargo Airlines Services SAS",
+      "contactName": "Cedric Lepretre",
+      "email": "cedric@cargoairlines.aero",
+      "headquarters": "Paris, France",
+      "coverage": [
+        "France",
+        "Benelux",
+        "Southern Europe"
+      ],
+      "markets": [
+        "France",
+        "Benelux"
+      ],
+      "certifications": [
+        "IATA",
+        "CASS",
+        "GDP"
+      ],
+      "cargoFocus": "Airline representation, pharma, general cargo",
+      "networkScore": 90,
+      "financialScore": 85,
+      "complianceScore": 93,
+      "winRate": 38,
+      "proposedCommission": "5.4% base commission with CDG support desk add-on",
+      "launchTimeline": "Cargo Airlines Services SAS can mobilize a dedicated Saudia Cargo sales desk within 30 days of award.",
+      "namedAccountCoverage": "Cargo Airlines Services SAS proposes named coverage for 24 priority forwarder and shipper accounts across France, Benelux, Southern Europe.",
+      "monthlySalesTarget": "512 tons per month after ramp-up, with weekly pipeline review and monthly conversion reporting.",
+      "networkPlan": "The plan focuses on France, Benelux accounts, using AMS-JED, BRU-RUH, LGG-JED as the initial route scope. Sales activity is prioritized around airline representation, pharma, general cargo with route-by-route opportunity tracking.",
+      "operationalReadiness": "IATA, CASS, GDP capability is in place. The proposed launch model includes customer onboarding, GHA handover, rate desk setup, and weekly performance cadence with Saudia Cargo.",
+      "documents": [
+        {
+          "id": "cargo-airlines-services-sas-company-profile.txt-318",
+          "name": "cargo-airlines-services-sas-company-profile.txt",
+          "size": 318,
+          "mimeType": "text/plain",
+          "dataUrl": "data:text/plain;base64,Q2FyZ28gQWlybGluZXMgU2VydmljZXMgU0FTIGNvbXBhbnkgcHJvZmlsZQoKQ29udGFjdDogQ2VkcmljIExlcHJldHJlCkVtYWlsOiBjZWRyaWNAY2FyZ29haXJsaW5lcy5hZXJvCkhlYWRxdWFydGVyczogUGFyaXMsIEZyYW5jZQpDb3ZlcmFnZTogRnJhbmNlLCBCZW5lbHV4LCBTb3V0aGVybiBFdXJvcGUKQ2VydGlmaWNhdGlvbnM6IElBVEEsIENBU1MsIEdEUAoKRnJhbmNlLWJhc2VkIGFpcmxpbmUgY2FyZ28gcmVwcmVzZW50YXRpb24gc3BlY2lhbGlzdCB3aXRoIHN0cm9uZyBmb3J3YXJkZXIgY292ZXJhZ2UgYW5kIG1hdHVyZSBzYWxlcyBwcm9jZXNzZXMu"
+        },
+        {
+          "id": "saudi-cargo-representation-benelux-sales-plan.txt-329",
+          "name": "saudi-cargo-representation-benelux-sales-plan.txt",
+          "size": 329,
+          "mimeType": "text/plain",
+          "dataUrl": "data:text/plain;base64,U2F1ZGkgQ2FyZ28gcmVwcmVzZW50YXRpb24gQmVuZWx1eCBzYWxlcyBwbGFuCgpUZW5kZXIgc2NvcGU6IE5ldGhlcmxhbmRzLCBCZWxnaXVtLCBMdXhlbWJvdXJnClJvdXRlczogQU1TLUpFRCwgQlJVLVJVSCwgTEdHLUpFRApQcm9kdWN0IGZvY3VzOiBQaGFybWEsIHBlcmlzaGFibGVzLCBlLWNvbW1lcmNlLCBnZW5lcmFsIGNhcmdvCgpDYXJnbyBBaXJsaW5lcyBTZXJ2aWNlcyBTQVMgd2lsbCB0YXJnZXQgbmFtZWQgYWNjb3VudHMsIHdlZWtseSBwaXBlbGluZSByZXZpZXdzLCBhbmQgcm91dGUtc3BlY2lmaWMgY2FyZ28gY29udmVyc2lvbiBmb3IgdGhlIHRlbmRlciBzY29wZS4="
+        }
+      ],
+      "status": "rejected",
+      "submittedAt": "2026-05-14T19:24:00.000Z",
+      "updatedAt": "2026-05-14T19:24:00.000Z"
+    },
+    {
+      "id": "app-demo-uk-ireland-air-menzies",
+      "tenderId": "tnd-demo-uk-ireland-2026",
+      "gsaId": "gsa-air-menzies",
+      "gsaName": "Air Menzies International",
+      "contactName": "Samantha Leaper",
+      "email": "samantha.leaper@airmenzies.com",
+      "headquarters": "Crawley, United Kingdom",
+      "coverage": [
+        "United Kingdom",
+        "Ireland",
+        "Global network"
+      ],
+      "markets": [
+        "UK",
+        "Ireland",
+        "Global"
+      ],
+      "certifications": [
+        "IATA",
+        "CASS",
+        "GDP"
+      ],
+      "cargoFocus": "Wholesale air cargo, pharma, express",
+      "networkScore": 92,
+      "financialScore": 87,
+      "complianceScore": 94,
+      "winRate": 40,
+      "proposedCommission": "5.2% base commission plus express-volume accelerator",
+      "launchTimeline": "Air Menzies International can mobilize a dedicated Saudia Cargo sales desk within 30 days of award.",
+      "namedAccountCoverage": "Air Menzies International proposes named coverage for 26 priority forwarder and shipper accounts across United Kingdom, Ireland, Global network.",
+      "monthlySalesTarget": "402 tons per month after ramp-up, with weekly pipeline review and monthly conversion reporting.",
+      "networkPlan": "The plan focuses on UK, Ireland, Global accounts, using LHR-JED, MAN-RUH, DUB-JED as the initial route scope. Sales activity is prioritized around wholesale air cargo, pharma, express with route-by-route opportunity tracking.",
+      "operationalReadiness": "IATA, CASS, GDP capability is in place. The proposed launch model includes customer onboarding, GHA handover, rate desk setup, and weekly performance cadence with Saudia Cargo.",
+      "documents": [
+        {
+          "id": "air-menzies-international-company-profile.txt-338",
+          "name": "air-menzies-international-company-profile.txt",
+          "size": 338,
+          "mimeType": "text/plain",
+          "dataUrl": "data:text/plain;base64,QWlyIE1lbnppZXMgSW50ZXJuYXRpb25hbCBjb21wYW55IHByb2ZpbGUKCkNvbnRhY3Q6IFNhbWFudGhhIExlYXBlcgpFbWFpbDogc2FtYW50aGEubGVhcGVyQGFpcm1lbnppZXMuY29tCkhlYWRxdWFydGVyczogQ3Jhd2xleSwgVW5pdGVkIEtpbmdkb20KQ292ZXJhZ2U6IFVuaXRlZCBLaW5nZG9tLCBJcmVsYW5kLCBHbG9iYWwgbmV0d29yawpDZXJ0aWZpY2F0aW9uczogSUFUQSwgQ0FTUywgR0RQCgpNYWpvciBVSyB3aG9sZXNhbGUgYWlyIGNhcmdvIHBhcnRuZXIgd2l0aCBnbG9iYWwgbmV0d29yayBhY2Nlc3MgYW5kIHN0cm9uZyBhaXJsaW5lLWNvbXBhdGlibGUgc2FsZXMgb3BlcmF0aW9ucy4="
+        },
+        {
+          "id": "saudi-cargo-uk-and-ireland-sales-mandate-sales-plan.txt-321",
+          "name": "saudi-cargo-uk-and-ireland-sales-mandate-sales-plan.txt",
+          "size": 321,
+          "mimeType": "text/plain",
+          "dataUrl": "data:text/plain;base64,U2F1ZGkgQ2FyZ28gVUsgYW5kIElyZWxhbmQgc2FsZXMgbWFuZGF0ZSBzYWxlcyBwbGFuCgpUZW5kZXIgc2NvcGU6IFVuaXRlZCBLaW5nZG9tLCBJcmVsYW5kClJvdXRlczogTEhSLUpFRCwgTUFOLVJVSCwgRFVCLUpFRApQcm9kdWN0IGZvY3VzOiBFeHByZXNzLCBtYWlsLCBlLWNvbW1lcmNlLCBoaWdoLXZhbHVlIGNhcmdvCgpBaXIgTWVuemllcyBJbnRlcm5hdGlvbmFsIHdpbGwgdGFyZ2V0IG5hbWVkIGFjY291bnRzLCB3ZWVrbHkgcGlwZWxpbmUgcmV2aWV3cywgYW5kIHJvdXRlLXNwZWNpZmljIGNhcmdvIGNvbnZlcnNpb24gZm9yIHRoZSB0ZW5kZXIgc2NvcGUu"
+        }
+      ],
+      "status": "shortlisted",
+      "submittedAt": "2026-05-14T19:32:00.000Z",
+      "updatedAt": "2026-05-14T19:32:00.000Z"
+    },
+    {
+      "id": "app-demo-uk-ireland-air-business",
+      "tenderId": "tnd-demo-uk-ireland-2026",
+      "gsaId": "gsa-air-business",
+      "gsaName": "Air Business",
+      "contactName": "Darrell Sweeney",
+      "email": "darrell.sweeney@airbusiness.com",
+      "headquarters": "Hatfield, United Kingdom",
+      "coverage": [
+        "United Kingdom",
+        "Ireland",
+        "Europe"
+      ],
+      "markets": [
+        "UK",
+        "Ireland"
+      ],
+      "certifications": [
+        "IATA",
+        "CASS",
+        "ISO 9001"
+      ],
+      "cargoFocus": "Mail, e-commerce, express cargo",
+      "networkScore": 88,
+      "financialScore": 86,
+      "complianceScore": 89,
+      "winRate": 35,
+      "proposedCommission": "4.9% base commission with mail and e-commerce incentive",
+      "launchTimeline": "Air Business can mobilize a dedicated Saudia Cargo sales desk within 30 days of award.",
+      "namedAccountCoverage": "Air Business proposes named coverage for 22 priority forwarder and shipper accounts across United Kingdom, Ireland, Europe.",
+      "monthlySalesTarget": "379 tons per month after ramp-up, with weekly pipeline review and monthly conversion reporting.",
+      "networkPlan": "The plan focuses on UK, Ireland accounts, using LHR-JED, MAN-RUH, DUB-JED as the initial route scope. Sales activity is prioritized around mail, e-commerce, express cargo with route-by-route opportunity tracking.",
+      "operationalReadiness": "IATA, CASS, ISO 9001 capability is in place. The proposed launch model includes customer onboarding, GHA handover, rate desk setup, and weekly performance cadence with Saudia Cargo.",
+      "documents": [
+        {
+          "id": "air-business-company-profile.txt-307",
+          "name": "air-business-company-profile.txt",
+          "size": 307,
+          "mimeType": "text/plain",
+          "dataUrl": "data:text/plain;base64,QWlyIEJ1c2luZXNzIGNvbXBhbnkgcHJvZmlsZQoKQ29udGFjdDogRGFycmVsbCBTd2VlbmV5CkVtYWlsOiBkYXJyZWxsLnN3ZWVuZXlAYWlyYnVzaW5lc3MuY29tCkhlYWRxdWFydGVyczogSGF0ZmllbGQsIFVuaXRlZCBLaW5nZG9tCkNvdmVyYWdlOiBVbml0ZWQgS2luZ2RvbSwgSXJlbGFuZCwgRXVyb3BlCkNlcnRpZmljYXRpb25zOiBJQVRBLCBDQVNTLCBJU08gOTAwMQoKVUsgbG9naXN0aWNzIGFuZCBhaXIgY2FyZ28gcGFydG5lciB3aXRoIHN0cm9uZyBtYWlsLCBlLWNvbW1lcmNlIGFuZCBleHByZXNzIGFjY291bnQgcmVsZXZhbmNlLg=="
+        },
+        {
+          "id": "saudi-cargo-uk-and-ireland-sales-mandate-sales-plan.txt-308",
+          "name": "saudi-cargo-uk-and-ireland-sales-mandate-sales-plan.txt",
+          "size": 308,
+          "mimeType": "text/plain",
+          "dataUrl": "data:text/plain;base64,U2F1ZGkgQ2FyZ28gVUsgYW5kIElyZWxhbmQgc2FsZXMgbWFuZGF0ZSBzYWxlcyBwbGFuCgpUZW5kZXIgc2NvcGU6IFVuaXRlZCBLaW5nZG9tLCBJcmVsYW5kClJvdXRlczogTEhSLUpFRCwgTUFOLVJVSCwgRFVCLUpFRApQcm9kdWN0IGZvY3VzOiBFeHByZXNzLCBtYWlsLCBlLWNvbW1lcmNlLCBoaWdoLXZhbHVlIGNhcmdvCgpBaXIgQnVzaW5lc3Mgd2lsbCB0YXJnZXQgbmFtZWQgYWNjb3VudHMsIHdlZWtseSBwaXBlbGluZSByZXZpZXdzLCBhbmQgcm91dGUtc3BlY2lmaWMgY2FyZ28gY29udmVyc2lvbiBmb3IgdGhlIHRlbmRlciBzY29wZS4="
+        }
+      ],
+      "status": "pending",
+      "submittedAt": "2026-05-14T19:40:00.000Z",
+      "updatedAt": "2026-05-14T19:40:00.000Z"
+    },
+    {
+      "id": "app-demo-uk-ireland-priority-freight",
+      "tenderId": "tnd-demo-uk-ireland-2026",
+      "gsaId": "gsa-priority-freight",
+      "gsaName": "Priority Freight Europe GmbH",
+      "contactName": "Marco Sauer",
+      "email": "marco.sauer@priorityfreight.com",
+      "headquarters": "Frankfurt Am Main, Germany",
+      "coverage": [
+        "Germany",
+        "Europe"
+      ],
+      "markets": [
+        "DACH",
+        "Europe"
+      ],
+      "certifications": [
+        "IATA",
+        "GDP",
+        "ISO 9001"
+      ],
+      "cargoFocus": "Automotive, AOG, emergency logistics",
+      "networkScore": 87,
+      "financialScore": 83,
+      "complianceScore": 91,
+      "winRate": 33,
+      "proposedCommission": "5.1% base commission focused on premium urgent cargo",
+      "launchTimeline": "Priority Freight Europe GmbH can mobilize a dedicated Saudia Cargo sales desk within 45 days of award.",
+      "namedAccountCoverage": "Priority Freight Europe GmbH proposes named coverage for 21 priority forwarder and shipper accounts across Germany, Europe.",
+      "monthlySalesTarget": "369 tons per month after ramp-up, with weekly pipeline review and monthly conversion reporting.",
+      "networkPlan": "The plan focuses on DACH, Europe accounts, using LHR-JED, MAN-RUH, DUB-JED as the initial route scope. Sales activity is prioritized around automotive, aog, emergency logistics with route-by-route opportunity tracking.",
+      "operationalReadiness": "IATA, GDP, ISO 9001 capability is in place. The proposed launch model includes customer onboarding, GHA handover, rate desk setup, and weekly performance cadence with Saudia Cargo.",
+      "documents": [
+        {
+          "id": "priority-freight-europe-gmbh-company-profile.txt-328",
+          "name": "priority-freight-europe-gmbh-company-profile.txt",
+          "size": 328,
+          "mimeType": "text/plain",
+          "dataUrl": "data:text/plain;base64,UHJpb3JpdHkgRnJlaWdodCBFdXJvcGUgR21iSCBjb21wYW55IHByb2ZpbGUKCkNvbnRhY3Q6IE1hcmNvIFNhdWVyCkVtYWlsOiBtYXJjby5zYXVlckBwcmlvcml0eWZyZWlnaHQuY29tCkhlYWRxdWFydGVyczogRnJhbmtmdXJ0IEFtIE1haW4sIEdlcm1hbnkKQ292ZXJhZ2U6IEdlcm1hbnksIEV1cm9wZQpDZXJ0aWZpY2F0aW9uczogSUFUQSwgR0RQLCBJU08gOTAwMQoKRW1lcmdlbmN5IGxvZ2lzdGljcyBzcGVjaWFsaXN0IHdpdGggaGlnaC12YWx1ZSB1cmdlbnQgZnJlaWdodCBhY2Nlc3MgYW5kIG1hdHVyZSBvcGVyYXRpb25hbCBjb250cm9sIGZvciBwcmVtaXVtIGNhcmdvLg=="
+        },
+        {
+          "id": "saudi-cargo-uk-and-ireland-sales-mandate-sales-plan.txt-324",
+          "name": "saudi-cargo-uk-and-ireland-sales-mandate-sales-plan.txt",
+          "size": 324,
+          "mimeType": "text/plain",
+          "dataUrl": "data:text/plain;base64,U2F1ZGkgQ2FyZ28gVUsgYW5kIElyZWxhbmQgc2FsZXMgbWFuZGF0ZSBzYWxlcyBwbGFuCgpUZW5kZXIgc2NvcGU6IFVuaXRlZCBLaW5nZG9tLCBJcmVsYW5kClJvdXRlczogTEhSLUpFRCwgTUFOLVJVSCwgRFVCLUpFRApQcm9kdWN0IGZvY3VzOiBFeHByZXNzLCBtYWlsLCBlLWNvbW1lcmNlLCBoaWdoLXZhbHVlIGNhcmdvCgpQcmlvcml0eSBGcmVpZ2h0IEV1cm9wZSBHbWJIIHdpbGwgdGFyZ2V0IG5hbWVkIGFjY291bnRzLCB3ZWVrbHkgcGlwZWxpbmUgcmV2aWV3cywgYW5kIHJvdXRlLXNwZWNpZmljIGNhcmdvIGNvbnZlcnNpb24gZm9yIHRoZSB0ZW5kZXIgc2NvcGUu"
+        }
+      ],
+      "status": "pending",
+      "submittedAt": "2026-05-14T19:48:00.000Z",
+      "updatedAt": "2026-05-14T19:48:00.000Z"
+    },
+    {
+      "id": "app-demo-uk-ireland-forto",
+      "tenderId": "tnd-demo-uk-ireland-2026",
       "gsaId": "gsa-forto",
       "gsaName": "Forto Logistics",
       "contactName": "Christopher Braun",
-      "email": "forto@airgsa.demo",
+      "email": "christopher.braun@forto.com",
+      "headquarters": "Berlin, Germany",
+      "coverage": [
+        "Germany",
+        "Europe",
+        "Asia trade lanes"
+      ],
+      "markets": [
+        "DACH",
+        "Asia"
+      ],
+      "certifications": [
+        "IATA",
+        "CASS",
+        "ISO 9001"
+      ],
+      "cargoFocus": "Digital freight, e-commerce, general cargo",
+      "networkScore": 89,
+      "financialScore": 88,
+      "complianceScore": 87,
+      "winRate": 36,
+      "proposedCommission": "4.7% base commission with digital pipeline reporting",
+      "launchTimeline": "Forto Logistics can mobilize a dedicated Saudia Cargo sales desk within 30 days of award.",
+      "namedAccountCoverage": "Forto Logistics proposes named coverage for 23 priority forwarder and shipper accounts across Germany, Europe, Asia trade lanes.",
+      "monthlySalesTarget": "383 tons per month after ramp-up, with weekly pipeline review and monthly conversion reporting.",
+      "networkPlan": "The plan focuses on DACH, Asia accounts, using LHR-JED, MAN-RUH, DUB-JED as the initial route scope. Sales activity is prioritized around digital freight, e-commerce, general cargo with route-by-route opportunity tracking.",
+      "operationalReadiness": "IATA, CASS, ISO 9001 capability is in place. The proposed launch model includes customer onboarding, GHA handover, rate desk setup, and weekly performance cadence with Saudia Cargo.",
+      "documents": [
+        {
+          "id": "forto-logistics-company-profile.txt-322",
+          "name": "forto-logistics-company-profile.txt",
+          "size": 322,
+          "mimeType": "text/plain",
+          "dataUrl": "data:text/plain;base64,Rm9ydG8gTG9naXN0aWNzIGNvbXBhbnkgcHJvZmlsZQoKQ29udGFjdDogQ2hyaXN0b3BoZXIgQnJhdW4KRW1haWw6IGNocmlzdG9waGVyLmJyYXVuQGZvcnRvLmNvbQpIZWFkcXVhcnRlcnM6IEJlcmxpbiwgR2VybWFueQpDb3ZlcmFnZTogR2VybWFueSwgRXVyb3BlLCBBc2lhIHRyYWRlIGxhbmVzCkNlcnRpZmljYXRpb25zOiBJQVRBLCBDQVNTLCBJU08gOTAwMQoKRGlnaXRhbCBmcmVpZ2h0IGZvcndhcmRlciB3aXRoIHNjYWxhYmxlIGN1c3RvbWVyIGNvdmVyYWdlIGFuZCBzdHJvbmcgZGF0YS1sZWQgc2FsZXMgcG90ZW50aWFsIGZvciBlLWNvbW1lcmNlIGxhbmVzLg=="
+        },
+        {
+          "id": "saudi-cargo-uk-and-ireland-sales-mandate-sales-plan.txt-311",
+          "name": "saudi-cargo-uk-and-ireland-sales-mandate-sales-plan.txt",
+          "size": 311,
+          "mimeType": "text/plain",
+          "dataUrl": "data:text/plain;base64,U2F1ZGkgQ2FyZ28gVUsgYW5kIElyZWxhbmQgc2FsZXMgbWFuZGF0ZSBzYWxlcyBwbGFuCgpUZW5kZXIgc2NvcGU6IFVuaXRlZCBLaW5nZG9tLCBJcmVsYW5kClJvdXRlczogTEhSLUpFRCwgTUFOLVJVSCwgRFVCLUpFRApQcm9kdWN0IGZvY3VzOiBFeHByZXNzLCBtYWlsLCBlLWNvbW1lcmNlLCBoaWdoLXZhbHVlIGNhcmdvCgpGb3J0byBMb2dpc3RpY3Mgd2lsbCB0YXJnZXQgbmFtZWQgYWNjb3VudHMsIHdlZWtseSBwaXBlbGluZSByZXZpZXdzLCBhbmQgcm91dGUtc3BlY2lmaWMgY2FyZ28gY29udmVyc2lvbiBmb3IgdGhlIHRlbmRlciBzY29wZS4="
+        }
+      ],
+      "status": "rejected",
+      "submittedAt": "2026-05-14T19:56:00.000Z",
+      "updatedAt": "2026-05-14T19:56:00.000Z"
+    },
+    {
+      "id": "app-demo-france-cargo-airlines-services",
+      "tenderId": "tnd-demo-france-2026",
+      "gsaId": "gsa-cargo-airlines-services",
+      "gsaName": "Cargo Airlines Services SAS",
+      "contactName": "Cedric Lepretre",
+      "email": "cedric@cargoairlines.aero",
+      "headquarters": "Paris, France",
+      "coverage": [
+        "France",
+        "Benelux",
+        "Southern Europe"
+      ],
+      "markets": [
+        "France",
+        "Benelux"
+      ],
+      "certifications": [
+        "IATA",
+        "CASS",
+        "GDP"
+      ],
+      "cargoFocus": "Airline representation, pharma, general cargo",
+      "networkScore": 90,
+      "financialScore": 85,
+      "complianceScore": 93,
+      "winRate": 38,
+      "proposedCommission": "5.0% base commission and 1.5% high-yield cargo bonus",
+      "launchTimeline": "Cargo Airlines Services SAS can mobilize a dedicated Saudia Cargo sales desk within 30 days of award.",
+      "namedAccountCoverage": "Cargo Airlines Services SAS proposes named coverage for 24 priority forwarder and shipper accounts across France, Benelux, Southern Europe.",
+      "monthlySalesTarget": "465 tons per month after ramp-up, with weekly pipeline review and monthly conversion reporting.",
+      "networkPlan": "The plan focuses on France, Benelux accounts, using CDG-JED, CDG-RUH, LYS-JED as the initial route scope. Sales activity is prioritized around airline representation, pharma, general cargo with route-by-route opportunity tracking.",
+      "operationalReadiness": "IATA, CASS, GDP capability is in place. The proposed launch model includes customer onboarding, GHA handover, rate desk setup, and weekly performance cadence with Saudia Cargo.",
+      "documents": [
+        {
+          "id": "cargo-airlines-services-sas-company-profile.txt-318",
+          "name": "cargo-airlines-services-sas-company-profile.txt",
+          "size": 318,
+          "mimeType": "text/plain",
+          "dataUrl": "data:text/plain;base64,Q2FyZ28gQWlybGluZXMgU2VydmljZXMgU0FTIGNvbXBhbnkgcHJvZmlsZQoKQ29udGFjdDogQ2VkcmljIExlcHJldHJlCkVtYWlsOiBjZWRyaWNAY2FyZ29haXJsaW5lcy5hZXJvCkhlYWRxdWFydGVyczogUGFyaXMsIEZyYW5jZQpDb3ZlcmFnZTogRnJhbmNlLCBCZW5lbHV4LCBTb3V0aGVybiBFdXJvcGUKQ2VydGlmaWNhdGlvbnM6IElBVEEsIENBU1MsIEdEUAoKRnJhbmNlLWJhc2VkIGFpcmxpbmUgY2FyZ28gcmVwcmVzZW50YXRpb24gc3BlY2lhbGlzdCB3aXRoIHN0cm9uZyBmb3J3YXJkZXIgY292ZXJhZ2UgYW5kIG1hdHVyZSBzYWxlcyBwcm9jZXNzZXMu"
+        },
+        {
+          "id": "saudi-cargo-france-representation-sales-plan.txt-304",
+          "name": "saudi-cargo-france-representation-sales-plan.txt",
+          "size": 304,
+          "mimeType": "text/plain",
+          "dataUrl": "data:text/plain;base64,U2F1ZGkgQ2FyZ28gRnJhbmNlIHJlcHJlc2VudGF0aW9uIHNhbGVzIHBsYW4KClRlbmRlciBzY29wZTogRnJhbmNlClJvdXRlczogQ0RHLUpFRCwgQ0RHLVJVSCwgTFlTLUpFRApQcm9kdWN0IGZvY3VzOiBQaGFybWEsIGx1eHVyeSBnb29kcywgcGVyaXNoYWJsZXMsIGdlbmVyYWwgY2FyZ28KCkNhcmdvIEFpcmxpbmVzIFNlcnZpY2VzIFNBUyB3aWxsIHRhcmdldCBuYW1lZCBhY2NvdW50cywgd2Vla2x5IHBpcGVsaW5lIHJldmlld3MsIGFuZCByb3V0ZS1zcGVjaWZpYyBjYXJnbyBjb252ZXJzaW9uIGZvciB0aGUgdGVuZGVyIHNjb3BlLg=="
+        }
+      ],
+      "status": "accepted",
+      "submittedAt": "2026-05-14T20:04:00.000Z",
+      "updatedAt": "2026-05-14T20:04:00.000Z"
+    },
+    {
+      "id": "app-demo-france-eas-france",
+      "tenderId": "tnd-demo-france-2026",
+      "gsaId": "gsa-eas-france",
+      "gsaName": "EAS France",
+      "contactName": "Marco Muggianu",
+      "email": "marco.muggianu@eas-intl.com",
+      "headquarters": "Paris, France",
+      "coverage": [
+        "France",
+        "Western Europe"
+      ],
+      "markets": [
+        "France"
+      ],
+      "certifications": [
+        "IATA",
+        "CASS"
+      ],
+      "cargoFocus": "General cargo, express, charter support",
+      "networkScore": 84,
+      "financialScore": 80,
+      "complianceScore": 86,
+      "winRate": 30,
+      "proposedCommission": "4.8% base commission with charter-support add-on",
+      "launchTimeline": "EAS France can mobilize a dedicated Saudia Cargo sales desk within 45 days of award.",
+      "namedAccountCoverage": "EAS France proposes named coverage for 18 priority forwarder and shipper accounts across France, Western Europe.",
+      "monthlySalesTarget": "420 tons per month after ramp-up, with weekly pipeline review and monthly conversion reporting.",
+      "networkPlan": "The plan focuses on France accounts, using CDG-JED, CDG-RUH, LYS-JED as the initial route scope. Sales activity is prioritized around general cargo, express, charter support with route-by-route opportunity tracking.",
+      "operationalReadiness": "IATA, CASS capability is in place. The proposed launch model includes customer onboarding, GHA handover, rate desk setup, and weekly performance cadence with Saudia Cargo.",
+      "documents": [
+        {
+          "id": "eas-france-company-profile.txt-285",
+          "name": "eas-france-company-profile.txt",
+          "size": 285,
+          "mimeType": "text/plain",
+          "dataUrl": "data:text/plain;base64,RUFTIEZyYW5jZSBjb21wYW55IHByb2ZpbGUKCkNvbnRhY3Q6IE1hcmNvIE11Z2dpYW51CkVtYWlsOiBtYXJjby5tdWdnaWFudUBlYXMtaW50bC5jb20KSGVhZHF1YXJ0ZXJzOiBQYXJpcywgRnJhbmNlCkNvdmVyYWdlOiBGcmFuY2UsIFdlc3Rlcm4gRXVyb3BlCkNlcnRpZmljYXRpb25zOiBJQVRBLCBDQVNTCgpGcmVuY2ggY2FyZ28gc2FsZXMgcGFydG5lciB3aXRoIHByYWN0aWNhbCBhaXJsaW5lIHN1cHBvcnQgY2FwYWJpbGl0eSBhbmQgYnJvYWQgbG9jYWwgZm9yd2FyZGVyIHJlbGF0aW9uc2hpcHMu"
+        },
+        {
+          "id": "saudi-cargo-france-representation-sales-plan.txt-287",
+          "name": "saudi-cargo-france-representation-sales-plan.txt",
+          "size": 287,
+          "mimeType": "text/plain",
+          "dataUrl": "data:text/plain;base64,U2F1ZGkgQ2FyZ28gRnJhbmNlIHJlcHJlc2VudGF0aW9uIHNhbGVzIHBsYW4KClRlbmRlciBzY29wZTogRnJhbmNlClJvdXRlczogQ0RHLUpFRCwgQ0RHLVJVSCwgTFlTLUpFRApQcm9kdWN0IGZvY3VzOiBQaGFybWEsIGx1eHVyeSBnb29kcywgcGVyaXNoYWJsZXMsIGdlbmVyYWwgY2FyZ28KCkVBUyBGcmFuY2Ugd2lsbCB0YXJnZXQgbmFtZWQgYWNjb3VudHMsIHdlZWtseSBwaXBlbGluZSByZXZpZXdzLCBhbmQgcm91dGUtc3BlY2lmaWMgY2FyZ28gY29udmVyc2lvbiBmb3IgdGhlIHRlbmRlciBzY29wZS4="
+        }
+      ],
+      "status": "shortlisted",
+      "submittedAt": "2026-05-14T20:12:00.000Z",
+      "updatedAt": "2026-05-14T20:12:00.000Z"
+    },
+    {
+      "id": "app-demo-france-logfret",
+      "tenderId": "tnd-demo-france-2026",
+      "gsaId": "gsa-logfret",
+      "gsaName": "Logfret",
+      "contactName": "Stephane Caillot",
+      "email": "scaillot@multimodal.fr",
+      "headquarters": "Aulnay-sous-Bois, France",
+      "coverage": [
+        "France",
+        "Europe",
+        "Overseas markets"
+      ],
+      "markets": [
+        "France",
+        "Overseas"
+      ],
+      "certifications": [
+        "IATA",
+        "CASS",
+        "ISO 9001"
+      ],
+      "cargoFocus": "Consolidations, overseas cargo, general freight",
+      "networkScore": 86,
+      "financialScore": 83,
+      "complianceScore": 87,
+      "winRate": 32,
+      "proposedCommission": "4.9% base commission plus overseas-flow accelerator",
+      "launchTimeline": "Logfret can mobilize a dedicated Saudia Cargo sales desk within 45 days of award.",
+      "namedAccountCoverage": "Logfret proposes named coverage for 20 priority forwarder and shipper accounts across France, Europe, Overseas markets.",
+      "monthlySalesTarget": "431 tons per month after ramp-up, with weekly pipeline review and monthly conversion reporting.",
+      "networkPlan": "The plan focuses on France, Overseas accounts, using CDG-JED, CDG-RUH, LYS-JED as the initial route scope. Sales activity is prioritized around consolidations, overseas cargo, general freight with route-by-route opportunity tracking.",
+      "operationalReadiness": "IATA, CASS, ISO 9001 capability is in place. The proposed launch model includes customer onboarding, GHA handover, rate desk setup, and weekly performance cadence with Saudia Cargo.",
+      "documents": [
+        {
+          "id": "logfret-company-profile.txt-313",
+          "name": "logfret-company-profile.txt",
+          "size": 313,
+          "mimeType": "text/plain",
+          "dataUrl": "data:text/plain;base64,TG9nZnJldCBjb21wYW55IHByb2ZpbGUKCkNvbnRhY3Q6IFN0ZXBoYW5lIENhaWxsb3QKRW1haWw6IHNjYWlsbG90QG11bHRpbW9kYWwuZnIKSGVhZHF1YXJ0ZXJzOiBBdWxuYXktc291cy1Cb2lzLCBGcmFuY2UKQ292ZXJhZ2U6IEZyYW5jZSwgRXVyb3BlLCBPdmVyc2VhcyBtYXJrZXRzCkNlcnRpZmljYXRpb25zOiBJQVRBLCBDQVNTLCBJU08gOTAwMQoKRXN0YWJsaXNoZWQgbG9naXN0aWNzIG5ldHdvcmsgd2l0aCBzdHJvbmcgb3ZlcnNlYXMgZmxvdyBrbm93bGVkZ2UgYW5kIGdvb2QgZml0IGZvciBzdHJ1Y3R1cmVkIGNhcGFjaXR5IHByb2dyYW1zLg=="
+        },
+        {
+          "id": "saudi-cargo-france-representation-sales-plan.txt-284",
+          "name": "saudi-cargo-france-representation-sales-plan.txt",
+          "size": 284,
+          "mimeType": "text/plain",
+          "dataUrl": "data:text/plain;base64,U2F1ZGkgQ2FyZ28gRnJhbmNlIHJlcHJlc2VudGF0aW9uIHNhbGVzIHBsYW4KClRlbmRlciBzY29wZTogRnJhbmNlClJvdXRlczogQ0RHLUpFRCwgQ0RHLVJVSCwgTFlTLUpFRApQcm9kdWN0IGZvY3VzOiBQaGFybWEsIGx1eHVyeSBnb29kcywgcGVyaXNoYWJsZXMsIGdlbmVyYWwgY2FyZ28KCkxvZ2ZyZXQgd2lsbCB0YXJnZXQgbmFtZWQgYWNjb3VudHMsIHdlZWtseSBwaXBlbGluZSByZXZpZXdzLCBhbmQgcm91dGUtc3BlY2lmaWMgY2FyZ28gY29udmVyc2lvbiBmb3IgdGhlIHRlbmRlciBzY29wZS4="
+        }
+      ],
+      "status": "pending",
+      "submittedAt": "2026-05-14T20:20:00.000Z",
+      "updatedAt": "2026-05-14T20:20:00.000Z"
+    },
+    {
+      "id": "app-demo-france-sparta-cargo",
+      "tenderId": "tnd-demo-france-2026",
+      "gsaId": "gsa-sparta-cargo",
+      "gsaName": "Sparta Cargo France",
+      "contactName": "Frederic Durepaire",
+      "email": "fred@spartacargo.fr",
+      "headquarters": "Paris, France",
+      "coverage": [
+        "France",
+        "Europe"
+      ],
+      "markets": [
+        "France",
+        "Europe"
+      ],
+      "certifications": [
+        "IATA",
+        "CASS",
+        "GDP"
+      ],
+      "cargoFocus": "Pharma, general cargo, perishables",
+      "networkScore": 87,
+      "financialScore": 81,
+      "complianceScore": 91,
+      "winRate": 34,
+      "proposedCommission": "5.1% base commission focused on pharma and perishables",
+      "launchTimeline": "Sparta Cargo France can mobilize a dedicated Saudia Cargo sales desk within 45 days of award.",
+      "namedAccountCoverage": "Sparta Cargo France proposes named coverage for 21 priority forwarder and shipper accounts across France, Europe.",
+      "monthlySalesTarget": "442 tons per month after ramp-up, with weekly pipeline review and monthly conversion reporting.",
+      "networkPlan": "The plan focuses on France, Europe accounts, using CDG-JED, CDG-RUH, LYS-JED as the initial route scope. Sales activity is prioritized around pharma, general cargo, perishables with route-by-route opportunity tracking.",
+      "operationalReadiness": "IATA, CASS, GDP capability is in place. The proposed launch model includes customer onboarding, GHA handover, rate desk setup, and weekly performance cadence with Saudia Cargo.",
+      "documents": [
+        {
+          "id": "sparta-cargo-france-company-profile.txt-277",
+          "name": "sparta-cargo-france-company-profile.txt",
+          "size": 277,
+          "mimeType": "text/plain",
+          "dataUrl": "data:text/plain;base64,U3BhcnRhIENhcmdvIEZyYW5jZSBjb21wYW55IHByb2ZpbGUKCkNvbnRhY3Q6IEZyZWRlcmljIER1cmVwYWlyZQpFbWFpbDogZnJlZEBzcGFydGFjYXJnby5mcgpIZWFkcXVhcnRlcnM6IFBhcmlzLCBGcmFuY2UKQ292ZXJhZ2U6IEZyYW5jZSwgRXVyb3BlCkNlcnRpZmljYXRpb25zOiBJQVRBLCBDQVNTLCBHRFAKCkZyYW5jZSBjYXJnbyBwYXJ0bmVyIHdpdGggc3Ryb25nIHBoYXJtYSBhbmQgZ2VuZXJhbCBjYXJnbyBzYWxlcyBmaXQgZm9yIGFpcmxpbmUgY2FwYWNpdHkgY2FtcGFpZ25zLg=="
+        },
+        {
+          "id": "saudi-cargo-france-representation-sales-plan.txt-296",
+          "name": "saudi-cargo-france-representation-sales-plan.txt",
+          "size": 296,
+          "mimeType": "text/plain",
+          "dataUrl": "data:text/plain;base64,U2F1ZGkgQ2FyZ28gRnJhbmNlIHJlcHJlc2VudGF0aW9uIHNhbGVzIHBsYW4KClRlbmRlciBzY29wZTogRnJhbmNlClJvdXRlczogQ0RHLUpFRCwgQ0RHLVJVSCwgTFlTLUpFRApQcm9kdWN0IGZvY3VzOiBQaGFybWEsIGx1eHVyeSBnb29kcywgcGVyaXNoYWJsZXMsIGdlbmVyYWwgY2FyZ28KClNwYXJ0YSBDYXJnbyBGcmFuY2Ugd2lsbCB0YXJnZXQgbmFtZWQgYWNjb3VudHMsIHdlZWtseSBwaXBlbGluZSByZXZpZXdzLCBhbmQgcm91dGUtc3BlY2lmaWMgY2FyZ28gY29udmVyc2lvbiBmb3IgdGhlIHRlbmRlciBzY29wZS4="
+        }
+      ],
+      "status": "pending",
+      "submittedAt": "2026-05-14T20:28:00.000Z",
+      "updatedAt": "2026-05-14T20:28:00.000Z"
+    },
+    {
+      "id": "app-demo-france-sky-art",
+      "tenderId": "tnd-demo-france-2026",
+      "gsaId": "gsa-sky-art",
+      "gsaName": "Sky Art Services SAS",
+      "contactName": "Damien Rizzo",
+      "email": "damien.rizzo@skyart-services.com",
+      "headquarters": "Paris, France",
+      "coverage": [
+        "France",
+        "Southern Europe"
+      ],
+      "markets": [
+        "France",
+        "Southern Europe"
+      ],
+      "certifications": [
+        "IATA",
+        "CASS"
+      ],
+      "cargoFocus": "Special cargo, project cargo, high-value",
+      "networkScore": 82,
+      "financialScore": 79,
+      "complianceScore": 85,
+      "winRate": 28,
+      "proposedCommission": "5.3% base commission with special-cargo premium",
+      "launchTimeline": "Sky Art Services SAS can mobilize a dedicated Saudia Cargo sales desk within 45 days of award.",
+      "namedAccountCoverage": "Sky Art Services SAS proposes named coverage for 28 priority forwarder and shipper accounts across France, Southern Europe.",
+      "monthlySalesTarget": "409 tons per month after ramp-up, with weekly pipeline review and monthly conversion reporting.",
+      "networkPlan": "The plan focuses on France, Southern Europe accounts, using CDG-JED, CDG-RUH, LYS-JED as the initial route scope. Sales activity is prioritized around special cargo, project cargo, high-value with route-by-route opportunity tracking.",
+      "operationalReadiness": "IATA, CASS capability is in place. The proposed launch model includes customer onboarding, GHA handover, rate desk setup, and weekly performance cadence with Saudia Cargo.",
+      "documents": [
+        {
+          "id": "sky-art-services-sas-company-profile.txt-287",
+          "name": "sky-art-services-sas-company-profile.txt",
+          "size": 287,
+          "mimeType": "text/plain",
+          "dataUrl": "data:text/plain;base64,U2t5IEFydCBTZXJ2aWNlcyBTQVMgY29tcGFueSBwcm9maWxlCgpDb250YWN0OiBEYW1pZW4gUml6em8KRW1haWw6IGRhbWllbi5yaXp6b0Bza3lhcnQtc2VydmljZXMuY29tCkhlYWRxdWFydGVyczogUGFyaXMsIEZyYW5jZQpDb3ZlcmFnZTogRnJhbmNlLCBTb3V0aGVybiBFdXJvcGUKQ2VydGlmaWNhdGlvbnM6IElBVEEsIENBU1MKClNwZWNpYWwgY2FyZ28tb3JpZW50ZWQgcGFydG5lciB3aXRoIHVzZWZ1bCBuaWNoZSBhY2NvdW50IGFjY2VzcyBhbmQgZmxleGlibGUgb3BlcmF0aW9uYWwgc3VwcG9ydC4="
+        },
+        {
+          "id": "saudi-cargo-france-representation-sales-plan.txt-297",
+          "name": "saudi-cargo-france-representation-sales-plan.txt",
+          "size": 297,
+          "mimeType": "text/plain",
+          "dataUrl": "data:text/plain;base64,U2F1ZGkgQ2FyZ28gRnJhbmNlIHJlcHJlc2VudGF0aW9uIHNhbGVzIHBsYW4KClRlbmRlciBzY29wZTogRnJhbmNlClJvdXRlczogQ0RHLUpFRCwgQ0RHLVJVSCwgTFlTLUpFRApQcm9kdWN0IGZvY3VzOiBQaGFybWEsIGx1eHVyeSBnb29kcywgcGVyaXNoYWJsZXMsIGdlbmVyYWwgY2FyZ28KClNreSBBcnQgU2VydmljZXMgU0FTIHdpbGwgdGFyZ2V0IG5hbWVkIGFjY291bnRzLCB3ZWVrbHkgcGlwZWxpbmUgcmV2aWV3cywgYW5kIHJvdXRlLXNwZWNpZmljIGNhcmdvIGNvbnZlcnNpb24gZm9yIHRoZSB0ZW5kZXIgc2NvcGUu"
+        }
+      ],
+      "status": "rejected",
+      "submittedAt": "2026-05-14T20:36:00.000Z",
+      "updatedAt": "2026-05-14T20:36:00.000Z"
+    },
+    {
+      "id": "app-demo-dach-pharma-aerotrans",
+      "tenderId": "tnd-demo-dach-pharma-2026",
+      "gsaId": "gsa-aerotrans",
+      "gsaName": "Aerotrans Luftfahrtagentur GmbH",
+      "contactName": "Mike Jaensch",
+      "email": "jaensch@aerotrans.de",
+      "headquarters": "Dusseldorf, Germany",
+      "coverage": [
+        "Germany",
+        "Austria",
+        "Switzerland"
+      ],
+      "markets": [
+        "DACH"
+      ],
+      "certifications": [
+        "IATA",
+        "CASS"
+      ],
+      "cargoFocus": "Aerospace, general cargo, time-critical",
+      "networkScore": 88,
+      "financialScore": 84,
+      "complianceScore": 90,
+      "winRate": 35,
+      "proposedCommission": "4.9% base commission with DACH route launch bonus",
+      "launchTimeline": "Aerotrans Luftfahrtagentur GmbH can mobilize a dedicated Saudia Cargo sales desk within 45 days of award.",
+      "namedAccountCoverage": "Aerotrans Luftfahrtagentur GmbH proposes named coverage for 22 priority forwarder and shipper accounts across Germany, Austria, Switzerland.",
+      "monthlySalesTarget": "629 tons per month after ramp-up, with weekly pipeline review and monthly conversion reporting.",
+      "networkPlan": "The plan focuses on DACH accounts, using FRA-JED, FRA-RUH, MUC-JED, ZRH-JED as the initial route scope. Sales activity is prioritized around aerospace, general cargo, time-critical with route-by-route opportunity tracking.",
+      "operationalReadiness": "IATA, CASS capability is in place. The proposed launch model includes customer onboarding, GHA handover, rate desk setup, and weekly performance cadence with Saudia Cargo.",
+      "documents": [
+        {
+          "id": "aerotrans-luftfahrtagentur-gmbh-company-profile.txt-326",
+          "name": "aerotrans-luftfahrtagentur-gmbh-company-profile.txt",
+          "size": 326,
+          "mimeType": "text/plain",
+          "dataUrl": "data:text/plain;base64,QWVyb3RyYW5zIEx1ZnRmYWhydGFnZW50dXIgR21iSCBjb21wYW55IHByb2ZpbGUKCkNvbnRhY3Q6IE1pa2UgSmFlbnNjaApFbWFpbDogamFlbnNjaEBhZXJvdHJhbnMuZGUKSGVhZHF1YXJ0ZXJzOiBEdXNzZWxkb3JmLCBHZXJtYW55CkNvdmVyYWdlOiBHZXJtYW55LCBBdXN0cmlhLCBTd2l0emVybGFuZApDZXJ0aWZpY2F0aW9uczogSUFUQSwgQ0FTUwoKRXN0YWJsaXNoZWQgYXZpYXRpb24gc2FsZXMgYWdlbmN5IGZvciBEQUNIIGNhcmdvIHByb2dyYW1zLCB3aXRoIHByYWN0aWNhbCBhaXJsaW5lIHJlcHJlc2VudGF0aW9uIGFuZCByb3V0ZSBsYXVuY2ggZXhwZXJpZW5jZS4="
+        },
+        {
+          "id": "saudia-cargo-dach-pharma-and-industrial-sales-sales-plan.txt-348",
+          "name": "saudia-cargo-dach-pharma-and-industrial-sales-sales-plan.txt",
+          "size": 348,
+          "mimeType": "text/plain",
+          "dataUrl": "data:text/plain;base64,U2F1ZGlhIENhcmdvIERBQ0ggcGhhcm1hIGFuZCBpbmR1c3RyaWFsIHNhbGVzIHNhbGVzIHBsYW4KClRlbmRlciBzY29wZTogR2VybWFueSwgQXVzdHJpYSwgU3dpdHplcmxhbmQKUm91dGVzOiBGUkEtSkVELCBGUkEtUlVILCBNVUMtSkVELCBaUkgtSkVEClByb2R1Y3QgZm9jdXM6IFBoYXJtYSwgYXV0b21vdGl2ZSwgbWFjaGluZXJ5LCBleHByZXNzIGNhcmdvCgpBZXJvdHJhbnMgTHVmdGZhaHJ0YWdlbnR1ciBHbWJIIHdpbGwgdGFyZ2V0IG5hbWVkIGFjY291bnRzLCB3ZWVrbHkgcGlwZWxpbmUgcmV2aWV3cywgYW5kIHJvdXRlLXNwZWNpZmljIGNhcmdvIGNvbnZlcnNpb24gZm9yIHRoZSB0ZW5kZXIgc2NvcGUu"
+        }
+      ],
+      "status": "shortlisted",
+      "submittedAt": "2026-05-14T20:44:00.000Z",
+      "updatedAt": "2026-05-14T20:44:00.000Z"
+    },
+    {
+      "id": "app-demo-dach-pharma-critical-logistics",
+      "tenderId": "tnd-demo-dach-pharma-2026",
+      "gsaId": "gsa-critical-logistics",
+      "gsaName": "Critical Logistics GmbH",
+      "contactName": "Yasar Maras",
+      "email": "yasar@criticallogistics.de",
+      "headquarters": "Frankfurt Am Main, Germany",
+      "coverage": [
+        "Germany",
+        "Central Europe"
+      ],
+      "markets": [
+        "DACH",
+        "CEE"
+      ],
+      "certifications": [
+        "IATA",
+        "GDP",
+        "ISO 9001"
+      ],
+      "cargoFocus": "Time-critical, automotive, high-value",
+      "networkScore": 86,
+      "financialScore": 82,
+      "complianceScore": 92,
+      "winRate": 34,
+      "proposedCommission": "5.2% base commission for time-critical industrial cargo",
+      "launchTimeline": "Critical Logistics GmbH can mobilize a dedicated Saudia Cargo sales desk within 45 days of award.",
+      "namedAccountCoverage": "Critical Logistics GmbH proposes named coverage for 20 priority forwarder and shipper accounts across Germany, Central Europe.",
+      "monthlySalesTarget": "621 tons per month after ramp-up, with weekly pipeline review and monthly conversion reporting.",
+      "networkPlan": "The plan focuses on DACH, CEE accounts, using FRA-JED, FRA-RUH, MUC-JED, ZRH-JED as the initial route scope. Sales activity is prioritized around time-critical, automotive, high-value with route-by-route opportunity tracking.",
+      "operationalReadiness": "IATA, GDP, ISO 9001 capability is in place. The proposed launch model includes customer onboarding, GHA handover, rate desk setup, and weekly performance cadence with Saudia Cargo.",
+      "documents": [
+        {
+          "id": "critical-logistics-gmbh-company-profile.txt-321",
+          "name": "critical-logistics-gmbh-company-profile.txt",
+          "size": 321,
+          "mimeType": "text/plain",
+          "dataUrl": "data:text/plain;base64,Q3JpdGljYWwgTG9naXN0aWNzIEdtYkggY29tcGFueSBwcm9maWxlCgpDb250YWN0OiBZYXNhciBNYXJhcwpFbWFpbDogeWFzYXJAY3JpdGljYWxsb2dpc3RpY3MuZGUKSGVhZHF1YXJ0ZXJzOiBGcmFua2Z1cnQgQW0gTWFpbiwgR2VybWFueQpDb3ZlcmFnZTogR2VybWFueSwgQ2VudHJhbCBFdXJvcGUKQ2VydGlmaWNhdGlvbnM6IElBVEEsIEdEUCwgSVNPIDkwMDEKClRpbWUtY3JpdGljYWwgc3BlY2lhbGlzdCB3aXRoIHN0cm9uZyBzaGlwcGVyIGFjY2VzcyBmb3IgdXJnZW50IGF1dG9tb3RpdmUsIG1hY2hpbmVyeSBhbmQgcHJlbWl1bSBjYXJnbyBtb3ZlbWVudHMu"
+        },
+        {
+          "id": "saudia-cargo-dach-pharma-and-industrial-sales-sales-plan.txt-340",
+          "name": "saudia-cargo-dach-pharma-and-industrial-sales-sales-plan.txt",
+          "size": 340,
+          "mimeType": "text/plain",
+          "dataUrl": "data:text/plain;base64,U2F1ZGlhIENhcmdvIERBQ0ggcGhhcm1hIGFuZCBpbmR1c3RyaWFsIHNhbGVzIHNhbGVzIHBsYW4KClRlbmRlciBzY29wZTogR2VybWFueSwgQXVzdHJpYSwgU3dpdHplcmxhbmQKUm91dGVzOiBGUkEtSkVELCBGUkEtUlVILCBNVUMtSkVELCBaUkgtSkVEClByb2R1Y3QgZm9jdXM6IFBoYXJtYSwgYXV0b21vdGl2ZSwgbWFjaGluZXJ5LCBleHByZXNzIGNhcmdvCgpDcml0aWNhbCBMb2dpc3RpY3MgR21iSCB3aWxsIHRhcmdldCBuYW1lZCBhY2NvdW50cywgd2Vla2x5IHBpcGVsaW5lIHJldmlld3MsIGFuZCByb3V0ZS1zcGVjaWZpYyBjYXJnbyBjb252ZXJzaW9uIGZvciB0aGUgdGVuZGVyIHNjb3BlLg=="
+        }
+      ],
+      "status": "shortlisted",
+      "submittedAt": "2026-05-14T20:52:00.000Z",
+      "updatedAt": "2026-05-14T20:52:00.000Z"
+    },
+    {
+      "id": "app-demo-dach-pharma-forto",
+      "tenderId": "tnd-demo-dach-pharma-2026",
+      "gsaId": "gsa-forto",
+      "gsaName": "Forto Logistics",
+      "contactName": "Christopher Braun",
+      "email": "christopher.braun@forto.com",
+      "headquarters": "Berlin, Germany",
+      "coverage": [
+        "Germany",
+        "Europe",
+        "Asia trade lanes"
+      ],
+      "markets": [
+        "DACH",
+        "Asia"
+      ],
+      "certifications": [
+        "IATA",
+        "CASS",
+        "ISO 9001"
+      ],
+      "cargoFocus": "Digital freight, e-commerce, general cargo",
+      "networkScore": 89,
+      "financialScore": 88,
+      "complianceScore": 87,
+      "winRate": 36,
+      "proposedCommission": "4.8% base commission with digital account pipeline reporting",
+      "launchTimeline": "Forto Logistics can mobilize a dedicated Saudia Cargo sales desk within 30 days of award.",
+      "namedAccountCoverage": "Forto Logistics proposes named coverage for 23 priority forwarder and shipper accounts across Germany, Europe, Asia trade lanes.",
+      "monthlySalesTarget": "637 tons per month after ramp-up, with weekly pipeline review and monthly conversion reporting.",
+      "networkPlan": "The plan focuses on DACH, Asia accounts, using FRA-JED, FRA-RUH, MUC-JED, ZRH-JED as the initial route scope. Sales activity is prioritized around digital freight, e-commerce, general cargo with route-by-route opportunity tracking.",
+      "operationalReadiness": "IATA, CASS, ISO 9001 capability is in place. The proposed launch model includes customer onboarding, GHA handover, rate desk setup, and weekly performance cadence with Saudia Cargo.",
+      "documents": [
+        {
+          "id": "forto-logistics-company-profile.txt-322",
+          "name": "forto-logistics-company-profile.txt",
+          "size": 322,
+          "mimeType": "text/plain",
+          "dataUrl": "data:text/plain;base64,Rm9ydG8gTG9naXN0aWNzIGNvbXBhbnkgcHJvZmlsZQoKQ29udGFjdDogQ2hyaXN0b3BoZXIgQnJhdW4KRW1haWw6IGNocmlzdG9waGVyLmJyYXVuQGZvcnRvLmNvbQpIZWFkcXVhcnRlcnM6IEJlcmxpbiwgR2VybWFueQpDb3ZlcmFnZTogR2VybWFueSwgRXVyb3BlLCBBc2lhIHRyYWRlIGxhbmVzCkNlcnRpZmljYXRpb25zOiBJQVRBLCBDQVNTLCBJU08gOTAwMQoKRGlnaXRhbCBmcmVpZ2h0IGZvcndhcmRlciB3aXRoIHNjYWxhYmxlIGN1c3RvbWVyIGNvdmVyYWdlIGFuZCBzdHJvbmcgZGF0YS1sZWQgc2FsZXMgcG90ZW50aWFsIGZvciBlLWNvbW1lcmNlIGxhbmVzLg=="
+        },
+        {
+          "id": "saudia-cargo-dach-pharma-and-industrial-sales-sales-plan.txt-332",
+          "name": "saudia-cargo-dach-pharma-and-industrial-sales-sales-plan.txt",
+          "size": 332,
+          "mimeType": "text/plain",
+          "dataUrl": "data:text/plain;base64,U2F1ZGlhIENhcmdvIERBQ0ggcGhhcm1hIGFuZCBpbmR1c3RyaWFsIHNhbGVzIHNhbGVzIHBsYW4KClRlbmRlciBzY29wZTogR2VybWFueSwgQXVzdHJpYSwgU3dpdHplcmxhbmQKUm91dGVzOiBGUkEtSkVELCBGUkEtUlVILCBNVUMtSkVELCBaUkgtSkVEClByb2R1Y3QgZm9jdXM6IFBoYXJtYSwgYXV0b21vdGl2ZSwgbWFjaGluZXJ5LCBleHByZXNzIGNhcmdvCgpGb3J0byBMb2dpc3RpY3Mgd2lsbCB0YXJnZXQgbmFtZWQgYWNjb3VudHMsIHdlZWtseSBwaXBlbGluZSByZXZpZXdzLCBhbmQgcm91dGUtc3BlY2lmaWMgY2FyZ28gY29udmVyc2lvbiBmb3IgdGhlIHRlbmRlciBzY29wZS4="
+        }
+      ],
+      "status": "pending",
+      "submittedAt": "2026-05-14T21:00:00.000Z",
+      "updatedAt": "2026-05-14T21:00:00.000Z"
+    },
+    {
+      "id": "app-demo-dach-pharma-mycargogate",
+      "tenderId": "tnd-demo-dach-pharma-2026",
+      "gsaId": "gsa-mycargogate",
+      "gsaName": "mycargogate GmbH",
+      "contactName": "Tanja Muller",
+      "email": "tmueller@mycargogate.com",
+      "headquarters": "Rheinfelden, Germany",
+      "coverage": [
+        "Germany",
+        "DACH"
+      ],
+      "markets": [
+        "DACH"
+      ],
+      "certifications": [
+        "IATA",
+        "CASS"
+      ],
+      "cargoFocus": "Digital cargo booking, SME forwarders, consolidations",
+      "networkScore": 84,
+      "financialScore": 81,
+      "complianceScore": 86,
+      "winRate": 30,
+      "proposedCommission": "4.6% base commission for SME forwarder conversion",
+      "launchTimeline": "mycargogate GmbH can mobilize a dedicated Saudia Cargo sales desk within 45 days of award.",
+      "namedAccountCoverage": "mycargogate GmbH proposes named coverage for 18 priority forwarder and shipper accounts across Germany, DACH.",
+      "monthlySalesTarget": "590 tons per month after ramp-up, with weekly pipeline review and monthly conversion reporting.",
+      "networkPlan": "The plan focuses on DACH accounts, using FRA-JED, FRA-RUH, MUC-JED, ZRH-JED as the initial route scope. Sales activity is prioritized around digital cargo booking, sme forwarders, consolidations with route-by-route opportunity tracking.",
+      "operationalReadiness": "IATA, CASS capability is in place. The proposed launch model includes customer onboarding, GHA handover, rate desk setup, and weekly performance cadence with Saudia Cargo.",
+      "documents": [
+        {
+          "id": "mycargogate-gmbh-company-profile.txt-283",
+          "name": "mycargogate-gmbh-company-profile.txt",
+          "size": 283,
+          "mimeType": "text/plain",
+          "dataUrl": "data:text/plain;base64,bXljYXJnb2dhdGUgR21iSCBjb21wYW55IHByb2ZpbGUKCkNvbnRhY3Q6IFRhbmphIE11bGxlcgpFbWFpbDogdG11ZWxsZXJAbXljYXJnb2dhdGUuY29tCkhlYWRxdWFydGVyczogUmhlaW5mZWxkZW4sIEdlcm1hbnkKQ292ZXJhZ2U6IEdlcm1hbnksIERBQ0gKQ2VydGlmaWNhdGlvbnM6IElBVEEsIENBU1MKCkRpZ2l0YWwgY2FyZ28gc2FsZXMgY2hhbm5lbCB3aXRoIHVzZWZ1bCBTTUUgZm9yd2FyZGVyIHJlYWNoIGFuZCBmYXN0IGNvbnZlcnNpb24gZm9yIHNwb3QtY2FwYWNpdHkgY2FtcGFpZ25zLg=="
+        },
+        {
+          "id": "saudia-cargo-dach-pharma-and-industrial-sales-sales-plan.txt-333",
+          "name": "saudia-cargo-dach-pharma-and-industrial-sales-sales-plan.txt",
+          "size": 333,
+          "mimeType": "text/plain",
+          "dataUrl": "data:text/plain;base64,U2F1ZGlhIENhcmdvIERBQ0ggcGhhcm1hIGFuZCBpbmR1c3RyaWFsIHNhbGVzIHNhbGVzIHBsYW4KClRlbmRlciBzY29wZTogR2VybWFueSwgQXVzdHJpYSwgU3dpdHplcmxhbmQKUm91dGVzOiBGUkEtSkVELCBGUkEtUlVILCBNVUMtSkVELCBaUkgtSkVEClByb2R1Y3QgZm9jdXM6IFBoYXJtYSwgYXV0b21vdGl2ZSwgbWFjaGluZXJ5LCBleHByZXNzIGNhcmdvCgpteWNhcmdvZ2F0ZSBHbWJIIHdpbGwgdGFyZ2V0IG5hbWVkIGFjY291bnRzLCB3ZWVrbHkgcGlwZWxpbmUgcmV2aWV3cywgYW5kIHJvdXRlLXNwZWNpZmljIGNhcmdvIGNvbnZlcnNpb24gZm9yIHRoZSB0ZW5kZXIgc2NvcGUu"
+        }
+      ],
+      "status": "pending",
+      "submittedAt": "2026-05-14T21:08:00.000Z",
+      "updatedAt": "2026-05-14T21:08:00.000Z"
+    },
+    {
+      "id": "app-demo-dach-pharma-on-air-cargo",
+      "tenderId": "tnd-demo-dach-pharma-2026",
+      "gsaId": "gsa-on-air-cargo",
+      "gsaName": "On Air Cargo GmbH",
+      "contactName": "Onur Uykiz",
+      "email": "onur@onair-cargo.com",
+      "headquarters": "Dusseldorf, Germany",
+      "coverage": [
+        "Germany",
+        "Austria",
+        "Turkey"
+      ],
+      "markets": [
+        "DACH",
+        "Turkey"
+      ],
+      "certifications": [
+        "IATA",
+        "CASS"
+      ],
+      "cargoFocus": "General cargo, express, cross-border trucking",
+      "networkScore": 83,
+      "financialScore": 80,
+      "complianceScore": 85,
+      "winRate": 29,
+      "proposedCommission": "4.7% base commission with trucking-feed incentive",
+      "launchTimeline": "On Air Cargo GmbH can mobilize a dedicated Saudia Cargo sales desk within 45 days of award.",
+      "namedAccountCoverage": "On Air Cargo GmbH proposes named coverage for 29 priority forwarder and shipper accounts across Germany, Austria, Turkey.",
+      "monthlySalesTarget": "582 tons per month after ramp-up, with weekly pipeline review and monthly conversion reporting.",
+      "networkPlan": "The plan focuses on DACH, Turkey accounts, using FRA-JED, FRA-RUH, MUC-JED, ZRH-JED as the initial route scope. Sales activity is prioritized around general cargo, express, cross-border trucking with route-by-route opportunity tracking.",
+      "operationalReadiness": "IATA, CASS capability is in place. The proposed launch model includes customer onboarding, GHA handover, rate desk setup, and weekly performance cadence with Saudia Cargo.",
+      "documents": [
+        {
+          "id": "on-air-cargo-gmbh-company-profile.txt-297",
+          "name": "on-air-cargo-gmbh-company-profile.txt",
+          "size": 297,
+          "mimeType": "text/plain",
+          "dataUrl": "data:text/plain;base64,T24gQWlyIENhcmdvIEdtYkggY29tcGFueSBwcm9maWxlCgpDb250YWN0OiBPbnVyIFV5a2l6CkVtYWlsOiBvbnVyQG9uYWlyLWNhcmdvLmNvbQpIZWFkcXVhcnRlcnM6IER1c3NlbGRvcmYsIEdlcm1hbnkKQ292ZXJhZ2U6IEdlcm1hbnksIEF1c3RyaWEsIFR1cmtleQpDZXJ0aWZpY2F0aW9uczogSUFUQSwgQ0FTUwoKQ29tbWVyY2lhbGx5IGZsZXhpYmxlIGNhcmdvIHNhbGVzIHBhcnRuZXIgd2l0aCBzdHJvbmcgcmVnaW9uYWwgcmVsYXRpb25zaGlwcyBhbmQgdXNlZnVsIFR1cmtleS1FdXJvcGUgbGFuZSBrbm93bGVkZ2Uu"
+        },
+        {
+          "id": "saudia-cargo-dach-pharma-and-industrial-sales-sales-plan.txt-334",
+          "name": "saudia-cargo-dach-pharma-and-industrial-sales-sales-plan.txt",
+          "size": 334,
+          "mimeType": "text/plain",
+          "dataUrl": "data:text/plain;base64,U2F1ZGlhIENhcmdvIERBQ0ggcGhhcm1hIGFuZCBpbmR1c3RyaWFsIHNhbGVzIHNhbGVzIHBsYW4KClRlbmRlciBzY29wZTogR2VybWFueSwgQXVzdHJpYSwgU3dpdHplcmxhbmQKUm91dGVzOiBGUkEtSkVELCBGUkEtUlVILCBNVUMtSkVELCBaUkgtSkVEClByb2R1Y3QgZm9jdXM6IFBoYXJtYSwgYXV0b21vdGl2ZSwgbWFjaGluZXJ5LCBleHByZXNzIGNhcmdvCgpPbiBBaXIgQ2FyZ28gR21iSCB3aWxsIHRhcmdldCBuYW1lZCBhY2NvdW50cywgd2Vla2x5IHBpcGVsaW5lIHJldmlld3MsIGFuZCByb3V0ZS1zcGVjaWZpYyBjYXJnbyBjb252ZXJzaW9uIGZvciB0aGUgdGVuZGVyIHNjb3BlLg=="
+        }
+      ],
+      "status": "pending",
+      "submittedAt": "2026-05-14T21:16:00.000Z",
+      "updatedAt": "2026-05-14T21:16:00.000Z"
+    },
+    {
+      "id": "app-demo-dach-pharma-quivo",
+      "tenderId": "tnd-demo-dach-pharma-2026",
+      "gsaId": "gsa-quivo",
+      "gsaName": "Quivo (Ancla Logistik GmbH)",
+      "contactName": "Torben Lenhart",
+      "email": "torben.lenhart@quivo.co",
+      "headquarters": "Wetzlar, Germany",
+      "coverage": [
+        "Germany",
+        "Austria",
+        "CEE"
+      ],
+      "markets": [
+        "DACH",
+        "CEE"
+      ],
+      "certifications": [
+        "IATA",
+        "ISO 9001"
+      ],
+      "cargoFocus": "E-commerce, fulfillment, parcel cargo",
+      "networkScore": 85,
+      "financialScore": 82,
+      "complianceScore": 84,
+      "winRate": 31,
+      "proposedCommission": "4.9% base commission for e-commerce and parcel cargo",
+      "launchTimeline": "Quivo (Ancla Logistik GmbH) can mobilize a dedicated Saudia Cargo sales desk within 45 days of award.",
+      "namedAccountCoverage": "Quivo (Ancla Logistik GmbH) proposes named coverage for 19 priority forwarder and shipper accounts across Germany, Austria, CEE.",
+      "monthlySalesTarget": "598 tons per month after ramp-up, with weekly pipeline review and monthly conversion reporting.",
+      "networkPlan": "The plan focuses on DACH, CEE accounts, using FRA-JED, FRA-RUH, MUC-JED, ZRH-JED as the initial route scope. Sales activity is prioritized around e-commerce, fulfillment, parcel cargo with route-by-route opportunity tracking.",
+      "operationalReadiness": "IATA, ISO 9001 capability is in place. The proposed launch model includes customer onboarding, GHA handover, rate desk setup, and weekly performance cadence with Saudia Cargo.",
+      "documents": [
+        {
+          "id": "quivo-ancla-logistik-gmbh-company-profile.txt-309",
+          "name": "quivo-ancla-logistik-gmbh-company-profile.txt",
+          "size": 309,
+          "mimeType": "text/plain",
+          "dataUrl": "data:text/plain;base64,UXVpdm8gKEFuY2xhIExvZ2lzdGlrIEdtYkgpIGNvbXBhbnkgcHJvZmlsZQoKQ29udGFjdDogVG9yYmVuIExlbmhhcnQKRW1haWw6IHRvcmJlbi5sZW5oYXJ0QHF1aXZvLmNvCkhlYWRxdWFydGVyczogV2V0emxhciwgR2VybWFueQpDb3ZlcmFnZTogR2VybWFueSwgQXVzdHJpYSwgQ0VFCkNlcnRpZmljYXRpb25zOiBJQVRBLCBJU08gOTAwMQoKRS1jb21tZXJjZSBhbmQgZnVsZmlsbG1lbnQtb3JpZW50ZWQgbG9naXN0aWNzIHBhcnRuZXIgd2l0aCBnb29kIGZpdCBmb3IgcGFyY2VsLWhlYXZ5IGJlbGx5IGFuZCBmcmVpZ2h0ZXIgY2FwYWNpdHku"
+        },
+        {
+          "id": "saudia-cargo-dach-pharma-and-industrial-sales-sales-plan.txt-344",
+          "name": "saudia-cargo-dach-pharma-and-industrial-sales-sales-plan.txt",
+          "size": 344,
+          "mimeType": "text/plain",
+          "dataUrl": "data:text/plain;base64,U2F1ZGlhIENhcmdvIERBQ0ggcGhhcm1hIGFuZCBpbmR1c3RyaWFsIHNhbGVzIHNhbGVzIHBsYW4KClRlbmRlciBzY29wZTogR2VybWFueSwgQXVzdHJpYSwgU3dpdHplcmxhbmQKUm91dGVzOiBGUkEtSkVELCBGUkEtUlVILCBNVUMtSkVELCBaUkgtSkVEClByb2R1Y3QgZm9jdXM6IFBoYXJtYSwgYXV0b21vdGl2ZSwgbWFjaGluZXJ5LCBleHByZXNzIGNhcmdvCgpRdWl2byAoQW5jbGEgTG9naXN0aWsgR21iSCkgd2lsbCB0YXJnZXQgbmFtZWQgYWNjb3VudHMsIHdlZWtseSBwaXBlbGluZSByZXZpZXdzLCBhbmQgcm91dGUtc3BlY2lmaWMgY2FyZ28gY29udmVyc2lvbiBmb3IgdGhlIHRlbmRlciBzY29wZS4="
+        }
+      ],
+      "status": "pending",
+      "submittedAt": "2026-05-14T21:24:00.000Z",
+      "updatedAt": "2026-05-14T21:24:00.000Z"
+    },
+    {
+      "id": "app-demo-dach-pharma-teconja",
+      "tenderId": "tnd-demo-dach-pharma-2026",
+      "gsaId": "gsa-teconja",
+      "gsaName": "Speditionsgesellschaft Teconja mbH",
+      "contactName": "Marc Schmitz",
+      "email": "mschmitz@teconja.de",
+      "headquarters": "Weiterstadt, Germany",
+      "coverage": [
+        "Germany",
+        "Western Europe"
+      ],
+      "markets": [
+        "DACH",
+        "Western Europe"
+      ],
+      "certifications": [
+        "IATA",
+        "CASS"
+      ],
+      "cargoFocus": "Industrial cargo, machinery, general freight",
+      "networkScore": 80,
+      "financialScore": 79,
+      "complianceScore": 84,
+      "winRate": 27,
+      "proposedCommission": "4.5% base commission with industrial-account focus",
+      "launchTimeline": "Speditionsgesellschaft Teconja mbH can mobilize a dedicated Saudia Cargo sales desk within 45 days of award.",
+      "namedAccountCoverage": "Speditionsgesellschaft Teconja mbH proposes named coverage for 26 priority forwarder and shipper accounts across Germany, Western Europe.",
+      "monthlySalesTarget": "566 tons per month after ramp-up, with weekly pipeline review and monthly conversion reporting.",
+      "networkPlan": "The plan focuses on DACH, Western Europe accounts, using FRA-JED, FRA-RUH, MUC-JED, ZRH-JED as the initial route scope. Sales activity is prioritized around industrial cargo, machinery, general freight with route-by-route opportunity tracking.",
+      "operationalReadiness": "IATA, CASS capability is in place. The proposed launch model includes customer onboarding, GHA handover, rate desk setup, and weekly performance cadence with Saudia Cargo.",
+      "documents": [
+        {
+          "id": "speditionsgesellschaft-teconja-mbh-company-profile.txt-314",
+          "name": "speditionsgesellschaft-teconja-mbh-company-profile.txt",
+          "size": 314,
+          "mimeType": "text/plain",
+          "dataUrl": "data:text/plain;base64,U3BlZGl0aW9uc2dlc2VsbHNjaGFmdCBUZWNvbmphIG1iSCBjb21wYW55IHByb2ZpbGUKCkNvbnRhY3Q6IE1hcmMgU2NobWl0egpFbWFpbDogbXNjaG1pdHpAdGVjb25qYS5kZQpIZWFkcXVhcnRlcnM6IFdlaXRlcnN0YWR0LCBHZXJtYW55CkNvdmVyYWdlOiBHZXJtYW55LCBXZXN0ZXJuIEV1cm9wZQpDZXJ0aWZpY2F0aW9uczogSUFUQSwgQ0FTUwoKSW5kdXN0cmlhbCBmcmVpZ2h0IHNwZWNpYWxpc3Qgd2l0aCBwcmFjdGljYWwgcmVnaW9uYWwgYWNjb3VudCBjb3ZlcmFnZSBhbmQgc3RhYmxlIG1pZC1tYXJrZXQgY3VzdG9tZXIgcmVsYXRpb25zaGlwcy4="
+        },
+        {
+          "id": "saudia-cargo-dach-pharma-and-industrial-sales-sales-plan.txt-351",
+          "name": "saudia-cargo-dach-pharma-and-industrial-sales-sales-plan.txt",
+          "size": 351,
+          "mimeType": "text/plain",
+          "dataUrl": "data:text/plain;base64,U2F1ZGlhIENhcmdvIERBQ0ggcGhhcm1hIGFuZCBpbmR1c3RyaWFsIHNhbGVzIHNhbGVzIHBsYW4KClRlbmRlciBzY29wZTogR2VybWFueSwgQXVzdHJpYSwgU3dpdHplcmxhbmQKUm91dGVzOiBGUkEtSkVELCBGUkEtUlVILCBNVUMtSkVELCBaUkgtSkVEClByb2R1Y3QgZm9jdXM6IFBoYXJtYSwgYXV0b21vdGl2ZSwgbWFjaGluZXJ5LCBleHByZXNzIGNhcmdvCgpTcGVkaXRpb25zZ2VzZWxsc2NoYWZ0IFRlY29uamEgbWJIIHdpbGwgdGFyZ2V0IG5hbWVkIGFjY291bnRzLCB3ZWVrbHkgcGlwZWxpbmUgcmV2aWV3cywgYW5kIHJvdXRlLXNwZWNpZmljIGNhcmdvIGNvbnZlcnNpb24gZm9yIHRoZSB0ZW5kZXIgc2NvcGUu"
+        }
+      ],
+      "status": "rejected",
+      "submittedAt": "2026-05-14T21:32:00.000Z",
+      "updatedAt": "2026-05-14T21:32:00.000Z"
+    },
+    {
+      "id": "app-demo-dach-pharma-talogis",
+      "tenderId": "tnd-demo-dach-pharma-2026",
+      "gsaId": "gsa-talogis",
+      "gsaName": "Talogis Air & Sea GmbH",
+      "contactName": "Christian Opszalski",
+      "email": "christian.opszalski@talogis.de",
+      "headquarters": "Dusseldorf, Germany",
+      "coverage": [
+        "Germany",
+        "North Europe",
+        "Asia trade lanes"
+      ],
+      "markets": [
+        "DACH",
+        "Asia"
+      ],
+      "certifications": [
+        "IATA",
+        "CASS"
+      ],
+      "cargoFocus": "Air & sea forwarding, consolidations, general cargo",
+      "networkScore": 82,
+      "financialScore": 80,
+      "complianceScore": 85,
+      "winRate": 28,
+      "proposedCommission": "4.7% base commission for air-sea consolidation traffic",
+      "launchTimeline": "Talogis Air & Sea GmbH can mobilize a dedicated Saudia Cargo sales desk within 45 days of award.",
+      "namedAccountCoverage": "Talogis Air & Sea GmbH proposes named coverage for 28 priority forwarder and shipper accounts across Germany, North Europe, Asia trade lanes.",
+      "monthlySalesTarget": "574 tons per month after ramp-up, with weekly pipeline review and monthly conversion reporting.",
+      "networkPlan": "The plan focuses on DACH, Asia accounts, using FRA-JED, FRA-RUH, MUC-JED, ZRH-JED as the initial route scope. Sales activity is prioritized around air & sea forwarding, consolidations, general cargo with route-by-route opportunity tracking.",
+      "operationalReadiness": "IATA, CASS capability is in place. The proposed launch model includes customer onboarding, GHA handover, rate desk setup, and weekly performance cadence with Saudia Cargo.",
+      "documents": [
+        {
+          "id": "talogis-air-sea-gmbh-company-profile.txt-326",
+          "name": "talogis-air-sea-gmbh-company-profile.txt",
+          "size": 326,
+          "mimeType": "text/plain",
+          "dataUrl": "data:text/plain;base64,VGFsb2dpcyBBaXIgJiBTZWEgR21iSCBjb21wYW55IHByb2ZpbGUKCkNvbnRhY3Q6IENocmlzdGlhbiBPcHN6YWxza2kKRW1haWw6IGNocmlzdGlhbi5vcHN6YWxza2lAdGFsb2dpcy5kZQpIZWFkcXVhcnRlcnM6IER1c3NlbGRvcmYsIEdlcm1hbnkKQ292ZXJhZ2U6IEdlcm1hbnksIE5vcnRoIEV1cm9wZSwgQXNpYSB0cmFkZSBsYW5lcwpDZXJ0aWZpY2F0aW9uczogSUFUQSwgQ0FTUwoKQWlyIGFuZCBzZWEgbG9naXN0aWNzIHBhcnRuZXIgd2l0aCB1c2VmdWwgY29uc29saWRhdGlvbiB0cmFmZmljIGFuZCBiYWxhbmNlZCBnZW5lcmFsIGNhcmdvIHNhbGVzIHBvdGVudGlhbC4="
+        },
+        {
+          "id": "saudia-cargo-dach-pharma-and-industrial-sales-sales-plan.txt-339",
+          "name": "saudia-cargo-dach-pharma-and-industrial-sales-sales-plan.txt",
+          "size": 339,
+          "mimeType": "text/plain",
+          "dataUrl": "data:text/plain;base64,U2F1ZGlhIENhcmdvIERBQ0ggcGhhcm1hIGFuZCBpbmR1c3RyaWFsIHNhbGVzIHNhbGVzIHBsYW4KClRlbmRlciBzY29wZTogR2VybWFueSwgQXVzdHJpYSwgU3dpdHplcmxhbmQKUm91dGVzOiBGUkEtSkVELCBGUkEtUlVILCBNVUMtSkVELCBaUkgtSkVEClByb2R1Y3QgZm9jdXM6IFBoYXJtYSwgYXV0b21vdGl2ZSwgbWFjaGluZXJ5LCBleHByZXNzIGNhcmdvCgpUYWxvZ2lzIEFpciAmIFNlYSBHbWJIIHdpbGwgdGFyZ2V0IG5hbWVkIGFjY291bnRzLCB3ZWVrbHkgcGlwZWxpbmUgcmV2aWV3cywgYW5kIHJvdXRlLXNwZWNpZmljIGNhcmdvIGNvbnZlcnNpb24gZm9yIHRoZSB0ZW5kZXIgc2NvcGUu"
+        }
+      ],
+      "status": "pending",
+      "submittedAt": "2026-05-14T21:40:00.000Z",
+      "updatedAt": "2026-05-14T21:40:00.000Z"
+    },
+    {
+      "id": "app-demo-dach-pharma-tci",
+      "tenderId": "tnd-demo-dach-pharma-2026",
+      "gsaId": "gsa-tci",
+      "gsaName": "TCI International Logistics GmbH",
+      "contactName": "Serkan Ertal",
+      "email": "s.ertal@mytcigroup.com",
+      "headquarters": "Kelsterbach, Germany",
+      "coverage": [
+        "Germany",
+        "Europe",
+        "Middle East"
+      ],
+      "markets": [
+        "DACH",
+        "Middle East"
+      ],
+      "certifications": [
+        "IATA",
+        "CASS",
+        "ISO 9001"
+      ],
+      "cargoFocus": "General cargo, textile, e-commerce",
+      "networkScore": 83,
+      "financialScore": 81,
+      "complianceScore": 86,
+      "winRate": 29,
+      "proposedCommission": "4.8% base commission with Middle East textile cargo focus",
+      "launchTimeline": "TCI International Logistics GmbH can mobilize a dedicated Saudia Cargo sales desk within 45 days of award.",
+      "namedAccountCoverage": "TCI International Logistics GmbH proposes named coverage for 29 priority forwarder and shipper accounts across Germany, Europe, Middle East.",
+      "monthlySalesTarget": "582 tons per month after ramp-up, with weekly pipeline review and monthly conversion reporting.",
+      "networkPlan": "The plan focuses on DACH, Middle East accounts, using FRA-JED, FRA-RUH, MUC-JED, ZRH-JED as the initial route scope. Sales activity is prioritized around general cargo, textile, e-commerce with route-by-route opportunity tracking.",
+      "operationalReadiness": "IATA, CASS, ISO 9001 capability is in place. The proposed launch model includes customer onboarding, GHA handover, rate desk setup, and weekly performance cadence with Saudia Cargo.",
+      "documents": [
+        {
+          "id": "tci-international-logistics-gmbh-company-profile.txt-326",
+          "name": "tci-international-logistics-gmbh-company-profile.txt",
+          "size": 326,
+          "mimeType": "text/plain",
+          "dataUrl": "data:text/plain;base64,VENJIEludGVybmF0aW9uYWwgTG9naXN0aWNzIEdtYkggY29tcGFueSBwcm9maWxlCgpDb250YWN0OiBTZXJrYW4gRXJ0YWwKRW1haWw6IHMuZXJ0YWxAbXl0Y2lncm91cC5jb20KSGVhZHF1YXJ0ZXJzOiBLZWxzdGVyYmFjaCwgR2VybWFueQpDb3ZlcmFnZTogR2VybWFueSwgRXVyb3BlLCBNaWRkbGUgRWFzdApDZXJ0aWZpY2F0aW9uczogSUFUQSwgQ0FTUywgSVNPIDkwMDEKCkludGVybmF0aW9uYWwgbG9naXN0aWNzIHBhcnRuZXIgd2l0aCB1c2VmdWwgTWlkZGxlIEVhc3QgdHJhZGUtbGFuZSByZWxldmFuY2UgYW5kIGJyb2FkIEdlcm1hbiBjdXN0b21lciBjb3ZlcmFnZS4="
+        },
+        {
+          "id": "saudia-cargo-dach-pharma-and-industrial-sales-sales-plan.txt-349",
+          "name": "saudia-cargo-dach-pharma-and-industrial-sales-sales-plan.txt",
+          "size": 349,
+          "mimeType": "text/plain",
+          "dataUrl": "data:text/plain;base64,U2F1ZGlhIENhcmdvIERBQ0ggcGhhcm1hIGFuZCBpbmR1c3RyaWFsIHNhbGVzIHNhbGVzIHBsYW4KClRlbmRlciBzY29wZTogR2VybWFueSwgQXVzdHJpYSwgU3dpdHplcmxhbmQKUm91dGVzOiBGUkEtSkVELCBGUkEtUlVILCBNVUMtSkVELCBaUkgtSkVEClByb2R1Y3QgZm9jdXM6IFBoYXJtYSwgYXV0b21vdGl2ZSwgbWFjaGluZXJ5LCBleHByZXNzIGNhcmdvCgpUQ0kgSW50ZXJuYXRpb25hbCBMb2dpc3RpY3MgR21iSCB3aWxsIHRhcmdldCBuYW1lZCBhY2NvdW50cywgd2Vla2x5IHBpcGVsaW5lIHJldmlld3MsIGFuZCByb3V0ZS1zcGVjaWZpYyBjYXJnbyBjb252ZXJzaW9uIGZvciB0aGUgdGVuZGVyIHNjb3BlLg=="
+        }
+      ],
+      "status": "pending",
+      "submittedAt": "2026-05-14T21:48:00.000Z",
+      "updatedAt": "2026-05-14T21:48:00.000Z"
+    },
+    {
+      "id": "app-demo-dach-pharma-aeb",
+      "tenderId": "tnd-demo-dach-pharma-2026",
+      "gsaId": "gsa-aeb",
+      "gsaName": "AEB",
+      "contactName": "Ian Crauwels",
+      "email": "ian.crauwels@aeb.com",
+      "headquarters": "Stuttgart, Germany",
+      "coverage": [
+        "Germany",
+        "DACH",
+        "Benelux"
+      ],
+      "markets": [
+        "DACH",
+        "Benelux"
+      ],
+      "certifications": [
+        "IATA",
+        "CASS",
+        "GDP"
+      ],
+      "cargoFocus": "General cargo, pharma, industrial freight",
+      "networkScore": 91,
+      "financialScore": 86,
+      "complianceScore": 94,
+      "winRate": 39,
+      "proposedCommission": "5.0% base commission with pharma and DACH forwarder accelerator",
+      "launchTimeline": "AEB can mobilize a dedicated Saudia Cargo sales desk within 30 days of award.",
+      "namedAccountCoverage": "AEB proposes named coverage for 25 priority forwarder and shipper accounts across Germany, DACH, Benelux.",
+      "monthlySalesTarget": "661 tons per month after ramp-up, with weekly pipeline review and monthly conversion reporting.",
+      "networkPlan": "The plan focuses on DACH, Benelux accounts, using FRA-JED, FRA-RUH, MUC-JED, ZRH-JED as the initial route scope. Sales activity is prioritized around general cargo, pharma, industrial freight with route-by-route opportunity tracking.",
+      "operationalReadiness": "IATA, CASS, GDP capability is in place. The proposed launch model includes customer onboarding, GHA handover, rate desk setup, and weekly performance cadence with Saudia Cargo.",
+      "documents": [
+        {
+          "id": "aeb-company-profile.txt-285",
+          "name": "aeb-company-profile.txt",
+          "size": 285,
+          "mimeType": "text/plain",
+          "dataUrl": "data:text/plain;base64,QUVCIGNvbXBhbnkgcHJvZmlsZQoKQ29udGFjdDogSWFuIENyYXV3ZWxzCkVtYWlsOiBpYW4uY3JhdXdlbHNAYWViLmNvbQpIZWFkcXVhcnRlcnM6IFN0dXR0Z2FydCwgR2VybWFueQpDb3ZlcmFnZTogR2VybWFueSwgREFDSCwgQmVuZWx1eApDZXJ0aWZpY2F0aW9uczogSUFUQSwgQ0FTUywgR0RQCgpHZXJtYW55LWJhc2VkIGNhcmdvIHNhbGVzIHBhcnRuZXIgd2l0aCBzdHJvbmcgREFDSCBmb3J3YXJkZXIgY292ZXJhZ2UgYW5kIHJlbGlhYmxlIHBoYXJtYS1jYXBhYmxlIGFjY291bnQgaGFuZGxpbmcu"
+        },
+        {
+          "id": "saudia-cargo-dach-pharma-and-industrial-sales-sales-plan.txt-320",
+          "name": "saudia-cargo-dach-pharma-and-industrial-sales-sales-plan.txt",
+          "size": 320,
+          "mimeType": "text/plain",
+          "dataUrl": "data:text/plain;base64,U2F1ZGlhIENhcmdvIERBQ0ggcGhhcm1hIGFuZCBpbmR1c3RyaWFsIHNhbGVzIHNhbGVzIHBsYW4KClRlbmRlciBzY29wZTogR2VybWFueSwgQXVzdHJpYSwgU3dpdHplcmxhbmQKUm91dGVzOiBGUkEtSkVELCBGUkEtUlVILCBNVUMtSkVELCBaUkgtSkVEClByb2R1Y3QgZm9jdXM6IFBoYXJtYSwgYXV0b21vdGl2ZSwgbWFjaGluZXJ5LCBleHByZXNzIGNhcmdvCgpBRUIgd2lsbCB0YXJnZXQgbmFtZWQgYWNjb3VudHMsIHdlZWtseSBwaXBlbGluZSByZXZpZXdzLCBhbmQgcm91dGUtc3BlY2lmaWMgY2FyZ28gY29udmVyc2lvbiBmb3IgdGhlIHRlbmRlciBzY29wZS4="
+        }
+      ],
+      "status": "accepted",
+      "submittedAt": "2026-05-14T21:56:00.000Z",
+      "updatedAt": "2026-05-14T21:56:00.000Z"
+    },
+    {
+      "id": "app-demo-nordics-closed-air-menzies",
+      "tenderId": "tnd-demo-nordics-closed-2026",
+      "gsaId": "gsa-air-menzies",
+      "gsaName": "Air Menzies International",
+      "contactName": "Samantha Leaper",
+      "email": "samantha.leaper@airmenzies.com",
+      "headquarters": "Crawley, United Kingdom",
+      "coverage": [
+        "United Kingdom",
+        "Ireland",
+        "Global network"
+      ],
+      "markets": [
+        "UK",
+        "Ireland",
+        "Global"
+      ],
+      "certifications": [
+        "IATA",
+        "CASS",
+        "GDP"
+      ],
+      "cargoFocus": "Wholesale air cargo, pharma, express",
+      "networkScore": 92,
+      "financialScore": 87,
+      "complianceScore": 94,
+      "winRate": 40,
+      "proposedCommission": "5.1% base commission with wholesale consolidation plan",
+      "launchTimeline": "Air Menzies International can mobilize a dedicated Saudia Cargo sales desk within 30 days of award.",
+      "namedAccountCoverage": "Air Menzies International proposes named coverage for 26 priority forwarder and shipper accounts across United Kingdom, Ireland, Global network.",
+      "monthlySalesTarget": "275 tons per month after ramp-up, with weekly pipeline review and monthly conversion reporting.",
+      "networkPlan": "The plan focuses on UK, Ireland, Global accounts, using CPH-JED, ARN-RUH as the initial route scope. Sales activity is prioritized around wholesale air cargo, pharma, express with route-by-route opportunity tracking.",
+      "operationalReadiness": "IATA, CASS, GDP capability is in place. The proposed launch model includes customer onboarding, GHA handover, rate desk setup, and weekly performance cadence with Saudia Cargo.",
+      "documents": [
+        {
+          "id": "air-menzies-international-company-profile.txt-338",
+          "name": "air-menzies-international-company-profile.txt",
+          "size": 338,
+          "mimeType": "text/plain",
+          "dataUrl": "data:text/plain;base64,QWlyIE1lbnppZXMgSW50ZXJuYXRpb25hbCBjb21wYW55IHByb2ZpbGUKCkNvbnRhY3Q6IFNhbWFudGhhIExlYXBlcgpFbWFpbDogc2FtYW50aGEubGVhcGVyQGFpcm1lbnppZXMuY29tCkhlYWRxdWFydGVyczogQ3Jhd2xleSwgVW5pdGVkIEtpbmdkb20KQ292ZXJhZ2U6IFVuaXRlZCBLaW5nZG9tLCBJcmVsYW5kLCBHbG9iYWwgbmV0d29yawpDZXJ0aWZpY2F0aW9uczogSUFUQSwgQ0FTUywgR0RQCgpNYWpvciBVSyB3aG9sZXNhbGUgYWlyIGNhcmdvIHBhcnRuZXIgd2l0aCBnbG9iYWwgbmV0d29yayBhY2Nlc3MgYW5kIHN0cm9uZyBhaXJsaW5lLWNvbXBhdGlibGUgc2FsZXMgb3BlcmF0aW9ucy4="
+        },
+        {
+          "id": "nordics-cargo-representation-review-sales-plan.txt-333",
+          "name": "nordics-cargo-representation-review-sales-plan.txt",
+          "size": 333,
+          "mimeType": "text/plain",
+          "dataUrl": "data:text/plain;base64,Tm9yZGljcyBjYXJnbyByZXByZXNlbnRhdGlvbiByZXZpZXcgc2FsZXMgcGxhbgoKVGVuZGVyIHNjb3BlOiBTd2VkZW4sIERlbm1hcmssIE5vcndheSwgRmlubGFuZApSb3V0ZXM6IENQSC1KRUQsIEFSTi1SVUgsIE9TTC1KRUQsIEhFTC1KRUQKUHJvZHVjdCBmb2N1czogUGhhcm1hLCBzZWFmb29kLCBlLWNvbW1lcmNlLCBnZW5lcmFsIGNhcmdvCgpBaXIgTWVuemllcyBJbnRlcm5hdGlvbmFsIHdpbGwgdGFyZ2V0IG5hbWVkIGFjY291bnRzLCB3ZWVrbHkgcGlwZWxpbmUgcmV2aWV3cywgYW5kIHJvdXRlLXNwZWNpZmljIGNhcmdvIGNvbnZlcnNpb24gZm9yIHRoZSB0ZW5kZXIgc2NvcGUu"
+        }
+      ],
+      "status": "accepted",
+      "submittedAt": "2026-05-14T22:04:00.000Z",
+      "updatedAt": "2026-05-14T22:04:00.000Z"
+    },
+    {
+      "id": "app-demo-nordics-closed-logfret",
+      "tenderId": "tnd-demo-nordics-closed-2026",
+      "gsaId": "gsa-logfret",
+      "gsaName": "Logfret",
+      "contactName": "Stephane Caillot",
+      "email": "scaillot@multimodal.fr",
+      "headquarters": "Aulnay-sous-Bois, France",
+      "coverage": [
+        "France",
+        "Europe",
+        "Overseas markets"
+      ],
+      "markets": [
+        "France",
+        "Overseas"
+      ],
+      "certifications": [
+        "IATA",
+        "CASS",
+        "ISO 9001"
+      ],
+      "cargoFocus": "Consolidations, overseas cargo, general freight",
+      "networkScore": 86,
+      "financialScore": 83,
+      "complianceScore": 87,
+      "winRate": 32,
+      "proposedCommission": "4.9% base commission with overseas network support",
+      "launchTimeline": "Logfret can mobilize a dedicated Saudia Cargo sales desk within 45 days of award.",
+      "namedAccountCoverage": "Logfret proposes named coverage for 20 priority forwarder and shipper accounts across France, Europe, Overseas markets.",
+      "monthlySalesTarget": "249 tons per month after ramp-up, with weekly pipeline review and monthly conversion reporting.",
+      "networkPlan": "The plan focuses on France, Overseas accounts, using CPH-JED, ARN-RUH as the initial route scope. Sales activity is prioritized around consolidations, overseas cargo, general freight with route-by-route opportunity tracking.",
+      "operationalReadiness": "IATA, CASS, ISO 9001 capability is in place. The proposed launch model includes customer onboarding, GHA handover, rate desk setup, and weekly performance cadence with Saudia Cargo.",
+      "documents": [
+        {
+          "id": "logfret-company-profile.txt-313",
+          "name": "logfret-company-profile.txt",
+          "size": 313,
+          "mimeType": "text/plain",
+          "dataUrl": "data:text/plain;base64,TG9nZnJldCBjb21wYW55IHByb2ZpbGUKCkNvbnRhY3Q6IFN0ZXBoYW5lIENhaWxsb3QKRW1haWw6IHNjYWlsbG90QG11bHRpbW9kYWwuZnIKSGVhZHF1YXJ0ZXJzOiBBdWxuYXktc291cy1Cb2lzLCBGcmFuY2UKQ292ZXJhZ2U6IEZyYW5jZSwgRXVyb3BlLCBPdmVyc2VhcyBtYXJrZXRzCkNlcnRpZmljYXRpb25zOiBJQVRBLCBDQVNTLCBJU08gOTAwMQoKRXN0YWJsaXNoZWQgbG9naXN0aWNzIG5ldHdvcmsgd2l0aCBzdHJvbmcgb3ZlcnNlYXMgZmxvdyBrbm93bGVkZ2UgYW5kIGdvb2QgZml0IGZvciBzdHJ1Y3R1cmVkIGNhcGFjaXR5IHByb2dyYW1zLg=="
+        },
+        {
+          "id": "nordics-cargo-representation-review-sales-plan.txt-315",
+          "name": "nordics-cargo-representation-review-sales-plan.txt",
+          "size": 315,
+          "mimeType": "text/plain",
+          "dataUrl": "data:text/plain;base64,Tm9yZGljcyBjYXJnbyByZXByZXNlbnRhdGlvbiByZXZpZXcgc2FsZXMgcGxhbgoKVGVuZGVyIHNjb3BlOiBTd2VkZW4sIERlbm1hcmssIE5vcndheSwgRmlubGFuZApSb3V0ZXM6IENQSC1KRUQsIEFSTi1SVUgsIE9TTC1KRUQsIEhFTC1KRUQKUHJvZHVjdCBmb2N1czogUGhhcm1hLCBzZWFmb29kLCBlLWNvbW1lcmNlLCBnZW5lcmFsIGNhcmdvCgpMb2dmcmV0IHdpbGwgdGFyZ2V0IG5hbWVkIGFjY291bnRzLCB3ZWVrbHkgcGlwZWxpbmUgcmV2aWV3cywgYW5kIHJvdXRlLXNwZWNpZmljIGNhcmdvIGNvbnZlcnNpb24gZm9yIHRoZSB0ZW5kZXIgc2NvcGUu"
+        }
+      ],
+      "status": "rejected",
+      "submittedAt": "2026-05-14T22:12:00.000Z",
+      "updatedAt": "2026-05-14T22:12:00.000Z"
+    },
+    {
+      "id": "app-mp5ldowg",
+      "tenderId": "tnd-mp5lc6b4",
+      "gsaId": "gsa-forto",
+      "gsaName": "Forto Logistics",
+      "contactName": "Christopher Braun",
+      "email": "christopher.braun@forto.com",
       "headquarters": "Germany",
       "coverage": [
         "Germany",
@@ -62,29 +1686,31 @@
       "financialScore": 88,
       "complianceScore": 87,
       "winRate": 36,
-      "proposedCommission": "asdfasd",
-      "launchTimeline": "fasdf",
-      "namedAccountCoverage": "asdfa",
-      "monthlySalesTarget": "sdfasdf",
-      "networkPlan": "asdfas",
-      "operationalReadiness": "dfasdf",
+      "proposedCommission": "5% on net-net revenue, plus 2% incentive for exceeding tonnage targets.",
+      "launchTimeline": "Ready for full operational takeoff within 45 days of contract signature.",
+      "namedAccountCoverage": "Direct access to 15 Tier-1 forwarders and 40+ specialized SME accounts in the DACH region.",
+      "monthlySalesTarget": "Initial target of 1,500 tons per month with a 10% MoM growth projection.",
+      "networkPlan": "Our strategy focuses on a 'Hub-and-Spoke' approach. We will utilize our existing sales offices in Frankfurt (FRA), Munich (MUC), and Zurich (ZRH) to feed cargo into Saudia’s main gateways. We plan daily feeder services and a dedicated trucking network (RFS) to ensure 24/7 connectivity to the JED and RUH hubs. Special focus will be placed on high-yield lanes originating from the German automotive and chemical sectors.",
+      "operationalReadiness": "We are fully IATA/CASS certified and currently employ a team of 12 dedicated cargo sales professionals. Our IT infrastructure is ready for seamless EDI integration with Saudia Cargo’s systems. We have existing SLA agreements with major Ground Handling Agents (GHA) in all major German airports, ensuring immediate cargo acceptance and processing capabilities upon launch.",
       "documents": [
         {
-          "id": "Saudia_Cargo_Sales_Strategy_DACH.pdf-13472-0.6992937036727441",
+          "id": "Saudia_Cargo_Sales_Strategy_DACH.pdf-13472-0.7498401626807828",
           "name": "Saudia_Cargo_Sales_Strategy_DACH.pdf",
           "size": 13472,
-          "mimeType": "application/pdf"
+          "mimeType": "application/pdf",
+          "dataUrl": "data:application/pdf;base64,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"
         },
         {
-          "id": "Company_Profile_GSA_2026.pdf-12810-0.5960675077094876",
+          "id": "Company_Profile_GSA_2026.pdf-12810-0.5810386050462867",
           "name": "Company_Profile_GSA_2026.pdf",
           "size": 12810,
-          "mimeType": "application/pdf"
+          "mimeType": "application/pdf",
+          "dataUrl": "data:application/pdf;base64,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"
         }
       ],
-      "status": "pending",
-      "submittedAt": "2026-05-14T00:41:19.372Z",
-      "updatedAt": "2026-05-14T00:41:25.321Z"
+      "status": "shortlisted",
+      "submittedAt": "2026-05-14T14:36:50.128Z",
+      "updatedAt": "2026-05-14T17:49:44.226Z"
     }
   ]
 }

@@ -16,16 +16,31 @@ export function GsaTenderDetailClient({ tenderId }: { tenderId: string }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    Promise.all([
-      fetch(`/api/tenders/${tenderId}`).then((res) => (res.ok ? res.json() : Promise.reject())),
-      fetch("/api/applications").then((res) => res.json()),
-    ])
+    let active = true;
+
+    async function fetchJson(url: string) {
+      const res = await fetch(url);
+      if (!res.ok) throw new Error(`${url} failed with ${res.status}`);
+      return res.json();
+    }
+
+    setLoading(true);
+    Promise.all([fetchJson(`/api/tenders/${tenderId}`), fetchJson("/api/applications")])
       .then(([tenderData, applicationData]) => {
+        if (!active) return;
         setTender(tenderData.tender);
         setApplication((applicationData.applications ?? []).find((item: LiveTenderApplication) => item.tenderId === tenderId) ?? null);
       })
-      .catch(() => setTender(null))
-      .finally(() => setLoading(false));
+      .catch(() => {
+        if (active) setTender(null);
+      })
+      .finally(() => {
+        if (active) setLoading(false);
+      });
+
+    return () => {
+      active = false;
+    };
   }, [tenderId]);
 
   if (loading) {

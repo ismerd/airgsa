@@ -24,14 +24,13 @@ export const DEMO_ACCOUNTS: DemoAccount[] = [
     company: "Saudia Cargo",
   },
   ...realGsaPartners
-    .filter((partner) => ["gsa-forto", "gsa-priority-freight", "gsa-air-menzies"].includes(partner.id))
     .map((partner) => ({
-    email: partner.email,
-    password: "demo2026",
-    role: "gsa" as const,
-    name: partner.contactName,
-    company: partner.name,
-  })),
+      email: partner.email,
+      password: "demo2026",
+      role: "gsa" as const,
+      name: partner.contactName,
+      company: partner.name,
+    })),
 ];
 
 export function validateCredentials(

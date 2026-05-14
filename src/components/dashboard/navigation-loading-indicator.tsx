@@ -17,8 +17,9 @@ export function NavigationLoadingIndicator() {
     function onClick(event: MouseEvent) {
       if (event.defaultPrevented || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
 
-      const target = event.target as Element | null;
-      const anchor = target?.closest("a[href]") as HTMLAnchorElement | null;
+      if (!(event.target instanceof Element)) return;
+
+      const anchor = event.target.closest("a[href]") as HTMLAnchorElement | null;
       if (!anchor || anchor.target || anchor.hasAttribute("download")) return;
 
       const href = anchor.getAttribute("href");

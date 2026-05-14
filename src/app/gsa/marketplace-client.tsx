@@ -14,15 +14,29 @@ export function GsaMarketplaceClient({ gsaName, markets }: { gsaName: string; ma
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    let active = true;
+
     Promise.all([
-      fetch("/api/tenders").then((res) => res.json()),
-      fetch("/api/applications").then((res) => res.json()),
+      fetch("/api/tenders").then((res) => (res.ok ? res.json() : { tenders: [] })),
+      fetch("/api/applications").then((res) => (res.ok ? res.json() : { applications: [] })),
     ])
       .then(([tenderData, applicationData]) => {
+        if (!active) return;
         setTenders(tenderData.tenders ?? []);
         setApplications(applicationData.applications ?? []);
       })
-      .finally(() => setLoading(false));
+      .catch(() => {
+        if (!active) return;
+        setTenders([]);
+        setApplications([]);
+      })
+      .finally(() => {
+        if (active) setLoading(false);
+      });
+
+    return () => {
+      active = false;
+    };
   }, []);
 
   const appliedTenderIds = new Set(applications.map((application) => application.tenderId));

@@ -12,6 +12,18 @@ type DocumentPreview = {
   isImage: boolean;
 };
 
+type DocumentSource =
+  | {
+      available: true;
+      href: string;
+      downloadName: string;
+      preview: DocumentPreview;
+    }
+  | {
+      available: false;
+      missingReason: string;
+    };
+
 export function DocumentList({ documents }: { documents: TenderWorkflowDocument[] }) {
   const [preview, setPreview] = useState<DocumentPreview | null>(null);
 
@@ -26,17 +38,38 @@ export function DocumentList({ documents }: { documents: TenderWorkflowDocument[
           const source = getDocumentSource(file);
 
           return (
-            <div key={file.id} className="flex flex-wrap items-center gap-2 rounded-lg border border-border-ui bg-surface2 p-3 text-sm text-ink-muted">
+            <div key={file.id} className="rounded-lg border border-border-ui bg-surface2 p-3 text-sm text-ink-muted">
+              <div className="flex flex-wrap items-center gap-2">
               <FileText className="h-4 w-4 text-brand" />
               <span className="min-w-0 flex-1 truncate">{file.name}</span>
-              <Button type="button" size="sm" variant="outline" onClick={() => setPreview(source.preview)}>
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                disabled={!source.available}
+                onClick={() => source.available && setPreview(source.preview)}
+                title={source.available ? "View document" : source.missingReason}
+              >
                 <ExternalLink className="h-3.5 w-3.5" />
                 View
               </Button>
-              <a href={source.href} download={source.downloadName} className="inline-flex h-8 items-center justify-center gap-2 rounded-lg border border-border-ui bg-surface px-3 text-xs font-semibold text-ink transition-colors hover:bg-surface2">
-                <Download className="h-3.5 w-3.5" />
-                Download
-              </a>
+              {source.available ? (
+                <a href={source.href} download={source.downloadName} className="inline-flex h-8 items-center justify-center gap-2 rounded-lg border border-border-ui bg-surface px-3 text-xs font-semibold text-ink transition-colors hover:bg-surface2">
+                  <Download className="h-3.5 w-3.5" />
+                  Download
+                </a>
+              ) : (
+                <Button type="button" size="sm" variant="ghost" disabled title={source.missingReason}>
+                  <Download className="h-3.5 w-3.5" />
+                  Download
+                </Button>
+              )}
+              </div>
+              {!source.available && (
+                <p className="mt-2 rounded-md bg-warning-bg px-3 py-2 text-xs text-warning">
+                  {source.missingReason}
+                </p>
+              )}
             </div>
           );
         })}
@@ -69,9 +102,10 @@ export function DocumentList({ documents }: { documents: TenderWorkflowDocument[
   );
 }
 
-function getDocumentSource(file: TenderWorkflowDocument) {
+function getDocumentSource(file: TenderWorkflowDocument): DocumentSource {
   if (file.dataUrl) {
     return {
+      available: true,
       href: file.dataUrl,
       downloadName: file.name,
       preview: {
@@ -83,24 +117,8 @@ function getDocumentSource(file: TenderWorkflowDocument) {
     };
   }
 
-  const fallbackText = [
-    `Document: ${file.name}`,
-    `MIME type: ${file.mimeType}`,
-    `Size: ${file.size} bytes`,
-    "",
-    "This legacy record does not include the original binary payload.",
-    "Newly uploaded files are stored with preview and download data.",
-  ].join("\n");
-  const href = `data:text/plain;charset=utf-8,${encodeURIComponent(fallbackText)}`;
-
   return {
-    href,
-    downloadName: `${file.name}.metadata.txt`,
-    preview: {
-      name: file.name,
-      mimeType: "text/plain",
-      src: href,
-      isImage: false,
-    },
+    available: false,
+    missingReason: "This older application only stored the filename, not the original file. Re-upload the document to preview or download it here.",
   };
 }

@@ -8,7 +8,6 @@ import {
   FileText,
   Globe2,
   Handshake,
-  Package,
   Plane,
   Radar,
   ShieldCheck,
@@ -17,7 +16,6 @@ import {
   Zap,
 } from "lucide-react";
 import { buttonVariants } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
 
 export default function Home() {
@@ -128,13 +126,13 @@ export default function Home() {
         <div className="mx-auto max-w-7xl px-5">
           <div className="text-center">
             <p className="text-xs font-semibold uppercase tracking-[0.28em] text-brand">Platform features</p>
-            <h2 className="mt-3 text-3xl font-semibold text-ink md:text-4xl">Built for every role in the cargo chain</h2>
+            <h2 className="mt-3 text-3xl font-semibold text-ink md:text-4xl">Built for airline and GSA teams</h2>
             <p className="mx-auto mt-4 max-w-xl text-ink-muted">
-              Whether you operate freighters, sell cargo capacity, or move freight — AirGSA gives you the tools to work smarter.
+              AirGSA gives airline cargo teams and General Sales Agents the tools to run tenders, applications, contracts, and performance in one workspace.
             </p>
           </div>
 
-          <div className="mt-14 grid gap-6 lg:grid-cols-3">
+          <div className="mt-14 grid gap-6 lg:grid-cols-2">
             {/* Airlines */}
             <div className="rounded-2xl border border-border-ui bg-surface p-7">
               <span className="inline-flex items-center gap-2 rounded-full border border-brand/20 bg-brand-light px-3 py-1 text-xs font-semibold text-brand">
@@ -163,19 +161,6 @@ export default function Home() {
               </ul>
             </div>
 
-            {/* Freight Forwarders */}
-            <div className="rounded-2xl border border-border-ui bg-surface p-7">
-              <span className="inline-flex items-center gap-2 rounded-full border border-cyan-400/20 bg-cyan-400/10 px-3 py-1 text-xs font-semibold text-cyan-400">
-                <Package className="h-3.5 w-3.5" /> For Freight Forwarders
-              </span>
-              <h3 className="mt-5 text-xl font-semibold text-ink">Book, track, manage — in one place</h3>
-              <p className="mt-2 text-sm leading-7 text-ink-muted">
-                Access real-time cargo capacity across the Saudia Cargo freighter network. Book space, track AWBs, and manage flight changes without switching between systems.
-              </p>
-              <ul className="mt-6 space-y-3">
-                {FF_FEATURES.map((f) => <FeatureItem key={f} text={f} />)}
-              </ul>
-            </div>
           </div>
         </div>
       </section>
@@ -291,14 +276,6 @@ const GSA_FEATURES = [
   "Submit structured proposals with network and commercial plans",
   "Track active contract KPIs and benchmark against targets",
   "Receive capacity hunt alerts from connected airlines",
-];
-
-const FF_FEATURES = [
-  "Search and book cargo space across the freighter network",
-  "Track AWBs in real time with status and ETA updates",
-  "Request flight changes and upsell confirmations online",
-  "Download flight statements and reconciliation reports",
-  "Manage preferred routes and rate agreements",
 ];
 
 const CAPABILITIES: { icon: LucideIcon; title: string; body: string }[] = [
