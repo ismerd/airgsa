@@ -191,6 +191,39 @@ export function useAirlineGsaWorkflow(applications: TenderApplication[]) {
     });
   }
 
+  function setContractTerms(
+    gsaId: string,
+    terms: {
+      targetLoadFactor?: number;
+      monthlyTonnageTargetKg?: number;
+      commercialTerms?: string;
+      reportingCadence?: string;
+    },
+  ) {
+    setState((current) => {
+      const currentAssignment = current.acceptedGsas[gsaId] ?? {
+        gsaId,
+        acceptedAt: new Date().toLocaleDateString("en-GB", {
+          day: "numeric",
+          month: "short",
+          year: "numeric",
+        }),
+        routeIds: [],
+      };
+
+      return {
+        ...current,
+        acceptedGsas: {
+          ...current.acceptedGsas,
+          [gsaId]: {
+            ...currentAssignment,
+            ...terms,
+          },
+        },
+      };
+    });
+  }
+
   function resetWorkflow() {
     setState(initialState);
   }
@@ -205,6 +238,7 @@ export function useAirlineGsaWorkflow(applications: TenderApplication[]) {
     unassignRoute,
     toggleAssignedRoute,
     setContractPeriod,
+    setContractTerms,
     resetWorkflow,
   };
 }

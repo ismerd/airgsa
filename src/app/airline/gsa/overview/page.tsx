@@ -4,12 +4,16 @@ import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import {
   ArrowRight,
+  CalendarDays,
   CheckCircle2,
+  ClipboardCheck,
   LockKeyhole,
   PackageCheck,
+  Plus,
   Route,
   Search,
   ShieldCheck,
+  Target,
   UsersRound,
 } from "lucide-react";
 import { Topbar } from "@/components/dashboard/topbar";
@@ -18,7 +22,8 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
-import { assignableRoutes, type AssignableRoute } from "@/lib/airline-gsa-workflow";
+import { Textarea } from "@/components/ui/textarea";
+import { assignableRoutes, type AssignableRoute, type AssignedGsa } from "@/lib/airline-gsa-workflow";
 import { realGsaPartners, type RealGsaPartner } from "@/lib/real-gsa-data";
 import type { LiveTenderApplication } from "@/lib/services/tender-workflow-store";
 import { useAirlineGsaWorkflow } from "@/lib/use-airline-gsa-workflow";
@@ -45,9 +50,12 @@ export default function AirlineGsaOverviewPage() {
     [acceptedApplicationByGsaId],
   );
   const [selectedGsaId, setSelectedGsaId] = useState<string>("");
-  const [query, setQuery] = useState("");
-  const [marketFilter, setMarketFilter] = useState("all");
-  const [statusFilter, setStatusFilter] = useState<RouteStatusFilter>("all");
+  const [selectedRouteQuery, setSelectedRouteQuery] = useState("");
+  const [routePickerOpen, setRoutePickerOpen] = useState(false);
+  const [routePickerQuery, setRoutePickerQuery] = useState("");
+  const [routePickerMarket, setRoutePickerMarket] = useState("all");
+  const [routePickerOrigin, setRoutePickerOrigin] = useState("all");
+  const [routePickerStatus, setRoutePickerStatus] = useState<RouteStatusFilter>("eligible");
   const [pendingTransferRouteId, setPendingTransferRouteId] = useState<string | null>(null);
 
   useEffect(() => {
@@ -91,25 +99,30 @@ export default function AirlineGsaOverviewPage() {
   const assignedRouteCount = assignedRouteIds.size;
   const assignedRoutes = assignableRoutes.filter((route) => assignedRouteIds.has(route.id));
   const markets = Array.from(new Set(assignableRoutes.map((route) => route.market))).sort();
+  const origins = Array.from(new Set(assignableRoutes.map((route) => route.origin))).sort();
   const hasContractPeriod = Boolean(selectedAssignment?.contractStart && selectedAssignment?.contractEnd);
-
-  const filteredRoutes = assignableRoutes.filter((route) => {
-    const owner = getRouteOwner(route.id, acceptedPartners, visibleAssignments);
-    const eligibility = selectedPartner ? getEligibility(route, selectedPartner, owner?.partner.id ?? null) : "no-selection";
-    const searchable = `${route.id} ${route.market} ${route.origin} ${route.destination} ${owner?.partner.name ?? ""}`.toLowerCase();
-
-    if (query && !searchable.includes(query.toLowerCase())) return false;
-    if (marketFilter !== "all" && route.market !== marketFilter) return false;
-    if (statusFilter === "assigned" && !owner) return false;
-    if (statusFilter === "unassigned" && owner) return false;
-    if (statusFilter === "eligible" && eligibility !== "available" && eligibility !== "assigned-to-selected") return false;
-    if (statusFilter === "blocked" && eligibility !== "assigned-to-other" && eligibility !== "out-of-scope") return false;
-    return true;
-  });
 
   const selectedRoutes = selectedAssignment
     ? assignableRoutes.filter((route) => selectedAssignment.routeIds.includes(route.id))
     : [];
+  const visibleSelectedRoutes = selectedRoutes.filter((route) => {
+    const searchable = `${route.id} ${route.market} ${route.origin} ${route.destination}`.toLowerCase();
+    return !selectedRouteQuery || searchable.includes(selectedRouteQuery.toLowerCase());
+  });
+  const routeCandidates = assignableRoutes.filter((route) => {
+    const owner = getRouteOwner(route.id, acceptedPartners, visibleAssignments);
+    const eligibility = selectedPartner ? getEligibility(route, selectedPartner, owner?.partner.id ?? null) : "no-selection";
+    const searchable = `${route.id} ${route.market} ${route.origin} ${route.destination} ${owner?.partner.name ?? ""}`.toLowerCase();
+
+    if (routePickerQuery && !searchable.includes(routePickerQuery.toLowerCase())) return false;
+    if (routePickerMarket !== "all" && route.market !== routePickerMarket) return false;
+    if (routePickerOrigin !== "all" && route.origin !== routePickerOrigin) return false;
+    if (routePickerStatus === "assigned" && !owner) return false;
+    if (routePickerStatus === "unassigned" && owner) return false;
+    if (routePickerStatus === "eligible" && eligibility !== "available") return false;
+    if (routePickerStatus === "blocked" && eligibility !== "assigned-to-other" && eligibility !== "out-of-scope") return false;
+    return true;
+  });
   const selectedCapacity = selectedRoutes.reduce((sum, route) => sum + route.weeklyCapacityKg, 0);
   const pendingTransferRoute = pendingTransferRouteId
     ? assignableRoutes.find((route) => route.id === pendingTransferRouteId) ?? null
@@ -148,167 +161,286 @@ export default function AirlineGsaOverviewPage() {
           </Card>
         ) : (
           <>
-            <div className="grid gap-5 xl:grid-cols-[360px_1fr]">
+            <Card>
+              <CardHeader>
+                <div className="flex flex-col gap-2 lg:flex-row lg:items-end lg:justify-between">
+                  <div>
+                    <CardTitle className="flex items-center gap-2">
+                      <ShieldCheck className="h-5 w-5 text-brand" />
+                      Working GSAs
+                    </CardTitle>
+                    <p className="mt-1 text-sm text-ink-muted">
+                      These partners have accepted awards and can receive contract terms, targets, and route allocations.
+                    </p>
+                  </div>
+                  <Badge variant="muted">{acceptedPartners.length} active partner{acceptedPartners.length === 1 ? "" : "s"}</Badge>
+                </div>
+              </CardHeader>
+              <CardContent className="grid gap-4 lg:grid-cols-2 2xl:grid-cols-3">
+                {acceptedPartners.map((partner) => (
+                  <PartnerContractCard
+                    key={partner.id}
+                    partner={partner}
+                    assignment={visibleAssignments[partner.id]}
+                    application={acceptedApplicationByGsaId.get(partner.id) ?? null}
+                    selected={partner.id === selectedGsaId}
+                    onSelect={() => setSelectedGsaId(partner.id)}
+                  />
+                ))}
+              </CardContent>
+            </Card>
+
+            {selectedPartner && selectedAssignment && (
               <Card>
                 <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <ShieldCheck className="h-5 w-5 text-brand" />
-                    Allocation control
-                  </CardTitle>
+                  <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+                    <div>
+                      <CardTitle className="flex items-center gap-2">
+                        <ClipboardCheck className="h-5 w-5 text-brand" />
+                        Contract controls for {selectedPartner.name}
+                      </CardTitle>
+                      <p className="mt-1 text-sm text-ink-muted">
+                        Set the working conditions first, then assign only the routes that belong to this contract.
+                      </p>
+                    </div>
+                    <Button asChild size="sm" variant="outline">
+                      <Link href={`/airline/gsa/${selectedPartner.id}`}>Open full profile</Link>
+                    </Button>
+                  </div>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                  <div>
-                    <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-ink-muted">
-                      Accepted GSA
-                    </label>
-                    <Select value={selectedGsaId} onChange={(event) => setSelectedGsaId(event.target.value)}>
-                      {acceptedPartners.map((partner) => (
-                        <option key={partner.id} value={partner.id}>
-                          {partner.name}
-                        </option>
-                      ))}
-                    </Select>
+                  <div className="grid gap-3 lg:grid-cols-4">
+                    <ContractField label="Contract start">
+                      <Input
+                        type="date"
+                        value={selectedAssignment.contractStart ?? ""}
+                        onChange={(event) => workflow.setContractPeriod(selectedPartner.id, { contractStart: event.target.value })}
+                      />
+                    </ContractField>
+                    <ContractField label="Contract end">
+                      <Input
+                        type="date"
+                        min={selectedAssignment.contractStart}
+                        value={selectedAssignment.contractEnd ?? ""}
+                        onChange={(event) => workflow.setContractPeriod(selectedPartner.id, { contractEnd: event.target.value })}
+                      />
+                    </ContractField>
+                    <ContractField label="Target load factor">
+                      <Input
+                        type="number"
+                        min={0}
+                        max={100}
+                        value={selectedAssignment.targetLoadFactor ?? ""}
+                        placeholder="82"
+                        onChange={(event) =>
+                          workflow.setContractTerms(selectedPartner.id, {
+                            targetLoadFactor: event.target.value ? Number(event.target.value) : undefined,
+                          })
+                        }
+                      />
+                    </ContractField>
+                    <ContractField label="Monthly tonnage target">
+                      <Input
+                        type="number"
+                        min={0}
+                        value={selectedAssignment.monthlyTonnageTargetKg ? Math.round(selectedAssignment.monthlyTonnageTargetKg / 1000) : ""}
+                        placeholder="1500"
+                        onChange={(event) =>
+                          workflow.setContractTerms(selectedPartner.id, {
+                            monthlyTonnageTargetKg: event.target.value ? Number(event.target.value) * 1000 : undefined,
+                          })
+                        }
+                      />
+                    </ContractField>
                   </div>
 
-                  {selectedPartner && selectedAssignment && (
-                    <>
-                      <div className="rounded-lg border border-border-ui bg-surface2 p-4">
-                        <div className="flex items-start justify-between gap-3">
-                          <div>
-                            <p className="font-semibold text-ink">{selectedPartner.name}</p>
-                            <p className="mt-1 text-xs text-ink-muted">{selectedPartner.contactName}</p>
-                            {selectedApplication && (
-                              <p className="mt-1 text-xs text-ink-muted">
-                                Accepted application on {new Date(selectedApplication.updatedAt).toLocaleDateString("en-GB")}
-                              </p>
-                            )}
-                          </div>
-                          <Button asChild size="sm" variant="outline">
-                            <Link href={`/airline/gsa/${selectedPartner.id}`}>Profile</Link>
-                          </Button>
-                        </div>
-                        <div className="mt-3 flex flex-wrap gap-1.5">
-                          {selectedPartner.markets.map((market) => (
-                            <Badge key={market} variant="muted">{market}</Badge>
-                          ))}
-                        </div>
-                      </div>
+                  <div className="grid gap-3 lg:grid-cols-[1fr_260px]">
+                    <ContractField label="Commercial terms">
+                      <Textarea
+                        value={selectedAssignment.commercialTerms ?? selectedApplication?.proposedCommission ?? ""}
+                        onChange={(event) =>
+                          workflow.setContractTerms(selectedPartner.id, { commercialTerms: event.target.value })
+                        }
+                        placeholder="Commission, incentive, payment terms, minimum commitment..."
+                      />
+                    </ContractField>
+                    <ContractField label="Reporting cadence">
+                      <Select
+                        value={selectedAssignment.reportingCadence ?? "weekly"}
+                        onChange={(event) =>
+                          workflow.setContractTerms(selectedPartner.id, { reportingCadence: event.target.value })
+                        }
+                      >
+                        <option value="weekly">Weekly sales review</option>
+                        <option value="biweekly">Bi-weekly review</option>
+                        <option value="monthly">Monthly QBR pack</option>
+                      </Select>
+                    </ContractField>
+                  </div>
 
-                      <div className="grid gap-3 sm:grid-cols-2">
-                        <div>
-                          <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-ink-muted">
-                            Contract start
-                          </label>
-                          <Input
-                            type="date"
-                            value={selectedAssignment.contractStart ?? ""}
-                            onChange={(event) =>
-                              workflow.setContractPeriod(selectedPartner.id, { contractStart: event.target.value })
-                            }
-                          />
-                        </div>
-                        <div>
-                          <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-ink-muted">
-                            Contract end
-                          </label>
-                          <Input
-                            type="date"
-                            min={selectedAssignment.contractStart}
-                            value={selectedAssignment.contractEnd ?? ""}
-                            onChange={(event) =>
-                              workflow.setContractPeriod(selectedPartner.id, { contractEnd: event.target.value })
-                            }
-                          />
-                        </div>
-                      </div>
-
-                      {!hasContractPeriod && (
-                        <div className="rounded-lg border border-amber-500/25 bg-warning-bg p-3 text-xs text-warning">
-                          Set contract start and end before assigning routes. The assignment is only valid for that contract period.
-                        </div>
-                      )}
-
-                      <div className="grid gap-3 sm:grid-cols-2">
-                        <MiniMetric label="Routes" value={String(selectedRoutes.length)} />
-                        <MiniMetric label="Weekly capacity" value={`${Math.round(selectedCapacity / 1000)}t`} />
-                      </div>
-                    </>
+                  {!hasContractPeriod && (
+                    <div className="rounded-lg border border-amber-500/25 bg-warning-bg p-3 text-xs text-warning">
+                      Set contract start and end before assigning routes. The assignment is only valid for that contract period.
+                    </div>
                   )}
+
+                  <div className="grid gap-3 md:grid-cols-4">
+                    <MiniMetric label="Routes" value={String(selectedRoutes.length)} />
+                    <MiniMetric label="Weekly capacity" value={`${Math.round(selectedCapacity / 1000)}t`} />
+                    <MiniMetric label="Load factor target" value={selectedAssignment.targetLoadFactor ? `${selectedAssignment.targetLoadFactor}%` : "-"} />
+                    <MiniMetric
+                      label="Monthly target"
+                      value={selectedAssignment.monthlyTonnageTargetKg ? `${Math.round(selectedAssignment.monthlyTonnageTargetKg / 1000)}t` : "-"}
+                    />
+                  </div>
                 </CardContent>
               </Card>
+            )}
 
+            {selectedPartner && selectedAssignment && (
               <Card>
                 <CardHeader className="gap-4">
                   <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
                     <div>
-                      <CardTitle>Route allocation table</CardTitle>
+                      <CardTitle>Routes for {selectedPartner.name}</CardTitle>
                       <p className="mt-1 text-sm text-ink-muted">
-                        Assign each route to one GSA for the contract duration. Existing route owners are protected from accidental overwrite.
+                        Only routes already selected for this GSA are shown here. Add more routes through the route picker below.
                       </p>
                     </div>
-                    <Badge variant="muted">{filteredRoutes.length} routes shown</Badge>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <Badge variant="muted">{selectedRoutes.length} selected</Badge>
+                      <Button size="sm" onClick={() => setRoutePickerOpen((open) => !open)}>
+                        <Plus className="h-4 w-4" />
+                        Add route
+                      </Button>
+                    </div>
                   </div>
 
-                  <div className="grid gap-3 lg:grid-cols-[1fr_180px_180px]">
-                    <div className="relative">
-                      <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-ink-muted" />
-                      <Input
-                        value={query}
-                        onChange={(event) => setQuery(event.target.value)}
-                        placeholder="Search route, market, airport or GSA..."
-                        className="pl-9"
-                      />
-                    </div>
-                    <Select value={marketFilter} onChange={(event) => setMarketFilter(event.target.value)}>
-                      <option value="all">All markets</option>
-                      {markets.map((market) => (
-                        <option key={market} value={market}>{market}</option>
-                      ))}
-                    </Select>
-                    <Select value={statusFilter} onChange={(event) => setStatusFilter(event.target.value as RouteStatusFilter)}>
-                      <option value="all">All routes</option>
-                      <option value="eligible">Eligible for selected GSA</option>
-                      <option value="unassigned">Unassigned</option>
-                      <option value="assigned">Assigned</option>
-                      <option value="blocked">Blocked / out of scope</option>
-                    </Select>
+                  <div className="relative">
+                    <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-ink-muted" />
+                    <Input
+                      value={selectedRouteQuery}
+                      onChange={(event) => setSelectedRouteQuery(event.target.value)}
+                      placeholder="Search selected routes..."
+                      className="pl-9"
+                    />
                   </div>
-                </CardHeader>
-                <CardContent className="overflow-x-auto">
-                  <table className="w-full text-sm">
-                    <thead>
-                      <tr className="border-b border-border-ui text-xs font-semibold uppercase tracking-wider text-ink-muted">
-                        <th className="pb-3 pr-4 text-left">Route</th>
-                        <th className="pb-3 pr-4 text-left">Market</th>
-                        <th className="pb-3 pr-4 text-left">Capacity</th>
-                        <th className="pb-3 pr-4 text-left">Current GSA</th>
-                        <th className="pb-3 pr-4 text-left">Eligibility</th>
-                        <th className="pb-3 text-right">Action</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-border-ui">
-                      {filteredRoutes.map((route) => {
-                        const owner = getRouteOwner(route.id, acceptedPartners, visibleAssignments);
-                        const eligibility = selectedPartner ? getEligibility(route, selectedPartner, owner?.partner.id ?? null) : "no-selection";
-                        return (
-                          <RouteRow
-                            key={route.id}
-                            route={route}
-                            owner={owner?.partner ?? null}
-                            eligibility={eligibility}
-                            canAssign={Boolean(selectedPartner && hasContractPeriod && eligibility === "available")}
-                            canTransfer={Boolean(selectedPartner && hasContractPeriod && eligibility === "assigned-to-other")}
-                            onAssign={() => selectedPartner && workflow.assignRoute(selectedPartner.id, route.id)}
-                            onUnassign={() => selectedPartner && workflow.unassignRoute(selectedPartner.id, route.id)}
-                            onReviewTransfer={() => setPendingTransferRouteId(route.id)}
+
+                  {routePickerOpen && (
+                    <div className="rounded-xl border border-brand/20 bg-brand-light/40 p-4">
+                      <div className="flex flex-col gap-2 lg:flex-row lg:items-center lg:justify-between">
+                        <div>
+                          <p className="font-semibold text-ink">Add routes to this contract</p>
+                          <p className="mt-1 text-sm text-ink-muted">
+                            Filter by market/country, origin airport, eligibility, or search the full route list.
+                          </p>
+                        </div>
+                        <Badge variant="muted">{routeCandidates.length} available in picker</Badge>
+                      </div>
+                      <div className="mt-4 grid gap-3 xl:grid-cols-[1fr_180px_180px_200px]">
+                        <div className="relative">
+                          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-ink-muted" />
+                          <Input
+                            value={routePickerQuery}
+                            onChange={(event) => setRoutePickerQuery(event.target.value)}
+                            placeholder="Search all routes..."
+                            className="pl-9"
                           />
-                        );
-                      })}
-                    </tbody>
-                  </table>
+                        </div>
+                        <Select value={routePickerMarket} onChange={(event) => setRoutePickerMarket(event.target.value)}>
+                          <option value="all">All markets</option>
+                          {markets.map((market) => (
+                            <option key={market} value={market}>{market}</option>
+                          ))}
+                        </Select>
+                        <Select value={routePickerOrigin} onChange={(event) => setRoutePickerOrigin(event.target.value)}>
+                          <option value="all">All origins</option>
+                          {origins.map((origin) => (
+                            <option key={origin} value={origin}>From {origin}</option>
+                          ))}
+                        </Select>
+                        <Select value={routePickerStatus} onChange={(event) => setRoutePickerStatus(event.target.value as RouteStatusFilter)}>
+                          <option value="eligible">Eligible only</option>
+                          <option value="unassigned">Unassigned</option>
+                          <option value="assigned">Assigned elsewhere</option>
+                          <option value="blocked">Blocked / out of scope</option>
+                          <option value="all">Entire route list</option>
+                        </Select>
+                      </div>
+                    </div>
+                  )}
+                </CardHeader>
+                <CardContent className="space-y-5">
+                  <div className="overflow-x-auto">
+                    {visibleSelectedRoutes.length === 0 ? (
+                      <div className="rounded-xl border border-dashed border-border-ui bg-surface2 p-8 text-center">
+                        <Route className="mx-auto h-9 w-9 text-ink-muted/45" />
+                        <p className="mt-3 font-semibold text-ink">No routes selected for this GSA yet</p>
+                        <p className="mt-1 text-sm text-ink-muted">
+                          Use Add route to attach the first route to this contract.
+                        </p>
+                      </div>
+                    ) : (
+                      <table className="w-full text-sm">
+                        <thead>
+                          <tr className="border-b border-border-ui text-xs font-semibold uppercase tracking-wider text-ink-muted">
+                            <th className="pb-3 pr-4 text-left">Route</th>
+                            <th className="pb-3 pr-4 text-left">Market</th>
+                            <th className="pb-3 pr-4 text-left">Capacity</th>
+                            <th className="pb-3 text-right">Action</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-border-ui">
+                          {visibleSelectedRoutes.map((route) => (
+                            <SelectedRouteRow
+                              key={route.id}
+                              route={route}
+                              onUnassign={() => workflow.unassignRoute(selectedPartner.id, route.id)}
+                            />
+                          ))}
+                        </tbody>
+                      </table>
+                    )}
+                  </div>
+
+                  {routePickerOpen && (
+                    <div className="overflow-x-auto rounded-xl border border-border-ui">
+                      <table className="w-full text-sm">
+                        <thead className="bg-surface2">
+                          <tr className="border-b border-border-ui text-xs font-semibold uppercase tracking-wider text-ink-muted">
+                            <th className="px-4 py-3 text-left">Route</th>
+                            <th className="px-4 py-3 text-left">Market</th>
+                            <th className="px-4 py-3 text-left">Capacity</th>
+                            <th className="px-4 py-3 text-left">Current GSA</th>
+                            <th className="px-4 py-3 text-left">Eligibility</th>
+                            <th className="px-4 py-3 text-right">Action</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-border-ui">
+                          {routeCandidates.map((route) => {
+                            const owner = getRouteOwner(route.id, acceptedPartners, visibleAssignments);
+                            const eligibility = selectedPartner ? getEligibility(route, selectedPartner, owner?.partner.id ?? null) : "no-selection";
+                            return (
+                              <RouteRow
+                                key={route.id}
+                                route={route}
+                                owner={owner?.partner ?? null}
+                                eligibility={eligibility}
+                                canAssign={Boolean(selectedPartner && hasContractPeriod && eligibility === "available")}
+                                canTransfer={Boolean(selectedPartner && hasContractPeriod && eligibility === "assigned-to-other")}
+                                onAssign={() => selectedPartner && workflow.assignRoute(selectedPartner.id, route.id)}
+                                onUnassign={() => selectedPartner && workflow.unassignRoute(selectedPartner.id, route.id)}
+                                onReviewTransfer={() => setPendingTransferRouteId(route.id)}
+                              />
+                            );
+                          })}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
                 </CardContent>
               </Card>
-            </div>
+            )}
 
             {pendingTransferRoute && selectedPartner && (
               <Card className="border-amber-500/30">
@@ -337,6 +469,118 @@ export default function AirlineGsaOverviewPage() {
         )}
       </main>
     </>
+  );
+}
+
+function PartnerContractCard({
+  partner,
+  assignment,
+  application,
+  selected,
+  onSelect,
+}: {
+  partner: RealGsaPartner;
+  assignment: AssignedGsa | undefined;
+  application: LiveTenderApplication | null;
+  selected: boolean;
+  onSelect: () => void;
+}) {
+  const assignedRoutesForPartner = assignment
+    ? assignableRoutes.filter((route) => assignment.routeIds.includes(route.id))
+    : [];
+  const weeklyCapacity = assignedRoutesForPartner.reduce((sum, route) => sum + route.weeklyCapacityKg, 0);
+  const hasContractPeriod = Boolean(assignment?.contractStart && assignment?.contractEnd);
+
+  return (
+    <button
+      type="button"
+      onClick={onSelect}
+      className={`rounded-xl border p-4 text-left transition ${
+        selected
+          ? "border-brand bg-brand-light shadow-[0_0_0_1px_rgba(26,90,255,0.16)]"
+          : "border-border-ui bg-surface2 hover:border-brand/45 hover:bg-surface"
+      }`}
+    >
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <p className="truncate text-base font-semibold text-ink">{partner.name}</p>
+          <p className="mt-1 truncate text-xs text-ink-muted">{partner.contactName}</p>
+        </div>
+        <Badge variant={hasContractPeriod ? "success" : "warning"}>
+          {hasContractPeriod ? "contract set" : "needs terms"}
+        </Badge>
+      </div>
+
+      <div className="mt-4 grid grid-cols-3 gap-2">
+        <CardMetric label="Routes" value={String(assignedRoutesForPartner.length)} />
+        <CardMetric label="Capacity" value={`${Math.round(weeklyCapacity / 1000)}t`} />
+        <CardMetric label="LF target" value={assignment?.targetLoadFactor ? `${assignment.targetLoadFactor}%` : "-"} />
+      </div>
+
+      <div className="mt-4 grid gap-2 text-xs text-ink-muted">
+        <span className="flex items-center gap-2">
+          <CalendarDays className="h-3.5 w-3.5 text-brand" />
+          {assignment?.contractStart && assignment.contractEnd
+            ? `${assignment.contractStart} to ${assignment.contractEnd}`
+            : "No contract period set"}
+        </span>
+        <span className="flex items-center gap-2">
+          <Target className="h-3.5 w-3.5 text-brand" />
+          {assignment?.monthlyTonnageTargetKg
+            ? `${Math.round(assignment.monthlyTonnageTargetKg / 1000)}t monthly target`
+            : application?.monthlySalesTarget || "No monthly target set"}
+        </span>
+      </div>
+    </button>
+  );
+}
+
+function CardMetric({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded-lg border border-border-ui bg-surface px-2 py-2">
+      <p className="text-base font-semibold text-ink">{value}</p>
+      <p className="text-[10px] text-ink-muted">{label}</p>
+    </div>
+  );
+}
+
+function ContractField({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <label>
+      <span className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-ink-muted">{label}</span>
+      {children}
+    </label>
+  );
+}
+
+function SelectedRouteRow({ route, onUnassign }: { route: AssignableRoute; onUnassign: () => void }) {
+  return (
+    <tr className="align-top text-ink-muted">
+      <td className="py-4 pr-4">
+        <p className="font-mono font-semibold text-ink">{route.id}</p>
+        <p className="mt-1 text-xs text-ink-muted">{route.origin} to {route.destination}</p>
+      </td>
+      <td className="py-4 pr-4">
+        <div className="flex flex-wrap gap-1.5">
+          <Badge variant="muted">{route.market}</Badge>
+          <Badge variant={route.flightType === "freighter" ? "default" : "muted"}>
+            {route.flightType === "freighter" ? "Cargo" : "Mixed"}
+          </Badge>
+          <Badge variant={route.priority === "recovery" ? "warning" : route.priority === "launch" ? "default" : "muted"}>
+            {route.priority}
+          </Badge>
+        </div>
+      </td>
+      <td className="py-4 pr-4">
+        <p className="font-semibold text-ink">{Math.round(route.weeklyCapacityKg / 1000)}t</p>
+        <p className="text-xs text-ink-muted">weekly</p>
+      </td>
+      <td className="py-4 text-right">
+        <Button size="sm" variant="outline" onClick={onUnassign}>
+          Remove
+        </Button>
+      </td>
+    </tr>
   );
 }
 

@@ -17,6 +17,10 @@ export type AssignedGsa = {
   acceptedAt: string;
   contractStart?: string;
   contractEnd?: string;
+  targetLoadFactor?: number;
+  monthlyTonnageTargetKg?: number;
+  commercialTerms?: string;
+  reportingCadence?: string;
   routeIds: string[];
 };
 
