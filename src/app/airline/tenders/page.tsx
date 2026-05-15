@@ -3,13 +3,13 @@
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { CalendarDays, Edit3, MapPin, PlaneTakeoff, Plus, Trash2 } from "lucide-react";
-import { StatusBadge } from "@/components/dashboard/status-badge";
 import { Topbar } from "@/components/dashboard/topbar";
+import { Badge } from "@/components/ui/badge";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import type { LiveTender, TenderRouteFrequency } from "@/lib/services/tender-workflow-store";
+import type { LiveTender, LiveTenderApplication, TenderRouteFrequency } from "@/lib/services/tender-workflow-store";
 
 type TenderFormState = {
   title: string;
@@ -19,6 +19,9 @@ type TenderFormState = {
   deadline: string;
   expectedStart: string;
   status: "draft" | "open" | "closed";
+  awardMode: "single" | "multi";
+  maxAwards: string;
+  commercialModel: "commission" | "capacity-risk" | "hybrid";
   requirements: string;
   commercialExpectations: string;
   routes: Array<Omit<TenderRouteFrequency, "id">>;
@@ -34,6 +37,7 @@ const emptyRoute: Omit<TenderRouteFrequency, "id"> = {
 
 export default function AirlineTendersPage() {
   const [tenders, setTenders] = useState<LiveTender[]>([]);
+  const [applications, setApplications] = useState<LiveTenderApplication[]>([]);
   const [loading, setLoading] = useState(true);
   const [editingTender, setEditingTender] = useState<LiveTender | null>(null);
   const [form, setForm] = useState<TenderFormState | null>(null);
@@ -45,14 +49,53 @@ export default function AirlineTendersPage() {
     loadTenders();
   }, []);
 
-  const openTenders = useMemo(() => tenders.filter((tender) => tender.status === "open").length, [tenders]);
+  const applicationStatsByTender = useMemo(() => {
+    const map = new Map<string, TenderApplicationStats>();
+    for (const tender of tenders) {
+      const rows = applications.filter((application) => application.tenderId === tender.id);
+      const awardSlots = getAwardSlots(tender);
+      const accepted = rows.filter((application) => application.status === "accepted").length;
+      const pending = rows.filter((application) => application.status === "pending").length;
+      const shortlisted = rows.filter((application) => application.status === "shortlisted").length;
+      map.set(tender.id, {
+        total: rows.length,
+        pending,
+        shortlisted,
+        accepted,
+        rejected: rows.filter((application) => application.status === "rejected").length,
+        awardSlots,
+        lifecycle: getTenderLifecycle(tender, accepted, awardSlots, rows.length, shortlisted),
+      });
+    }
+    return map;
+  }, [applications, tenders]);
+  const liveTenders = useMemo(
+    () => tenders.filter((tender) => applicationStatsByTender.get(tender.id)?.lifecycle.key === "live").length,
+    [applicationStatsByTender, tenders],
+  );
+  const evaluationTenders = useMemo(
+    () => tenders.filter((tender) => ["evaluating", "part-awarded"].includes(applicationStatsByTender.get(tender.id)?.lifecycle.key ?? "")).length,
+    [applicationStatsByTender, tenders],
+  );
+  const awardedTenders = useMemo(
+    () => tenders.filter((tender) => applicationStatsByTender.get(tender.id)?.lifecycle.key === "awarded").length,
+    [applicationStatsByTender, tenders],
+  );
 
   async function loadTenders() {
     setLoading(true);
-    fetch("/api/tenders")
-      .then((res) => (res.ok ? res.json() : { tenders: [] }))
-      .then((data) => setTenders(data.tenders ?? []))
-      .catch(() => setTenders([]))
+    Promise.all([
+      fetch("/api/tenders").then((res) => (res.ok ? res.json() : { tenders: [] })),
+      fetch("/api/applications").then((res) => (res.ok ? res.json() : { applications: [] })),
+    ])
+      .then(([tenderData, applicationData]) => {
+        setTenders(tenderData.tenders ?? []);
+        setApplications(applicationData.applications ?? []);
+      })
+      .catch(() => {
+        setTenders([]);
+        setApplications([]);
+      })
       .finally(() => setLoading(false));
   }
 
@@ -66,6 +109,9 @@ export default function AirlineTendersPage() {
       deadline: tender.deadline,
       expectedStart: tender.expectedStart,
       status: tender.status,
+      awardMode: tender.awardMode ?? "single",
+      maxAwards: String(tender.maxAwards ?? 1),
+      commercialModel: tender.commercialModel ?? "commission",
       requirements: tender.requirements.join("\n"),
       commercialExpectations: tender.commercialExpectations,
       routes: tender.routes.length
@@ -113,6 +159,9 @@ export default function AirlineTendersPage() {
           deadline: form.deadline,
           expectedStart: form.expectedStart,
           status: form.status,
+          awardMode: form.awardMode,
+          maxAwards: Number(form.maxAwards) || 1,
+          commercialModel: form.commercialModel,
           requirements: form.requirements.split("\n").map((item) => item.trim()).filter(Boolean),
           commercialExpectations: form.commercialExpectations.trim(),
           routes: activeRoutes,
@@ -145,6 +194,7 @@ export default function AirlineTendersPage() {
       const res = await fetch(`/api/tenders/${tender.id}`, { method: "DELETE" });
       if (!res.ok) return;
       setTenders((current) => current.filter((item) => item.id !== tender.id));
+      setApplications((current) => current.filter((application) => application.tenderId !== tender.id));
       if (editingTender?.id === tender.id) {
         setEditingTender(null);
         setForm(null);
@@ -161,10 +211,11 @@ export default function AirlineTendersPage() {
       <Topbar title="Tender overview" subtitle="Airline tender desk" />
       <main className="space-y-5 p-5">
         <div className="flex flex-wrap items-center justify-between gap-3">
-          <div className="grid gap-3 sm:grid-cols-3">
+          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
             <Metric label="Total tenders" value={String(tenders.length)} />
-            <Metric label="Open" value={String(openTenders)} />
-            <Metric label="Draft / closed" value={String(tenders.length - openTenders)} />
+            <Metric label="Live" value={String(liveTenders)} />
+            <Metric label="In decision" value={String(evaluationTenders)} />
+            <Metric label="Awarded" value={String(awardedTenders)} />
           </div>
           <Link href="/airline/tenders/create" className={buttonVariants()}>
             Create tender
@@ -218,6 +269,41 @@ export default function AirlineTendersPage() {
                 </Field>
                 <Field label="Application deadline">
                   <Input value={form.deadline} onChange={(event) => setForm({ ...form, deadline: event.target.value })} type="date" />
+                </Field>
+                <Field label="Award model">
+                  <select
+                    value={form.awardMode}
+                    onChange={(event) => setForm({
+                      ...form,
+                      awardMode: event.target.value as TenderFormState["awardMode"],
+                      maxAwards: event.target.value === "single" ? "1" : form.maxAwards,
+                    })}
+                    className="h-10 w-full rounded-lg border border-border-ui bg-surface px-3 text-sm text-ink outline-none focus:border-brand"
+                  >
+                    <option value="single">Single winner</option>
+                    <option value="multi">Multiple GSAs</option>
+                  </select>
+                </Field>
+                <Field label="Award slots">
+                  <Input
+                    value={form.maxAwards}
+                    onChange={(event) => setForm({ ...form, maxAwards: event.target.value })}
+                    type="number"
+                    min={1}
+                    max={10}
+                    disabled={form.awardMode === "single"}
+                  />
+                </Field>
+                <Field label="Commercial model" className="md:col-span-2">
+                  <select
+                    value={form.commercialModel}
+                    onChange={(event) => setForm({ ...form, commercialModel: event.target.value as TenderFormState["commercialModel"] })}
+                    className="h-10 w-full rounded-lg border border-border-ui bg-surface px-3 text-sm text-ink outline-none focus:border-brand"
+                  >
+                    <option value="commission">Commission bid - airline controls rate, GSA earns commission</option>
+                    <option value="capacity-risk">Capacity risk - GSA sells allocated capacity profitably</option>
+                    <option value="hybrid">Hybrid - fixed commission with volume or yield accelerator</option>
+                  </select>
                 </Field>
                 <Field label="Requirements" className="md:col-span-2">
                   <Textarea value={form.requirements} onChange={(event) => setForm({ ...form, requirements: event.target.value })} />
@@ -282,6 +368,7 @@ export default function AirlineTendersPage() {
               <TenderManagementCard
                 key={tender.id}
                 tender={tender}
+                stats={applicationStatsByTender.get(tender.id) ?? createEmptyStats(tender)}
                 deleting={deletingId === tender.id}
                 onEdit={() => startEdit(tender)}
                 onDelete={() => deleteTender(tender)}
@@ -304,11 +391,13 @@ export default function AirlineTendersPage() {
 
 function TenderManagementCard({
   tender,
+  stats,
   deleting,
   onEdit,
   onDelete,
 }: {
   tender: LiveTender;
+  stats: TenderApplicationStats;
   deleting: boolean;
   onEdit: () => void;
   onDelete: () => void;
@@ -321,7 +410,7 @@ function TenderManagementCard({
             <CardTitle>{tender.title}</CardTitle>
             <p className="mt-1 text-sm text-ink-muted">{tender.airline}</p>
           </div>
-          <StatusBadge status={tender.status} />
+          <Badge variant={stats.lifecycle.variant}>{stats.lifecycle.label}</Badge>
         </div>
       </CardHeader>
       <CardContent className="space-y-4">
@@ -343,9 +432,28 @@ function TenderManagementCard({
           <span className="font-semibold text-ink">{tender.annualTonnage.toLocaleString()} tons</span> expected annually,
           focused on {tender.productMix ? tender.productMix.toLowerCase() : "not specified"}.
         </div>
+        <div className="grid gap-2 rounded-xl border border-border-ui bg-surface2 p-3">
+          <div className="flex flex-wrap gap-2">
+            <Badge variant="muted">{getAwardModelLabel(tender, stats.awardSlots)}</Badge>
+            <Badge variant="muted">{getCommercialModelLabel(tender)}</Badge>
+          </div>
+          <p className="text-sm leading-5 text-ink-muted">{getCommercialModelDescription(tender)}</p>
+        </div>
+        <div className="grid grid-cols-4 gap-2">
+          <MiniProcessMetric label="Apps" value={stats.total} />
+          <MiniProcessMetric label="Pending" value={stats.pending} />
+          <MiniProcessMetric label="Shortlist" value={stats.shortlisted} />
+          <MiniProcessMetric label="Awarded" value={`${stats.accepted}/${stats.awardSlots}`} />
+        </div>
+        <div className="rounded-xl border border-brand/15 bg-brand-light/60 p-3 text-sm">
+          <p className="font-semibold text-ink">Next step</p>
+          <p className="mt-1 leading-5 text-ink-muted">{stats.lifecycle.nextStep}</p>
+        </div>
         <div className="flex flex-col gap-2">
           <Button asChild>
-            <Link href="/airline/applications">Review applications</Link>
+            <Link href={`/airline/applications?tender=${encodeURIComponent(tender.id)}`}>
+              {stats.total ? "Open decision room" : "Review tender process"}
+            </Link>
           </Button>
           <div className="grid grid-cols-2 gap-2">
             <Button variant="outline" onClick={onEdit}>
@@ -368,6 +476,142 @@ function Metric({ label, value }: { label: string; value: string }) {
     <div className="rounded-lg border border-border-ui bg-surface2 px-4 py-3">
       <p className="text-xs font-semibold uppercase tracking-wider text-ink-muted">{label}</p>
       <p className="mt-1 text-xl font-semibold text-ink">{value}</p>
+    </div>
+  );
+}
+
+type TenderLifecycleKey = "draft" | "live" | "evaluating" | "part-awarded" | "awarded" | "closed";
+
+type TenderLifecycle = {
+  key: TenderLifecycleKey;
+  label: string;
+  variant: "default" | "success" | "warning" | "danger" | "muted";
+  nextStep: string;
+};
+
+type TenderApplicationStats = {
+  total: number;
+  pending: number;
+  shortlisted: number;
+  accepted: number;
+  rejected: number;
+  awardSlots: number;
+  lifecycle: TenderLifecycle;
+};
+
+function createEmptyStats(tender: LiveTender): TenderApplicationStats {
+  const awardSlots = getAwardSlots(tender);
+  return {
+    total: 0,
+    pending: 0,
+    shortlisted: 0,
+    accepted: 0,
+    rejected: 0,
+    awardSlots,
+    lifecycle: getTenderLifecycle(tender, 0, awardSlots, 0, 0),
+  };
+}
+
+function getAwardSlots(tender: LiveTender) {
+  if (tender.awardMode === "multi") return Math.max(2, tender.maxAwards ?? 2);
+  return Math.max(1, tender.maxAwards ?? 1);
+}
+
+function getTenderLifecycle(
+  tender: LiveTender,
+  acceptedCount: number,
+  awardSlots: number,
+  applicationCount: number,
+  shortlistCount: number,
+): TenderLifecycle {
+  if (tender.status === "draft") {
+    return {
+      key: "draft",
+      label: "Design draft",
+      variant: "muted",
+      nextStep: "Finish the mandate scope, commercial rules, and publication timing before GSAs can apply.",
+    };
+  }
+
+  if (acceptedCount >= awardSlots) {
+    return {
+      key: "awarded",
+      label: "Awarded",
+      variant: "success",
+      nextStep: "Tender is awarded. The accepted GSA should move into partner profiles and operational handover.",
+    };
+  }
+
+  if (acceptedCount > 0) {
+    return {
+      key: "part-awarded",
+      label: "Part-awarded",
+      variant: "warning",
+      nextStep: `Award ${awardSlots - acceptedCount} remaining slot${awardSlots - acceptedCount === 1 ? "" : "s"} or close the tender when the mandate is complete.`,
+    };
+  }
+
+  if (tender.status === "closed") {
+    return {
+      key: "closed",
+      label: "Closed",
+      variant: "muted",
+      nextStep: "This tender is closed without an active award. Reopen only if Saudia wants to restart the process.",
+    };
+  }
+
+  if (tender.status === "open" && applicationCount === 0) {
+    return {
+      key: "live",
+      label: "Live",
+      variant: "default",
+      nextStep: "Wait for GSA submissions, then shortlist the strongest candidates before accepting an award.",
+    };
+  }
+
+  if (tender.status === "open" && applicationCount > 0) {
+    return {
+      key: "evaluating",
+      label: shortlistCount > 0 ? "Shortlisting" : "Evaluating",
+      variant: "warning",
+      nextStep: shortlistCount > 0
+        ? "Review the shortlist, inspect documents, and accept the strongest GSA when the mandate is ready."
+        : "Compare submissions by coverage, commercial model, readiness, and documents before building a shortlist.",
+    };
+  }
+
+  return {
+    key: "closed",
+    label: "Closed",
+    variant: "muted",
+    nextStep: "This tender is not active. Use edit if the status or award model needs to change.",
+  };
+}
+
+function getAwardModelLabel(tender: LiveTender, awardSlots: number) {
+  if (tender.awardMode === "multi") return `${awardSlots} GSA awards`;
+  return "Single GSA award";
+}
+
+function getCommercialModelLabel(tender: LiveTender) {
+  const model = tender.commercialModel ?? "commission";
+  if (model === "capacity-risk") return "Capacity-risk mandate";
+  if (model === "hybrid") return "Hybrid commercial model";
+  return "Commission bid";
+}
+
+function getCommercialModelDescription(tender: LiveTender) {
+  const model = tender.commercialModel ?? "commission";
+  if (model === "capacity-risk") return "Airline allocates sellable capacity; GSA must prove it can fill it profitably.";
+  if (model === "hybrid") return "GSA proposes a base commission plus upside tied to volume, yield, or target over-performance.";
+  return "GSA competes on commission, account access, launch plan, and expected sales performance.";
+}
+
+function MiniProcessMetric({ label, value }: { label: string; value: number | string }) {
+  return (
+    <div className="rounded-lg border border-border-ui bg-surface px-2 py-2 text-center">
+      <p className="text-base font-semibold text-ink">{value}</p>
+      <p className="text-[10px] text-ink-muted">{label}</p>
     </div>
   );
 }

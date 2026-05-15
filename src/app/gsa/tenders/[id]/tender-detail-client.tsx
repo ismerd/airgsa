@@ -80,6 +80,10 @@ export function GsaTenderDetailClient({ tenderId }: { tenderId: string }) {
               <Info label="Expected start" value={tender.expectedStart || "Not stated"} />
               <Info label="Deadline" value={tender.deadline || "Not stated"} />
             </div>
+            <div className="grid gap-3 md:grid-cols-2">
+              <Info label="Award structure" value={getAwardLabel(tender)} helper={getAwardHelper(tender)} />
+              <Info label="Commercial model" value={getCommercialLabel(tender)} helper={getCommercialHelper(tender)} />
+            </div>
             <div>
               <p className="mb-2 text-sm font-semibold text-ink">Markets</p>
               <div className="flex flex-wrap gap-2">
@@ -143,7 +147,8 @@ export function GsaTenderDetailClient({ tenderId }: { tenderId: string }) {
               </p>
             </div>
             <p className="text-sm leading-6 text-ink-muted">
-              Your company profile will be attached automatically. Add commercial terms, network plan, readiness notes, and documents on the next step.
+              Your company profile will be attached automatically. Add the commercial proposal, account coverage, launch plan, readiness notes,
+              and documents that match this tender model.
             </p>
             <Button asChild className="w-full" disabled={tender.status !== "open"}>
               <Link href={`/gsa/tenders/${tender.id}/apply`}>
@@ -157,11 +162,36 @@ export function GsaTenderDetailClient({ tenderId }: { tenderId: string }) {
   );
 }
 
-function Info({ label, value }: { label: string; value: string }) {
+function Info({ label, value, helper }: { label: string; value: string; helper?: string }) {
   return (
     <div className="rounded-md border border-border-ui bg-surface2 p-4">
       <p className="text-xs text-ink-muted">{label}</p>
       <p className="mt-1 font-semibold text-ink">{value}</p>
+      {helper && <p className="mt-2 text-xs leading-5 text-ink-muted">{helper}</p>}
     </div>
   );
+}
+
+function getAwardLabel(tender: LiveTender) {
+  if (tender.awardMode === "multi") return `${Math.max(2, tender.maxAwards ?? 2)} possible GSA awards`;
+  return "Exclusive single-GSA award";
+}
+
+function getAwardHelper(tender: LiveTender) {
+  if (tender.awardMode === "multi") return "Saudia may select more than one GSA for this mandate.";
+  return "Saudia expects to select one GSA; once awarded, the tender is effectively closed.";
+}
+
+function getCommercialLabel(tender: LiveTender) {
+  const model = tender.commercialModel ?? "commission";
+  if (model === "capacity-risk") return "Capacity-risk mandate";
+  if (model === "hybrid") return "Hybrid commission and upside";
+  return "Commission bid";
+}
+
+function getCommercialHelper(tender: LiveTender) {
+  const model = tender.commercialModel ?? "commission";
+  if (model === "capacity-risk") return "The airline wants proof that you can sell allocated capacity profitably.";
+  if (model === "hybrid") return "Your proposal should combine base terms with target-based upside.";
+  return "Your proposal should make commission terms and sales execution clear.";
 }

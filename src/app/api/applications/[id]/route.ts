@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSession } from "@/lib/auth/session";
-import { getLiveApplication, updateLiveApplicationStatus } from "@/lib/services/tender-workflow-store";
+import { getLiveApplication, getLiveTender, updateLiveApplicationStatus } from "@/lib/services/tender-workflow-store";
 import type { Status } from "@/lib/types";
 
 const ALLOWED = new Set(["pending", "shortlisted", "accepted", "rejected"]);
@@ -29,11 +29,17 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   }
 
   const { id } = await params;
-  const application = await updateLiveApplicationStatus(
-    id,
-    body.status as Extract<Status, "pending" | "shortlisted" | "accepted" | "rejected">,
-  );
+  let application;
+  try {
+    application = await updateLiveApplicationStatus(
+      id,
+      body.status as Extract<Status, "pending" | "shortlisted" | "accepted" | "rejected">,
+    );
+  } catch (error) {
+    return NextResponse.json({ error: (error as Error).message }, { status: 409 });
+  }
   if (!application) return NextResponse.json({ error: "Application not found" }, { status: 404 });
 
-  return NextResponse.json({ application });
+  const tender = await getLiveTender(application.tenderId);
+  return NextResponse.json({ application, tender });
 }

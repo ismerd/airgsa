@@ -17,6 +17,9 @@ const tenderSeeds = [
     deadline: "2026-06-12",
     expectedStart: "2026-07-15",
     status: "open",
+    awardMode: "multi",
+    maxAwards: 2,
+    commercialModel: "hybrid",
     requirements: [
       "IATA / CASS capability",
       "GDP-qualified pharma sales coverage",
@@ -43,6 +46,9 @@ const tenderSeeds = [
     deadline: "2026-06-20",
     expectedStart: "2026-08-01",
     status: "open",
+    awardMode: "single",
+    maxAwards: 1,
+    commercialModel: "capacity-risk",
     requirements: [
       "UK and Ireland field sales coverage",
       "Experience with express, mail and e-commerce cargo",
@@ -69,6 +75,9 @@ const tenderSeeds = [
     deadline: "2026-06-18",
     expectedStart: "2026-08-05",
     status: "open",
+    awardMode: "single",
+    maxAwards: 1,
+    commercialModel: "commission",
     requirements: [
       "France-wide forwarder coverage",
       "Strong CDG cargo sales presence",
@@ -95,6 +104,9 @@ const tenderSeeds = [
     deadline: "2026-06-05",
     expectedStart: "2026-07-01",
     status: "open",
+    awardMode: "multi",
+    maxAwards: 2,
+    commercialModel: "hybrid",
     requirements: [
       "DACH sales team with named account ownership",
       "GDP-capable pharma commercial handling",
@@ -122,6 +134,9 @@ const tenderSeeds = [
     deadline: "2026-07-08",
     expectedStart: "2026-09-01",
     status: "draft",
+    awardMode: "multi",
+    maxAwards: 3,
+    commercialModel: "capacity-risk",
     requirements: [
       "Country-level sales coverage options",
       "Forwarder pipeline by market",
@@ -146,6 +161,9 @@ const tenderSeeds = [
     deadline: "2026-05-01",
     expectedStart: "2026-06-15",
     status: "closed",
+    awardMode: "single",
+    maxAwards: 1,
+    commercialModel: "commission",
     requirements: [
       "Nordics-wide commercial representation",
       "Cold-chain and seafood cargo knowledge",

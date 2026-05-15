@@ -44,7 +44,10 @@ export function ApplyTenderClient({ tenderId, gsa }: { tenderId: string; gsa: Re
       .then(([tenderData, applicationData]) => {
         if (!active) return;
         setTender(tenderData.tender ?? null);
-        const existing = (applicationData.applications ?? []).find((item: LiveTenderApplication) => item.tenderId === tenderId) ?? null;
+        const existing =
+          (applicationData.applications ?? []).find(
+            (item: LiveTenderApplication) => item.tenderId === tenderId && item.gsaId === gsa.id,
+          ) ?? null;
         setApplication(existing);
         if (existing) {
           setForm({
@@ -65,7 +68,7 @@ export function ApplyTenderClient({ tenderId, gsa }: { tenderId: string; gsa: Re
     return () => {
       active = false;
     };
-  }, [tenderId]);
+  }, [gsa.id, tenderId]);
 
   const canEdit = !application || (application.status === "pending" && Date.now() - new Date(application.submittedAt).getTime() < 24 * 60 * 60 * 1000);
 
@@ -111,7 +114,7 @@ export function ApplyTenderClient({ tenderId, gsa }: { tenderId: string; gsa: Re
           <CardContent className="space-y-4">
             <div>
               <p className="text-lg font-semibold text-ink">{gsa.name}</p>
-              <p className="mt-1 text-sm text-ink-muted">{gsa.contactName} · {gsa.email}</p>
+              <p className="mt-1 text-sm text-ink-muted">{gsa.contactName} - {gsa.email}</p>
             </div>
             <div className="flex flex-wrap gap-2">
               {gsa.markets.map((market) => <Badge key={market} variant="muted">{market}</Badge>)}
@@ -126,65 +129,86 @@ export function ApplyTenderClient({ tenderId, gsa }: { tenderId: string; gsa: Re
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader>
-            <CardTitle>Commercial proposal</CardTitle>
-            <p className="text-sm text-ink-muted">
-              {application
-                ? canEdit
-                  ? "You can edit this application for 24 hours after submission."
-                  : "The 24-hour edit window is closed. This application is read-only."
-                : "These details will be visible to Saudia Cargo in the airline applications page."}
-            </p>
-          </CardHeader>
-          <CardContent className="grid gap-4 md:grid-cols-2">
-            <Input disabled={!canEdit} placeholder="Proposed commission" value={form.proposedCommission} onChange={(event) => setForm({ ...form, proposedCommission: event.target.value })} />
-            <Input disabled={!canEdit} placeholder="Launch timeline" value={form.launchTimeline} onChange={(event) => setForm({ ...form, launchTimeline: event.target.value })} />
-            <Input disabled={!canEdit} placeholder="Named account coverage" value={form.namedAccountCoverage} onChange={(event) => setForm({ ...form, namedAccountCoverage: event.target.value })} />
-            <Input disabled={!canEdit} placeholder="Monthly sales target" value={form.monthlySalesTarget} onChange={(event) => setForm({ ...form, monthlySalesTarget: event.target.value })} />
-            <Textarea
-              className="md:col-span-2"
-              placeholder="Network plan"
-              disabled={!canEdit}
-              value={form.networkPlan}
-              onChange={(event) => setForm({ ...form, networkPlan: event.target.value })}
-            />
-            <Textarea
-              className="md:col-span-2"
-              placeholder="Operational readiness"
-              disabled={!canEdit}
-              value={form.operationalReadiness}
-              onChange={(event) => setForm({ ...form, operationalReadiness: event.target.value })}
-            />
+        <div className="space-y-5">
+          {tender && (
+            <Card>
+              <CardHeader>
+                <CardTitle>Tender rules</CardTitle>
+                <p className="text-sm text-ink-muted">Build the proposal around the actual mandate, not a generic profile deck.</p>
+              </CardHeader>
+              <CardContent className="grid gap-3 md:grid-cols-3">
+                <TenderRule label="Award" value={getAwardLabel(tender)} helper={getAwardHelper(tender)} />
+                <TenderRule label="Commercial model" value={getCommercialLabel(tender)} helper={getCommercialHelper(tender)} />
+                <TenderRule label="Decision focus" value={getDecisionFocus(tender)} helper="This is what the airline will compare first." />
+              </CardContent>
+            </Card>
+          )}
 
-            <div className="md:col-span-2 space-y-3">
-              <div className="flex items-center gap-2">
-                <Paperclip className="h-4 w-4 text-ink-muted" />
-                <p className="text-sm font-semibold text-ink">Supporting documents</p>
+          <Card>
+            <CardHeader>
+              <CardTitle>{tender ? getProposalTitle(tender) : "Commercial proposal"}</CardTitle>
+              <p className="text-sm text-ink-muted">
+                {application
+                  ? canEdit
+                    ? "You can edit this application for 24 hours after submission."
+                    : "The 24-hour edit window is closed. This application is read-only."
+                  : "These details will be visible to Saudia Cargo in the airline applications page."}
+              </p>
+            </CardHeader>
+            <CardContent className="grid gap-4 md:grid-cols-2">
+              <Input
+                disabled={!canEdit}
+                placeholder={tender ? getCommercialPlaceholder(tender) : "Proposed commission"}
+                value={form.proposedCommission}
+                onChange={(event) => setForm({ ...form, proposedCommission: event.target.value })}
+              />
+              <Input disabled={!canEdit} placeholder="Launch timeline" value={form.launchTimeline} onChange={(event) => setForm({ ...form, launchTimeline: event.target.value })} />
+              <Input disabled={!canEdit} placeholder="Named account coverage" value={form.namedAccountCoverage} onChange={(event) => setForm({ ...form, namedAccountCoverage: event.target.value })} />
+              <Input disabled={!canEdit} placeholder="Monthly sales target" value={form.monthlySalesTarget} onChange={(event) => setForm({ ...form, monthlySalesTarget: event.target.value })} />
+              <Textarea
+                className="md:col-span-2"
+                placeholder={tender ? getNetworkPlanPlaceholder(tender) : "Network plan"}
+                disabled={!canEdit}
+                value={form.networkPlan}
+                onChange={(event) => setForm({ ...form, networkPlan: event.target.value })}
+              />
+              <Textarea
+                className="md:col-span-2"
+                placeholder="Operational readiness: team, launch owners, tools, reporting cadence, first 30 days"
+                disabled={!canEdit}
+                value={form.operationalReadiness}
+                onChange={(event) => setForm({ ...form, operationalReadiness: event.target.value })}
+              />
+
+              <div className="md:col-span-2 space-y-3">
+                <div className="flex items-center gap-2">
+                  <Paperclip className="h-4 w-4 text-ink-muted" />
+                  <p className="text-sm font-semibold text-ink">Supporting documents</p>
+                </div>
+                {canEdit ? (
+                  <FileDropzone files={files} onChange={setFiles} hint="Profile deck, account list, references, certifications, financials, launch plan" />
+                ) : (
+                  <DocumentList documents={files} />
+                )}
               </div>
-              {canEdit ? (
-                <FileDropzone files={files} onChange={setFiles} hint="Certifications, profile deck, account list, financials, references" />
-              ) : (
-                <DocumentList documents={files} />
-              )}
-            </div>
 
-            {error && <p className="md:col-span-2 rounded-lg bg-danger-bg px-3 py-2 text-sm text-danger">{error}</p>}
+              {error && <p className="md:col-span-2 rounded-lg bg-danger-bg px-3 py-2 text-sm text-danger">{error}</p>}
 
-            <div className="md:col-span-2 flex flex-col gap-3 sm:flex-row">
-              <Button disabled={!canEdit || saving || !form.proposedCommission.trim()} onClick={submit}>
-                {saving
-                  ? "Saving..."
-                  : application
-                    ? "Update application"
-                    : `Submit application${files.length ? ` · ${files.length} document${files.length > 1 ? "s" : ""}` : ""}`}
-              </Button>
-              <Button asChild variant="outline">
-                <Link href={`/gsa/tenders/${tenderId}`}>Back to tender</Link>
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
+              <div className="md:col-span-2 flex flex-col gap-3 sm:flex-row">
+                <Button disabled={!canEdit || saving || !form.proposedCommission.trim()} onClick={submit}>
+                  {saving
+                    ? "Saving..."
+                    : application
+                      ? "Update application"
+                      : `Submit application${files.length ? ` - ${files.length} document${files.length > 1 ? "s" : ""}` : ""}`}
+                </Button>
+                <Button asChild variant="outline">
+                  <Link href={`/gsa/tenders/${tenderId}`}>Back to tender</Link>
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
       </main>
     </>
   );
@@ -197,4 +221,66 @@ function ProfileMetric({ label, value }: { label: string; value: number }) {
       <span className="font-semibold text-ink">{value}/100</span>
     </div>
   );
+}
+
+function TenderRule({ label, value, helper }: { label: string; value: string; helper: string }) {
+  return (
+    <div className="rounded-lg border border-border-ui bg-surface2 p-3">
+      <p className="text-xs font-semibold uppercase tracking-wider text-ink-muted">{label}</p>
+      <p className="mt-2 font-semibold text-ink">{value}</p>
+      <p className="mt-1 text-xs leading-5 text-ink-muted">{helper}</p>
+    </div>
+  );
+}
+
+function getAwardLabel(tender: LiveTender) {
+  if (tender.awardMode === "multi") return `${Math.max(2, tender.maxAwards ?? 2)} winners possible`;
+  return "Single winner";
+}
+
+function getAwardHelper(tender: LiveTender) {
+  if (tender.awardMode === "multi") return "More than one GSA can be accepted for this scope.";
+  return "Usually one GSA wins; once accepted, the tender should close.";
+}
+
+function getCommercialLabel(tender: LiveTender) {
+  const model = tender.commercialModel ?? "commission";
+  if (model === "capacity-risk") return "Capacity-risk";
+  if (model === "hybrid") return "Hybrid";
+  return "Commission bid";
+}
+
+function getCommercialHelper(tender: LiveTender) {
+  const model = tender.commercialModel ?? "commission";
+  if (model === "capacity-risk") return "Show how you will fill capacity at profitable yields.";
+  if (model === "hybrid") return "Show base commission and target-based upside.";
+  return "Show the commission terms and why your sales plan wins.";
+}
+
+function getDecisionFocus(tender: LiveTender) {
+  const model = tender.commercialModel ?? "commission";
+  if (model === "capacity-risk") return "Yield and capacity plan";
+  if (model === "hybrid") return "Balanced upside";
+  return "Commission and coverage";
+}
+
+function getProposalTitle(tender: LiveTender) {
+  const model = tender.commercialModel ?? "commission";
+  if (model === "capacity-risk") return "Capacity sales proposal";
+  if (model === "hybrid") return "Hybrid commercial proposal";
+  return "Commission proposal";
+}
+
+function getCommercialPlaceholder(tender: LiveTender) {
+  const model = tender.commercialModel ?? "commission";
+  if (model === "capacity-risk") return "Capacity/yield proposal, e.g. guaranteed block margin or target yield plan";
+  if (model === "hybrid") return "Base commission plus volume/yield accelerator";
+  return "Proposed commission, e.g. 5% net-net plus target incentive";
+}
+
+function getNetworkPlanPlaceholder(tender: LiveTender) {
+  const model = tender.commercialModel ?? "commission";
+  if (model === "capacity-risk") return "Capacity plan: key accounts, yield protection, peak handling, unsold capacity risk controls";
+  if (model === "hybrid") return "Growth plan: accounts, volume targets, upside triggers, reporting cadence";
+  return "Network plan: named forwarders, verticals, launch pipeline, weekly sales cadence";
 }

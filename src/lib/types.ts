@@ -29,6 +29,9 @@ export type Tender = {
   productMix: string;
   deadline: string;
   status: Status;
+  awardMode?: "single" | "multi";
+  maxAwards?: number;
+  commercialModel?: "commission" | "capacity-risk" | "hybrid";
   requirements: string[];
   expectedStart: string;
 };

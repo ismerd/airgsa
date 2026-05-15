@@ -37,6 +37,9 @@ export type LiveTender = {
   deadline: string;
   expectedStart: string;
   status: Extract<Status, "draft" | "open" | "closed">;
+  awardMode?: "single" | "multi";
+  maxAwards?: number;
+  commercialModel?: "commission" | "capacity-risk" | "hybrid";
   requirements: string[];
   commercialExpectations: string;
   routes: TenderRouteFrequency[];
@@ -215,13 +218,64 @@ export async function updateLiveApplicationStatus(
   const index = store.applications.findIndex((application) => application.id === applicationId);
   if (index < 0) return null;
 
+  const tenderIndex = store.tenders.findIndex((tender) => tender.id === store.applications[index].tenderId);
+  const tender = tenderIndex >= 0 ? store.tenders[tenderIndex] : null;
+  if (status === "accepted" && tender) {
+    const awardSlots = getTenderAwardSlots(tender);
+    const acceptedCount = store.applications.filter(
+      (application) =>
+        application.tenderId === tender.id &&
+        application.status === "accepted" &&
+        application.id !== applicationId,
+    ).length;
+
+    if (acceptedCount >= awardSlots) {
+      throw new Error("Tender award capacity is already filled");
+    }
+  }
+
   store.applications[index] = {
     ...store.applications[index],
     status,
     updatedAt: new Date().toISOString(),
   };
+
+  if (status === "accepted" && tender && tenderIndex >= 0) {
+    const awardSlots = getTenderAwardSlots(tender);
+    const acceptedForTender = store.applications.filter(
+      (application) => application.tenderId === tender.id && application.status === "accepted",
+    );
+
+    if (acceptedForTender.length >= awardSlots) {
+      const now = new Date().toISOString();
+      store.tenders[tenderIndex] = {
+        ...tender,
+        status: "closed",
+        updatedAt: now,
+      };
+      store.applications = store.applications.map((application) => {
+        if (application.tenderId !== tender.id) return application;
+        if (application.status === "accepted") return application;
+        return {
+          ...application,
+          status: "rejected",
+          updatedAt: now,
+        };
+      });
+    }
+  }
+
   await writeStore(store);
   return store.applications[index];
+}
+
+export function getTenderAwardSlots(tender: Pick<LiveTender, "awardMode" | "maxAwards">) {
+  if (tender.awardMode === "multi") return Math.max(2, tender.maxAwards ?? 2);
+  return Math.max(1, tender.maxAwards ?? 1);
+}
+
+export function getTenderCommercialModel(tender: Pick<LiveTender, "commercialModel">) {
+  return tender.commercialModel ?? "commission";
 }
 
 async function readStore(): Promise<TenderWorkflowStore> {

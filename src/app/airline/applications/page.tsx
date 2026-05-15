@@ -3,6 +3,7 @@
 import type React from "react";
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { CheckCircle2, Eye, FileText, Inbox, ListChecks, Plus, Route, Search, Sparkles, Trash2, X } from "lucide-react";
 import { DataTable, type Column } from "@/components/dashboard/data-table";
 import { StatusBadge } from "@/components/dashboard/status-badge";
@@ -37,6 +38,9 @@ const emptyTenderForm = {
   productMix: "",
   deadline: "",
   expectedStart: "",
+  awardMode: "single" as "single" | "multi",
+  maxAwards: "1",
+  commercialModel: "commission" as "commission" | "capacity-risk" | "hybrid",
   requirements: "",
   commercialExpectations: "",
 };
@@ -44,6 +48,8 @@ const emptyTenderForm = {
 const TENDER_APPLICATIONS_SEEN_KEY = "airgsa.airline.applications.tenderSeenAt";
 
 export default function ApplicationsPage() {
+  const searchParams = useSearchParams();
+  const tenderIdParam = searchParams.get("tender");
   const [applications, setApplications] = useState<LiveTenderApplication[]>([]);
   const [tenders, setTenders] = useState<LiveTender[]>([]);
   const [loading, setLoading] = useState(true);
@@ -124,6 +130,7 @@ export default function ApplicationsPage() {
           pendingCount: rows.filter((row) => row.status === "pending").length,
           shortlistedCount: rows.filter((row) => row.status === "shortlisted").length,
           acceptedCount: rows.filter((row) => row.status === "accepted").length,
+          awardSlots: getAwardSlots(tender),
           latestPendingSubmittedAt: rows
             .filter((row) => row.status === "pending")
             .reduce((latest, row) => Math.max(latest, new Date(row.submittedAt).getTime()), 0),
@@ -174,15 +181,23 @@ export default function ApplicationsPage() {
   }, [query, selectedTenderApplications, sortBy, statusFilter, tenderTitleById]);
   const acceptedCount = selectedTenderApplications.filter((application) => application.status === "accepted").length;
   const shortlistedCount = selectedTenderApplications.filter((application) => application.status === "shortlisted").length;
+  const selectedAwardSlots = selectedTender ? getAwardSlots(selectedTender) : 1;
+  const selectedAwardFilled = Boolean(selectedTender && acceptedCount >= selectedAwardSlots);
   const averageScore = selectedTenderApplications.length
     ? Math.round(selectedTenderApplications.reduce((sum, application) => sum + scoreApplication(application), 0) / selectedTenderApplications.length)
     : 0;
 
   useEffect(() => {
     if (loading) return;
+    if (tenderIdParam && tenderOptions.some((option) => option.tender.id === tenderIdParam)) {
+      setSelectedTenderId(tenderIdParam);
+      const option = tenderOptions.find((item) => item.tender.id === tenderIdParam);
+      if (option) markTenderApplicationsSeen(option.tender.id, option.latestPendingSubmittedAt);
+      return;
+    }
     if (selectedTenderId && tenderOptions.some((option) => option.tender.id === selectedTenderId)) return;
     setSelectedTenderId(tenderOptions[0]?.tender.id ?? null);
-  }, [loading, selectedTenderId, tenderOptions]);
+  }, [loading, selectedTenderId, tenderIdParam, tenderOptions]);
 
   async function updateStatus(application: LiveTenderApplication, status: Extract<Status, "pending" | "shortlisted" | "accepted" | "rejected">) {
     setPendingApplicationId(application.id);
@@ -192,9 +207,24 @@ export default function ApplicationsPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ status }),
       });
-      if (!res.ok) return;
+      if (!res.ok) {
+        const data = await res.json();
+        window.alert(data.error ?? "Application status could not be updated");
+        return;
+      }
       const data = await res.json();
-      setApplications((current) => current.map((item) => (item.id === application.id ? data.application : item)));
+      setApplications((current) =>
+        current.map((item) => {
+          if (item.id === application.id) return data.application;
+          if (data.tender?.status === "closed" && item.tenderId === data.tender.id && item.status !== "accepted") {
+            return { ...item, status: "rejected", updatedAt: new Date().toISOString() };
+          }
+          return item;
+        }),
+      );
+      if (data.tender) {
+        setTenders((current) => current.map((item) => (item.id === data.tender.id ? data.tender : item)));
+      }
       workflow.setApplicationStatus(toWorkflowApplication(application), status);
     } finally {
       setPendingApplicationId(null);
@@ -232,6 +262,9 @@ export default function ApplicationsPage() {
           deadline: createForm.deadline,
           expectedStart: createForm.expectedStart,
           status,
+          awardMode: createForm.awardMode,
+          maxAwards: Number(createForm.maxAwards) || 1,
+          commercialModel: createForm.commercialModel,
           requirements: createForm.requirements.split("\n").map((item) => item.trim()).filter(Boolean),
           commercialExpectations: createForm.commercialExpectations.trim(),
           routes: activeRoutes,
@@ -322,6 +355,11 @@ export default function ApplicationsPage() {
       cell: (row) => {
         const isAccepted = row.status === "accepted";
         const isPending = pendingApplicationId === row.id;
+        const rowTender = tenders.find((tender) => tender.id === row.tenderId);
+        const rowTenderApplications = applications.filter((application) => application.tenderId === row.tenderId);
+        const rowAwardSlots = rowTender ? getAwardSlots(rowTender) : 1;
+        const rowAwardFilled = rowTenderApplications.filter((application) => application.status === "accepted").length >= rowAwardSlots;
+        const canAccept = !isAccepted && !isPending && !rowAwardFilled;
         return (
           <div className="flex flex-wrap gap-2">
             <Button
@@ -332,8 +370,8 @@ export default function ApplicationsPage() {
             >
               {isPending ? "Updating..." : row.status === "shortlisted" ? "Remove shortlist" : "Shortlist"}
             </Button>
-            <Button size="sm" disabled={isAccepted || isPending} onClick={() => updateStatus(row, "accepted")}>
-              {isPending ? "Updating..." : isAccepted ? <><CheckCircle2 className="h-3.5 w-3.5" /> Accepted</> : "Accept"}
+            <Button size="sm" disabled={!canAccept && !isAccepted} onClick={() => updateStatus(row, "accepted")}>
+              {isPending ? "Updating..." : isAccepted ? <><CheckCircle2 className="h-3.5 w-3.5" /> Accepted</> : rowAwardFilled ? "Award filled" : "Accept"}
             </Button>
             <Button size="sm" variant="destructive" disabled={isPending} onClick={() => updateStatus(row, "rejected")}>
               {isPending ? "Updating..." : "Reject"}
@@ -409,6 +447,39 @@ export default function ApplicationsPage() {
                   <Field label="Application deadline">
                     <Input value={createForm.deadline} onChange={(event) => setCreateForm({ ...createForm, deadline: event.target.value })} type="date" />
                   </Field>
+                  <Field label="Award model">
+                    <Select
+                      value={createForm.awardMode}
+                      onChange={(event) => setCreateForm({
+                        ...createForm,
+                        awardMode: event.target.value as "single" | "multi",
+                        maxAwards: event.target.value === "single" ? "1" : createForm.maxAwards,
+                      })}
+                    >
+                      <option value="single">Single winner</option>
+                      <option value="multi">Multiple GSAs</option>
+                    </Select>
+                  </Field>
+                  <Field label="Award slots">
+                    <Input
+                      value={createForm.maxAwards}
+                      onChange={(event) => setCreateForm({ ...createForm, maxAwards: event.target.value })}
+                      type="number"
+                      min={1}
+                      max={10}
+                      disabled={createForm.awardMode === "single"}
+                    />
+                  </Field>
+                  <Field label="Commercial model" className="md:col-span-2">
+                    <Select
+                      value={createForm.commercialModel}
+                      onChange={(event) => setCreateForm({ ...createForm, commercialModel: event.target.value as "commission" | "capacity-risk" | "hybrid" })}
+                    >
+                      <option value="commission">Commission bid - airline controls rate, GSA earns commission</option>
+                      <option value="capacity-risk">Capacity risk - GSA sells allocated capacity profitably</option>
+                      <option value="hybrid">Hybrid - fixed commission with volume or yield accelerator</option>
+                    </Select>
+                  </Field>
                   <Field label="Requirements" className="md:col-span-2">
                     <Textarea
                       value={createForm.requirements}
@@ -480,6 +551,7 @@ export default function ApplicationsPage() {
                 {tenderOptions.map((option) => {
                   const selected = option.tender.id === selectedTenderId;
                   const hasNewApplications = option.pendingCount > 0 && option.latestPendingSubmittedAt > (tenderSeenAt[option.tender.id] ?? 0);
+                  const lifecycle = getTenderLifecycle(option.tender, option.acceptedCount, option.awardSlots);
                   return (
                     <button
                       key={option.tender.id}
@@ -512,14 +584,20 @@ export default function ApplicationsPage() {
                             <p className="truncate font-semibold text-ink">{option.tender.title}</p>
                           </div>
                           <p className="mt-1 text-xs text-ink-muted">{option.tender.countryScope || option.tender.lanes || "No scope"}</p>
+                          <div className="mt-3 flex flex-wrap gap-1.5">
+                            <Badge variant={option.awardSlots > 1 ? "default" : "muted"}>
+                              {option.awardSlots > 1 ? `${option.awardSlots} winners` : "Single winner"}
+                            </Badge>
+                            <Badge variant="muted">{getCommercialModelLabel(option.tender)}</Badge>
+                          </div>
                         </div>
-                        <StatusBadge status={option.tender.status} />
+                        <Badge variant={lifecycle.variant}>{lifecycle.label}</Badge>
                       </div>
                       <div className="mt-4 grid grid-cols-4 gap-2 text-center">
                         <MiniCount label="Apps" value={option.applicationCount} />
                         <MiniCount label="Pending" value={option.pendingCount} />
                         <MiniCount label="Shortlist" value={option.shortlistedCount} />
-                        <MiniCount label="Accepted" value={option.acceptedCount} />
+                        <MiniCount label={`Awarded ${option.acceptedCount}/${option.awardSlots}`} value={option.acceptedCount} />
                       </div>
                     </button>
                   );
@@ -528,6 +606,35 @@ export default function ApplicationsPage() {
             )}
           </CardContent>
         </Card>
+
+        {selectedTender && (
+          <Card>
+            <CardContent className="grid gap-4 p-4 xl:grid-cols-[1.2fr_.8fr_.8fr_.8fr]">
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-wider text-brand">Tender decision room</p>
+                <h2 className="mt-1 text-xl font-semibold text-ink">{selectedTender.title}</h2>
+                <p className="mt-2 text-sm leading-6 text-ink-muted">
+                  {selectedTender.commercialExpectations || "Review proposals, compare commercial models, and award the mandate."}
+                </p>
+              </div>
+              <DecisionTile
+                label="Award rule"
+                value={selectedAwardSlots > 1 ? `${selectedAwardSlots} GSA awards` : "Single winner"}
+                helper={selectedAwardSlots > 1 ? "Multiple GSAs can be appointed" : "Award closes the tender"}
+              />
+              <DecisionTile
+                label="Commercial model"
+                value={getCommercialModelLabel(selectedTender)}
+                helper={getCommercialModelHelper(selectedTender)}
+              />
+              <DecisionTile
+                label="Decision progress"
+                value={`${acceptedCount}/${selectedAwardSlots} awarded`}
+                helper={selectedAwardFilled ? "Award capacity filled" : `${Math.max(0, selectedAwardSlots - acceptedCount)} award slot open`}
+              />
+            </CardContent>
+          </Card>
+        )}
 
         <div className="grid gap-4 md:grid-cols-4">
           <InsightMetric label="Tender applications" value={String(selectedTenderApplications.length)} helper={selectedTender?.title ?? "Select a tender"} />
@@ -643,11 +750,48 @@ function countStatus(applications: LiveTenderApplication[], status: ApplicationS
   return applications.filter((application) => application.status === status).length;
 }
 
+function getAwardSlots(tender: LiveTender) {
+  if (tender.awardMode === "multi") return Math.max(2, tender.maxAwards ?? 2);
+  return Math.max(1, tender.maxAwards ?? 1);
+}
+
+function getTenderLifecycle(tender: LiveTender, acceptedCount: number, awardSlots: number) {
+  if (tender.status === "draft") return { label: "Designing", variant: "muted" as const };
+  if (acceptedCount >= awardSlots) return { label: "Awarded", variant: "success" as const };
+  if (acceptedCount > 0) return { label: "Part-awarded", variant: "warning" as const };
+  if (tender.status === "closed") return { label: "Closed", variant: "muted" as const };
+  return { label: "Live tender", variant: "default" as const };
+}
+
+function getCommercialModelLabel(tender: LiveTender) {
+  const model = tender.commercialModel ?? "commission";
+  if (model === "capacity-risk") return "Capacity risk";
+  if (model === "hybrid") return "Hybrid model";
+  return "Commission bid";
+}
+
+function getCommercialModelHelper(tender: LiveTender) {
+  const model = tender.commercialModel ?? "commission";
+  if (model === "capacity-risk") return "GSA must sell capacity profitably";
+  if (model === "hybrid") return "Commission plus yield or volume upside";
+  return "GSAs compete on commission and sales plan";
+}
+
 function MiniCount({ label, value }: { label: string; value: number }) {
   return (
     <div className="rounded-lg border border-border-ui bg-surface px-2 py-2">
       <p className="text-base font-semibold text-ink">{value}</p>
       <p className="text-[10px] text-ink-muted">{label}</p>
+    </div>
+  );
+}
+
+function DecisionTile({ label, value, helper }: { label: string; value: string; helper: string }) {
+  return (
+    <div className="rounded-lg border border-border-ui bg-surface2 p-4">
+      <p className="text-xs font-semibold uppercase tracking-wider text-ink-muted">{label}</p>
+      <p className="mt-2 text-lg font-semibold text-ink">{value}</p>
+      <p className="mt-1 text-xs leading-5 text-ink-muted">{helper}</p>
     </div>
   );
 }

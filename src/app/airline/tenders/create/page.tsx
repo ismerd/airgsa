@@ -33,6 +33,9 @@ export default function CreateTenderPage() {
     productMix: "",
     deadline: "",
     expectedStart: "",
+    awardMode: "single" as "single" | "multi",
+    maxAwards: "1",
+    commercialModel: "commission" as "commission" | "capacity-risk" | "hybrid",
     requirements: "",
     commercialExpectations: "",
   });
@@ -73,6 +76,9 @@ export default function CreateTenderPage() {
           deadline: form.deadline,
           expectedStart: form.expectedStart,
           status,
+          awardMode: form.awardMode,
+          maxAwards: Number(form.maxAwards) || 1,
+          commercialModel: form.commercialModel,
           requirements: form.requirements.split("\n").map((item) => item.trim()).filter(Boolean),
           commercialExpectations: form.commercialExpectations.trim(),
           routes: activeRoutes,
@@ -122,6 +128,41 @@ export default function CreateTenderPage() {
               </Field>
               <Field label="Application deadline">
                 <Input value={form.deadline} onChange={(event) => setForm({ ...form, deadline: event.target.value })} type="date" />
+              </Field>
+              <Field label="Award model">
+                <select
+                  value={form.awardMode}
+                  onChange={(event) => setForm({
+                    ...form,
+                    awardMode: event.target.value as "single" | "multi",
+                    maxAwards: event.target.value === "single" ? "1" : form.maxAwards,
+                  })}
+                  className="h-10 w-full rounded-lg border border-border-ui bg-surface px-3 text-sm text-ink outline-none focus:border-brand"
+                >
+                  <option value="single">Single winner</option>
+                  <option value="multi">Multiple GSAs</option>
+                </select>
+              </Field>
+              <Field label="Award slots">
+                <Input
+                  value={form.maxAwards}
+                  onChange={(event) => setForm({ ...form, maxAwards: event.target.value })}
+                  type="number"
+                  min={1}
+                  max={10}
+                  disabled={form.awardMode === "single"}
+                />
+              </Field>
+              <Field label="Commercial model" className="md:col-span-2">
+                <select
+                  value={form.commercialModel}
+                  onChange={(event) => setForm({ ...form, commercialModel: event.target.value as "commission" | "capacity-risk" | "hybrid" })}
+                  className="h-10 w-full rounded-lg border border-border-ui bg-surface px-3 text-sm text-ink outline-none focus:border-brand"
+                >
+                  <option value="commission">Commission bid - airline controls rate, GSA earns commission</option>
+                  <option value="capacity-risk">Capacity risk - GSA sells allocated capacity profitably</option>
+                  <option value="hybrid">Hybrid - fixed commission with volume or yield accelerator</option>
+                </select>
               </Field>
               <Field label="Requirements" className="md:col-span-2">
                 <Textarea
