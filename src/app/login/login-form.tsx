@@ -2,13 +2,12 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 
 export function LoginForm() {
-  const router = useRouter();
   const searchParams = useSearchParams();
   const next = searchParams.get("next");
 
@@ -39,8 +38,7 @@ export function LoginForm() {
       const role = data.role as "airline" | "gsa" | "admin";
       const fallbackDestination = role === "admin" ? "/admin" : role === "airline" ? "/airline" : "/gsa";
       const destination = next && next.startsWith("/") && !next.startsWith("//") ? next : fallbackDestination;
-      router.replace(destination);
-      router.refresh();
+      window.location.assign(destination);
     } catch {
       setError("Network error. Please try again.");
     } finally {

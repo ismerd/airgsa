@@ -12,7 +12,7 @@ export const SESSION_COOKIE_NAME = "airgsa-session";
 
 export async function signSessionPayload(payload: SessionPayload) {
   const body = encodeBase64Url(JSON.stringify(payload));
-  const signature = bytesToBase64Url(new Uint8Array(await sign(body)));
+  const signature = bytesToBase64Url(await sign(body));
   return `${body}.${signature}`;
 }
 
@@ -39,12 +39,13 @@ export async function verifySessionCookie(value: string | undefined): Promise<Se
 
 async function sign(value: string) {
   const key = await getSigningKey();
-  return crypto.subtle.sign("HMAC", key, encoder.encode(value));
+  const signature = await crypto.subtle.sign("HMAC", key, encoder.encode(value));
+  return new Uint8Array(signature);
 }
 
 async function verify(value: string, signature: Uint8Array) {
-  const key = await getSigningKey();
-  return crypto.subtle.verify("HMAC", key, bytesToArrayBuffer(signature), encoder.encode(value));
+  const expected = await sign(value);
+  return timingSafeEqual(expected, signature);
 }
 
 async function getSigningKey() {
@@ -92,8 +93,11 @@ function base64UrlToBytes(value: string): Uint8Array | null {
   return Uint8Array.from(binary, (char) => char.charCodeAt(0));
 }
 
-function bytesToArrayBuffer(bytes: Uint8Array): ArrayBuffer {
-  const buffer = new ArrayBuffer(bytes.byteLength);
-  new Uint8Array(buffer).set(bytes);
-  return buffer;
+function timingSafeEqual(left: Uint8Array, right: Uint8Array) {
+  if (left.byteLength !== right.byteLength) return false;
+  let diff = 0;
+  for (let index = 0; index < left.byteLength; index += 1) {
+    diff |= left[index] ^ right[index];
+  }
+  return diff === 0;
 }
