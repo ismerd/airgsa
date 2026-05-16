@@ -7,10 +7,18 @@ export async function GET() {
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const [applications, tenders] = await Promise.all([listLiveApplications(), listLiveTenders()]);
+  const airlineTenderIds = new Set(
+    tenders.filter((tender) => tender.airlineEmail === session.email).map((tender) => tender.id),
+  );
+  const visibleApplications = session.role === "gsa"
+    ? applications.filter((application) => application.gsaName === session.company)
+    : applications.filter((application) => airlineTenderIds.has(application.tenderId));
+  const visibleTenders = session.role === "gsa"
+    ? tenders
+    : tenders.filter((tender) => tender.airlineEmail === session.email);
+
   return NextResponse.json({
-    applications: session.role === "gsa"
-      ? applications.filter((application) => application.gsaName === session.company)
-      : applications,
-    tenders,
+    applications: visibleApplications,
+    tenders: visibleTenders,
   });
 }

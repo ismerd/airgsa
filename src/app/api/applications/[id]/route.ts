@@ -12,6 +12,11 @@ export async function GET(_: NextRequest, { params }: { params: Promise<{ id: st
   const { id } = await params;
   const application = await getLiveApplication(id);
   if (!application) return NextResponse.json({ error: "Application not found" }, { status: 404 });
+  const tender = await getLiveTender(application.tenderId);
+  if (!tender) return NextResponse.json({ error: "Application not found" }, { status: 404 });
+  if (session.role === "airline" && tender.airlineEmail !== session.email) {
+    return NextResponse.json({ error: "Application not found" }, { status: 404 });
+  }
   if (session.role === "gsa" && application.gsaName !== session.company) {
     return NextResponse.json({ error: "Application not found" }, { status: 404 });
   }
@@ -29,6 +34,14 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   }
 
   const { id } = await params;
+  const existingApplication = await getLiveApplication(id);
+  if (!existingApplication) return NextResponse.json({ error: "Application not found" }, { status: 404 });
+
+  const existingTender = await getLiveTender(existingApplication.tenderId);
+  if (!existingTender || existingTender.airlineEmail !== session.email) {
+    return NextResponse.json({ error: "Application not found" }, { status: 404 });
+  }
+
   let application;
   try {
     application = await updateLiveApplicationStatus(

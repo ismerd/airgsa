@@ -9,6 +9,9 @@ export async function GET(_: Request, { params }: { params: Promise<{ id: string
   const { id } = await params;
   const tender = await getLiveTender(id);
   if (!tender) return NextResponse.json({ error: "Tender not found" }, { status: 404 });
+  if (session.role === "airline" && tender.airlineEmail !== session.email) {
+    return NextResponse.json({ error: "Tender not found" }, { status: 404 });
+  }
   if (session.role === "gsa" && tender.status !== "open") {
     return NextResponse.json({ error: "Tender not available" }, { status: 404 });
   }

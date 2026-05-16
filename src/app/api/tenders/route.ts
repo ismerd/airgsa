@@ -7,8 +7,12 @@ export async function GET() {
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const tenders = await listLiveTenders();
+  const visibleTenders = session.role === "airline"
+    ? tenders.filter((tender) => tender.airlineEmail === session.email)
+    : tenders.filter((tender) => tender.status === "open");
+
   return NextResponse.json({
-    tenders: session.role === "gsa" ? tenders.filter((tender) => tender.status === "open") : tenders,
+    tenders: visibleTenders,
   });
 }
 

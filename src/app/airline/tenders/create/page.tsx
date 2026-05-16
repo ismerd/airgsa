@@ -1,88 +1,108 @@
 "use client";
 
 import type React from "react";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Plus, Trash2, Paperclip } from "lucide-react";
-import { FileDropzone, type DroppedFile } from "@/components/dashboard/file-dropzone";
+import { ArrowLeft, ArrowRight, CheckCircle2, ClipboardList, FileText, Globe2, Package, Send } from "lucide-react";
 import { Topbar } from "@/components/dashboard/topbar";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import type { TenderRouteFrequency } from "@/lib/services/tender-workflow-store";
 
-type RouteDraft = Omit<TenderRouteFrequency, "id">;
+type WizardStep = 0 | 1 | 2 | 3 | 4;
 
-const emptyRoute: RouteDraft = {
-  origin: "",
-  destination: "",
-  operatingDays: "",
-  frequencyPerWeek: 1,
-  aircraft: "",
+type TenderWizardForm = {
+  airlineName: string;
+  title: string;
+  region: string;
+  airports: string;
+  cargoTypes: string;
+  expectedMonthlyTonnage: string;
+  contractDuration: string;
+  applicationDeadline: string;
+  startDate: string;
+  requiredExperience: string;
+  requiredCertifications: string;
+  salesExpectations: string;
+  additionalNotes: string;
+};
+
+const steps = [
+  { label: "Market", icon: Globe2 },
+  { label: "Cargo Focus", icon: Package },
+  { label: "Requirements", icon: ClipboardList },
+  { label: "Commercial Expectations", icon: FileText },
+  { label: "Review & Publish", icon: CheckCircle2 },
+];
+
+const initialForm: TenderWizardForm = {
+  airlineName: "Saudia Cargo",
+  title: "",
+  region: "",
+  airports: "",
+  cargoTypes: "",
+  expectedMonthlyTonnage: "",
+  contractDuration: "",
+  applicationDeadline: "",
+  startDate: "",
+  requiredExperience: "",
+  requiredCertifications: "",
+  salesExpectations: "",
+  additionalNotes: "",
 };
 
 export default function CreateTenderPage() {
   const router = useRouter();
-  const [files, setFiles] = useState<DroppedFile[]>([]);
-  const [routes, setRoutes] = useState<RouteDraft[]>([{ ...emptyRoute }]);
-  const [form, setForm] = useState({
-    title: "",
-    countryScope: "",
-    annualTonnage: "",
-    productMix: "",
-    deadline: "",
-    expectedStart: "",
-    awardMode: "single" as "single" | "multi",
-    maxAwards: "1",
-    commercialModel: "commission" as "commission" | "capacity-risk" | "hybrid",
-    requirements: "",
-    commercialExpectations: "",
-  });
-  const [saving, setSaving] = useState(false);
+  const [step, setStep] = useState<WizardStep>(0);
+  const [form, setForm] = useState<TenderWizardForm>(initialForm);
+  const [saving, setSaving] = useState<"draft" | "publish" | null>(null);
   const [error, setError] = useState<string | null>(null);
 
+  const preview = useMemo(() => buildPreview(form), [form]);
+  const canContinue = getStepValidity(step, form);
+
   async function submit(status: "draft" | "open") {
-    setSaving(true);
+    setSaving(status === "open" ? "publish" : "draft");
     setError(null);
 
-    const activeRoutes = routes
-      .filter((route) => route.origin.trim() && route.destination.trim())
-      .map((route, index) => ({
-        ...route,
-        id: `route-${index + 1}`,
-        origin: route.origin.trim().toUpperCase(),
-        destination: route.destination.trim().toUpperCase(),
-        frequencyPerWeek: Number(route.frequencyPerWeek) || 1,
-      }));
-    const regions = form.countryScope
-      .split(",")
-      .map((item) => item.trim())
-      .filter(Boolean);
-
     try {
+      const regions = splitList(form.region);
+      const airports = splitList(form.airports).map((airport) => airport.toUpperCase());
+      const requirements = [
+        ...splitList(form.requiredExperience).map((item) => `Experience: ${item}`),
+        ...splitList(form.requiredCertifications).map((item) => `Certification: ${item}`),
+      ];
+      const commercialExpectations = [
+        form.salesExpectations,
+        form.contractDuration ? `Contract duration: ${form.contractDuration}` : "",
+        form.additionalNotes ? `Additional notes: ${form.additionalNotes}` : "",
+      ]
+        .filter(Boolean)
+        .join("\n\n");
+      const monthly = Number(form.expectedMonthlyTonnage) || 0;
+
       const res = await fetch("/api/tenders", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           title: form.title.trim(),
-          countryScope: form.countryScope.trim(),
+          countryScope: form.region.trim(),
           regions,
-          lanes: activeRoutes.length
-            ? activeRoutes.map((route) => `${route.origin}-${route.destination}`).join(", ")
-            : form.countryScope.trim(),
-          annualTonnage: Number(form.annualTonnage) || 0,
-          productMix: form.productMix.trim(),
-          deadline: form.deadline,
-          expectedStart: form.expectedStart,
+          lanes: airports.length ? airports.join(", ") : form.region.trim(),
+          annualTonnage: monthly * 12,
+          productMix: form.cargoTypes.trim(),
+          deadline: form.applicationDeadline,
+          expectedStart: form.startDate,
           status,
-          awardMode: form.awardMode,
-          maxAwards: Number(form.maxAwards) || 1,
-          commercialModel: form.commercialModel,
-          requirements: form.requirements.split("\n").map((item) => item.trim()).filter(Boolean),
-          commercialExpectations: form.commercialExpectations.trim(),
-          routes: activeRoutes,
-          attachments: files,
+          awardMode: "single",
+          maxAwards: 1,
+          commercialModel: "commission",
+          requirements,
+          commercialExpectations,
+          routes: [],
+          attachments: [],
         }),
       });
 
@@ -92,148 +112,199 @@ export default function CreateTenderPage() {
         return;
       }
 
-      router.push("/airline/tenders");
+      const data = await res.json();
+      router.push(`/airline/tenders/${data.tender.id}`);
+    } catch {
+      setError("Tender could not be saved. Please try again.");
     } finally {
-      setSaving(false);
+      setSaving(null);
     }
   }
 
   return (
     <>
-      <Topbar title="Create tender" subtitle="Saudia Cargo" />
-      <main className="p-5">
-        <Card className="max-w-5xl">
+      <Topbar title="Tender Builder" subtitle="Structured GSA tender wizard" />
+      <main className="grid gap-5 p-5 xl:grid-cols-[320px_1fr]">
+        <Card className="self-start">
           <CardHeader>
-            <CardTitle>New GSA tender</CardTitle>
-            <p className="text-sm text-ink-muted">
-              Publish a country or lane-based request. GSAs will see open tenders in their marketplace after login.
-            </p>
+            <CardTitle>Build workflow</CardTitle>
+            <p className="text-sm text-ink-muted">Five steps from market scope to publish-ready preview.</p>
           </CardHeader>
-          <CardContent className="space-y-6">
-            <div className="grid gap-4 md:grid-cols-2">
-              <Field label="Tender title">
-                <Input value={form.title} onChange={(event) => setForm({ ...form, title: event.target.value })} placeholder="Saudi Cargo representation Germany" />
-              </Field>
-              <Field label="Country / market scope">
-                <Input value={form.countryScope} onChange={(event) => setForm({ ...form, countryScope: event.target.value })} placeholder="Germany, Austria, Switzerland" />
-              </Field>
-              <Field label="Expected annual tonnage">
-                <Input value={form.annualTonnage} onChange={(event) => setForm({ ...form, annualTonnage: event.target.value })} type="number" placeholder="22000" />
-              </Field>
-              <Field label="Product focus">
-                <Input value={form.productMix} onChange={(event) => setForm({ ...form, productMix: event.target.value })} placeholder="General cargo, pharma, express" />
-              </Field>
-              <Field label="Expected start">
-                <Input value={form.expectedStart} onChange={(event) => setForm({ ...form, expectedStart: event.target.value })} type="date" />
-              </Field>
-              <Field label="Application deadline">
-                <Input value={form.deadline} onChange={(event) => setForm({ ...form, deadline: event.target.value })} type="date" />
-              </Field>
-              <Field label="Award model">
-                <select
-                  value={form.awardMode}
-                  onChange={(event) => setForm({
-                    ...form,
-                    awardMode: event.target.value as "single" | "multi",
-                    maxAwards: event.target.value === "single" ? "1" : form.maxAwards,
-                  })}
-                  className="h-10 w-full rounded-lg border border-border-ui bg-surface px-3 text-sm text-ink outline-none focus:border-brand"
+          <CardContent className="space-y-2">
+            {steps.map((item, index) => {
+              const Icon = item.icon;
+              const active = index === step;
+              const done = index < step;
+              return (
+                <button
+                  key={item.label}
+                  type="button"
+                  onClick={() => setStep(index as WizardStep)}
+                  className={`flex w-full items-center gap-3 rounded-xl border px-3 py-3 text-left transition ${
+                    active
+                      ? "border-brand bg-brand-light text-brand"
+                      : done
+                        ? "border-[#0B7A52]/20 bg-success-bg text-success"
+                        : "border-border-ui bg-surface2 text-ink-muted hover:border-brand/30"
+                  }`}
                 >
-                  <option value="single">Single winner</option>
-                  <option value="multi">Multiple GSAs</option>
-                </select>
-              </Field>
-              <Field label="Award slots">
-                <Input
-                  value={form.maxAwards}
-                  onChange={(event) => setForm({ ...form, maxAwards: event.target.value })}
-                  type="number"
-                  min={1}
-                  max={10}
-                  disabled={form.awardMode === "single"}
-                />
-              </Field>
-              <Field label="Commercial model" className="md:col-span-2">
-                <select
-                  value={form.commercialModel}
-                  onChange={(event) => setForm({ ...form, commercialModel: event.target.value as "commission" | "capacity-risk" | "hybrid" })}
-                  className="h-10 w-full rounded-lg border border-border-ui bg-surface px-3 text-sm text-ink outline-none focus:border-brand"
-                >
-                  <option value="commission">Commission bid - airline controls rate, GSA earns commission</option>
-                  <option value="capacity-risk">Capacity risk - GSA sells allocated capacity profitably</option>
-                  <option value="hybrid">Hybrid - fixed commission with volume or yield accelerator</option>
-                </select>
-              </Field>
-              <Field label="Requirements" className="md:col-span-2">
-                <Textarea
-                  value={form.requirements}
-                  onChange={(event) => setForm({ ...form, requirements: event.target.value })}
-                  placeholder={"IATA / CASS capability\nLocal sales team\nMonthly KPI reporting"}
-                />
-              </Field>
-              <Field label="Commercial expectations" className="md:col-span-2">
-                <Textarea
-                  value={form.commercialExpectations}
-                  onChange={(event) => setForm({ ...form, commercialExpectations: event.target.value })}
-                  placeholder="Describe target customers, service level, reporting, and handover expectations."
-                />
-              </Field>
-            </div>
-
-            <section className="space-y-3">
-              <div className="flex items-center justify-between gap-3">
-                <div>
-          <p className="text-sm font-semibold text-ink">Optional route scope</p>
-          <p className="text-xs text-ink-muted">Use this only when the tender is lane-specific. Enter weekly frequency and operating days only if known.</p>
-                </div>
-                <Button type="button" variant="outline" size="sm" onClick={() => setRoutes([...routes, { ...emptyRoute }])}>
-                  <Plus className="h-4 w-4" />
-                  Add route
-                </Button>
-              </div>
-              <div className="space-y-2">
-                {routes.map((route, index) => (
-                  <div key={index} className="grid gap-2 rounded-lg border border-border-ui bg-surface2 p-3 md:grid-cols-[1fr_1fr_150px_1fr_1fr_auto]">
-                    <Input value={route.origin} onChange={(event) => updateRoute(index, { origin: event.target.value })} placeholder="Origin, e.g. JED" />
-                    <Input value={route.destination} onChange={(event) => updateRoute(index, { destination: event.target.value })} placeholder="Destination, e.g. FRA" />
-                    <Input value={route.frequencyPerWeek || ""} onChange={(event) => updateRoute(index, { frequencyPerWeek: Number(event.target.value) })} type="number" min={1} max={14} placeholder="Flights / week" />
-                    <Input value={route.operatingDays ?? ""} onChange={(event) => updateRoute(index, { operatingDays: event.target.value })} placeholder="Days if known, e.g. Mon/Wed/Fri" />
-                    <Input value={route.aircraft ?? ""} onChange={(event) => updateRoute(index, { aircraft: event.target.value })} placeholder="Aircraft / notes" />
-                    <Button type="button" variant="ghost" size="icon" onClick={() => setRoutes(routes.filter((_, itemIndex) => itemIndex !== index))}>
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  </div>
-                ))}
-              </div>
-            </section>
-
-            <section className="space-y-3">
-              <div className="flex items-center gap-2">
-                <Paperclip className="h-4 w-4 text-ink-muted" />
-                <p className="text-sm font-semibold text-ink">Attachments</p>
-              </div>
-              <FileDropzone files={files} onChange={setFiles} hint="RFP, lane sheet, service requirements, or legal terms" />
-            </section>
-
-            {error && <p className="rounded-lg bg-danger-bg px-3 py-2 text-sm text-danger">{error}</p>}
-
-            <div className="flex flex-col gap-3 sm:flex-row">
-              <Button disabled={saving || !form.title.trim()} onClick={() => submit("open")}>
-                {saving ? "Publishing..." : "Publish tender"}
-              </Button>
-              <Button disabled={saving || !form.title.trim()} variant="outline" onClick={() => submit("draft")}>
-                Save draft
-              </Button>
-            </div>
+                  <Icon className="h-4 w-4" />
+                  <span className="font-semibold">{index + 1}. {item.label}</span>
+                </button>
+              );
+            })}
           </CardContent>
         </Card>
+
+        <section className="space-y-5">
+          <Card>
+            <CardHeader>
+              <div className="flex flex-col gap-2 lg:flex-row lg:items-center lg:justify-between">
+                <div>
+                  <CardTitle>{steps[step].label}</CardTitle>
+                  <p className="mt-1 text-sm text-ink-muted">{getStepHelper(step)}</p>
+                </div>
+                <Badge variant="muted">Step {step + 1} of {steps.length}</Badge>
+              </div>
+            </CardHeader>
+            <CardContent className="space-y-5">
+              {step === 0 && (
+                <div className="grid gap-4 md:grid-cols-2">
+                  <Field label="airline_name">
+                    <Input value={form.airlineName} onChange={(event) => update("airlineName", event.target.value)} />
+                  </Field>
+                  <Field label="title">
+                    <Input value={form.title} onChange={(event) => update("title", event.target.value)} placeholder="Saudi Cargo France representation" />
+                  </Field>
+                  <Field label="region" className="md:col-span-2">
+                    <Input value={form.region} onChange={(event) => update("region", event.target.value)} placeholder="France, Benelux, DACH..." />
+                  </Field>
+                  <Field label="airports" className="md:col-span-2">
+                    <Input value={form.airports} onChange={(event) => update("airports", event.target.value)} placeholder="CDG, LYS, JED, RUH" />
+                  </Field>
+                </div>
+              )}
+
+              {step === 1 && (
+                <div className="grid gap-4 md:grid-cols-2">
+                  <Field label="cargo_types" className="md:col-span-2">
+                    <Input value={form.cargoTypes} onChange={(event) => update("cargoTypes", event.target.value)} placeholder="pharma, perishables, general cargo, e-commerce" />
+                  </Field>
+                  <Field label="expected_monthly_tonnage">
+                    <Input value={form.expectedMonthlyTonnage} onChange={(event) => update("expectedMonthlyTonnage", event.target.value)} type="number" placeholder="1500" />
+                  </Field>
+                  <Field label="contract_duration">
+                    <Input value={form.contractDuration} onChange={(event) => update("contractDuration", event.target.value)} placeholder="24 months with 12-month extension option" />
+                  </Field>
+                  <Field label="application_deadline">
+                    <Input value={form.applicationDeadline} onChange={(event) => update("applicationDeadline", event.target.value)} type="date" />
+                  </Field>
+                  <Field label="start_date">
+                    <Input value={form.startDate} onChange={(event) => update("startDate", event.target.value)} type="date" />
+                  </Field>
+                </div>
+              )}
+
+              {step === 2 && (
+                <div className="grid gap-4 md:grid-cols-2">
+                  <Field label="required_experience" className="md:col-span-2">
+                    <Textarea value={form.requiredExperience} onChange={(event) => update("requiredExperience", event.target.value)} placeholder="10+ years cargo sales in France&#10;Existing Tier-1 forwarder relationships&#10;Airport sales presence at CDG" />
+                  </Field>
+                  <Field label="required_certifications" className="md:col-span-2">
+                    <Textarea value={form.requiredCertifications} onChange={(event) => update("requiredCertifications", event.target.value)} placeholder="IATA CASS&#10;GDP pharma handling&#10;ISO 9001 preferred" />
+                  </Field>
+                </div>
+              )}
+
+              {step === 3 && (
+                <div className="grid gap-4">
+                  <Field label="sales_expectations">
+                    <Textarea value={form.salesExpectations} onChange={(event) => update("salesExpectations", event.target.value)} placeholder="Monthly sales target, account coverage, reporting rhythm, commercial proposal expectations..." />
+                  </Field>
+                  <Field label="additional_notes">
+                    <Textarea value={form.additionalNotes} onChange={(event) => update("additionalNotes", event.target.value)} placeholder="Operational constraints, preferred launch plan, special cargo requirements..." />
+                  </Field>
+                </div>
+              )}
+
+              {step === 4 && <TenderPreview preview={preview} />}
+
+              {error && <p className="rounded-lg bg-danger-bg px-3 py-2 text-sm text-danger">{error}</p>}
+
+              <div className="flex flex-col gap-3 border-t border-border-ui pt-5 sm:flex-row sm:justify-between">
+                <Button variant="outline" disabled={step === 0 || Boolean(saving)} onClick={() => setStep((current) => Math.max(0, current - 1) as WizardStep)}>
+                  <ArrowLeft className="h-4 w-4" />
+                  Back
+                </Button>
+                <div className="flex flex-col gap-3 sm:flex-row">
+                  {step === 4 ? (
+                    <>
+                      <Button variant="outline" disabled={Boolean(saving) || !form.title.trim()} onClick={() => submit("draft")}>
+                        {saving === "draft" ? "Saving..." : "Save Draft"}
+                      </Button>
+                      <Button disabled={Boolean(saving) || !form.title.trim()} onClick={() => submit("open")}>
+                        <Send className="h-4 w-4" />
+                        {saving === "publish" ? "Publishing..." : "Publish Tender"}
+                      </Button>
+                    </>
+                  ) : (
+                    <Button disabled={!canContinue} onClick={() => setStep((current) => Math.min(4, current + 1) as WizardStep)}>
+                      Continue
+                      <ArrowRight className="h-4 w-4" />
+                    </Button>
+                  )}
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </section>
       </main>
     </>
   );
 
-  function updateRoute(index: number, patch: Partial<RouteDraft>) {
-    setRoutes(routes.map((route, itemIndex) => (itemIndex === index ? { ...route, ...patch } : route)));
+  function update(field: keyof TenderWizardForm, value: string) {
+    setForm((current) => ({ ...current, [field]: value }));
   }
+}
+
+function TenderPreview({ preview }: { preview: ReturnType<typeof buildPreview> }) {
+  return (
+    <div className="overflow-hidden rounded-2xl border border-border-ui bg-surface">
+      <div className="border-b border-border-ui bg-surface2 p-5">
+        <p className="text-xs font-semibold uppercase tracking-[0.2em] text-brand">{preview.airlineName}</p>
+        <h2 className="mt-2 text-2xl font-semibold text-ink">{preview.title || "Untitled tender"}</h2>
+        <p className="mt-2 text-sm text-ink-muted">{preview.region || "Market not set"} - {preview.airports || "Airports not set"}</p>
+      </div>
+      <div className="grid gap-4 p-5 md:grid-cols-3">
+        <PreviewMetric label="Cargo focus" value={preview.cargoTypes || "Not set"} />
+        <PreviewMetric label="Monthly tonnage" value={preview.monthlyTonnage || "Not set"} />
+        <PreviewMetric label="Contract duration" value={preview.contractDuration || "Not set"} />
+      </div>
+      <div className="grid gap-4 border-t border-border-ui p-5 lg:grid-cols-3">
+        <PreviewBlock title="Mandatory requirements" value={preview.requirements || "No mandatory requirements entered."} />
+        <PreviewBlock title="Commercial expectations" value={preview.salesExpectations || "No commercial expectations entered."} />
+        <PreviewBlock title="Tender intelligence summary" value={preview.intelligenceSummary} />
+      </div>
+    </div>
+  );
+}
+
+function PreviewMetric({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded-xl border border-border-ui bg-surface2 p-4">
+      <p className="text-xs font-semibold uppercase tracking-wider text-ink-muted">{label}</p>
+      <p className="mt-2 text-sm font-semibold text-ink">{value}</p>
+    </div>
+  );
+}
+
+function PreviewBlock({ title, value }: { title: string; value: string }) {
+  return (
+    <div>
+      <p className="text-sm font-semibold text-ink">{title}</p>
+      <p className="mt-2 whitespace-pre-line text-sm leading-6 text-ink-muted">{value}</p>
+    </div>
+  );
 }
 
 function Field({ label, className, children }: { label: string; className?: string; children: React.ReactNode }) {
@@ -243,4 +314,42 @@ function Field({ label, className, children }: { label: string; className?: stri
       {children}
     </label>
   );
+}
+
+function buildPreview(form: TenderWizardForm) {
+  const monthlyTonnage = form.expectedMonthlyTonnage ? `${Number(form.expectedMonthlyTonnage).toLocaleString()} tons` : "";
+  const intelligenceSummary = `${form.airlineName || "The airline"} is preparing a GSA tender for ${form.region || "the selected market"}. The mandate focuses on ${form.cargoTypes || "defined cargo products"} with ${monthlyTonnage || "a target monthly tonnage to be confirmed"}. Applicants should prove market coverage, airport access, sales execution, and launch readiness before award.`;
+  return {
+    airlineName: form.airlineName,
+    title: form.title,
+    region: form.region,
+    airports: form.airports,
+    cargoTypes: form.cargoTypes,
+    monthlyTonnage,
+    contractDuration: form.contractDuration,
+    requirements: [form.requiredExperience, form.requiredCertifications].filter(Boolean).join("\n"),
+    salesExpectations: [form.salesExpectations, form.additionalNotes].filter(Boolean).join("\n\n"),
+    intelligenceSummary,
+  };
+}
+
+function getStepValidity(step: WizardStep, form: TenderWizardForm) {
+  if (step === 0) return Boolean(form.title.trim() && form.region.trim());
+  if (step === 1) return Boolean(form.cargoTypes.trim() && form.applicationDeadline && form.startDate);
+  return true;
+}
+
+function getStepHelper(step: WizardStep) {
+  if (step === 0) return "Define where this GSA mandate applies and which airports matter.";
+  if (step === 1) return "Set the cargo profile, monthly tonnage target, and tender timeline.";
+  if (step === 2) return "Separate must-have experience and certifications from general context.";
+  if (step === 3) return "Tell GSAs what a strong commercial and sales plan should prove.";
+  return "Review the tender exactly as an airline team would see it before publication.";
+}
+
+function splitList(value: string) {
+  return value
+    .split(/[\n,]/)
+    .map((item) => item.trim())
+    .filter(Boolean);
 }
