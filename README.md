@@ -1,6 +1,6 @@
 # AirGSA MVP
 
-B2B aviation cargo MVP built with Next.js App Router, TypeScript, TailwindCSS, shadcn-style UI primitives, Supabase-ready services, Recharts, and mock data.
+B2B  aviation cargo MVP built with Next.js App Router, TypeScript, TailwindCSS, shadcn-style UI primitives, Supabase-ready services, Recharts, and mock data.
 
 ## Local Development
 
