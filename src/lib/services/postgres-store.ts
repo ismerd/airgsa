@@ -50,6 +50,18 @@ async function ensureSchema() {
         data jsonb not null
       );
 
+      create table if not exists live_partner_contracts (
+        id text primary key,
+        tender_id text not null,
+        application_id text not null,
+        airline_email text not null,
+        gsa_id text not null,
+        status text not null,
+        created_at timestamptz not null,
+        updated_at timestamptz not null,
+        data jsonb not null
+      );
+
       create table if not exists airline_fleet_aircraft (
         registration text primary key,
         airline_icao text not null,
@@ -61,6 +73,8 @@ async function ensureSchema() {
       create index if not exists live_tenders_status_idx on live_tenders(status);
       create index if not exists live_applications_tender_idx on live_applications(tender_id);
       create index if not exists live_applications_status_idx on live_applications(status);
+      create index if not exists live_partner_contracts_tender_idx on live_partner_contracts(tender_id);
+      create index if not exists live_partner_contracts_application_idx on live_partner_contracts(application_id);
       create index if not exists airline_fleet_aircraft_airline_idx on airline_fleet_aircraft(airline_icao);
     `).then(() => undefined);
   }

@@ -1,10 +1,9 @@
 import type { ReactNode } from "react";
 import { revalidatePath } from "next/cache";
-import { cookies } from "next/headers";
 import { Award, Globe2, ShieldCheck, TrendingUp, UserCircle, Zap } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Topbar } from "@/components/dashboard/topbar";
-import { getSession } from "@/lib/auth/session";
+import { getSession, updateSession } from "@/lib/auth/session";
 import { realGsaPartners, type RealGsaPartner } from "@/lib/real-gsa-data";
 
 export const dynamic = "force-dynamic";
@@ -13,22 +12,7 @@ async function updateContactName(formData: FormData) {
   "use server";
   const name = (formData.get("name") as string)?.trim();
   if (!name) return;
-  const cookieStore = await cookies();
-  const raw = cookieStore.get("airgsa-session")?.value;
-  if (!raw) return;
-  try {
-    const session = JSON.parse(raw);
-    session.name = name;
-    cookieStore.set("airgsa-session", JSON.stringify(session), {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "lax" as const,
-      maxAge: 60 * 60 * 24 * 7,
-      path: "/",
-    });
-  } catch {
-    return;
-  }
+  await updateSession({ name });
   revalidatePath("/gsa/profile");
 }
 

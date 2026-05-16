@@ -13,6 +13,7 @@ import {
   Rocket,
   Users,
 } from "lucide-react";
+import { AiTextButton } from "@/components/ai/ai-text-button";
 import { DocumentList } from "@/components/dashboard/document-list";
 import { FileDropzone, type DroppedFile } from "@/components/dashboard/file-dropzone";
 import { Topbar } from "@/components/dashboard/topbar";
@@ -359,20 +360,40 @@ export function ApplyTenderClient({ tenderId, gsa }: { tenderId: string; gsa: Re
                   </p>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                  <Textarea
-                    disabled={!canEdit}
-                    placeholder={tender ? getNetworkPlanPlaceholder(tender) : "Network plan: named forwarders, verticals, launch pipeline, weekly sales cadence"}
-                    value={form.networkPlan}
-                    onChange={(e) => setForm({ ...form, networkPlan: e.target.value })}
-                    className="min-h-[120px]"
-                  />
-                  <Textarea
-                    disabled={!canEdit}
-                    placeholder="Operational readiness: team, launch owners, tools, reporting cadence, first-30-day milestones"
-                    value={form.operationalReadiness}
-                    onChange={(e) => setForm({ ...form, operationalReadiness: e.target.value })}
-                    className="min-h-[120px]"
-                  />
+                  <div className="relative">
+                    <Textarea
+                      disabled={!canEdit}
+                      placeholder={tender ? getNetworkPlanPlaceholder(tender) : "Network plan: named forwarders, verticals, launch pipeline, weekly sales cadence"}
+                      value={form.networkPlan}
+                      onChange={(e) => setForm({ ...form, networkPlan: e.target.value })}
+                      className="min-h-[120px] pr-32 pt-10"
+                    />
+                    {canEdit && (
+                      <AiTextButton
+                        value={form.networkPlan}
+                        onChange={(value) => setForm({ ...form, networkPlan: value })}
+                        fieldLabel="GSA application network plan"
+                        context={buildApplicationAiContext(tender, gsa)}
+                      />
+                    )}
+                  </div>
+                  <div className="relative">
+                    <Textarea
+                      disabled={!canEdit}
+                      placeholder="Operational readiness: team, launch owners, tools, reporting cadence, first-30-day milestones"
+                      value={form.operationalReadiness}
+                      onChange={(e) => setForm({ ...form, operationalReadiness: e.target.value })}
+                      className="min-h-[120px] pr-32 pt-10"
+                    />
+                    {canEdit && (
+                      <AiTextButton
+                        value={form.operationalReadiness}
+                        onChange={(value) => setForm({ ...form, operationalReadiness: value })}
+                        fieldLabel="GSA application operational readiness"
+                        context={buildApplicationAiContext(tender, gsa)}
+                      />
+                    )}
+                  </div>
 
                   <div className="space-y-2">
                     <div className="flex items-center gap-2">
@@ -736,4 +757,17 @@ function getNetworkPlanPlaceholder(tender: LiveTender) {
   if (m === "capacity-risk") return "Capacity plan: key accounts, yield protection, peak handling, unsold capacity risk controls";
   if (m === "hybrid") return "Growth plan: accounts, volume targets, upside triggers, reporting cadence";
   return "Network plan: named forwarders, verticals, launch pipeline, weekly sales cadence";
+}
+
+function buildApplicationAiContext(tender: LiveTender | null, gsa: RealGsaPartner) {
+  return [
+    tender?.title ? `Tender: ${tender.title}` : "",
+    tender?.countryScope ? `Market: ${tender.countryScope}` : "",
+    tender?.productMix ? `Cargo focus: ${tender.productMix}` : "",
+    gsa.name ? `GSA: ${gsa.name}` : "",
+    gsa.coverage.length ? `GSA coverage: ${gsa.coverage.join(", ")}` : "",
+    gsa.cargoFocus ? `GSA cargo focus: ${gsa.cargoFocus}` : "",
+  ]
+    .filter(Boolean)
+    .join(" | ");
 }

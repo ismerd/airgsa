@@ -6,13 +6,16 @@ import { Topbar } from "@/components/dashboard/topbar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { getLiveApplication, listLiveTenders } from "@/lib/services/tender-workflow-store";
+import { getSession } from "@/lib/auth/session";
+import { canViewApplication } from "@/lib/auth/permissions";
+import { getLiveApplication, getLiveTender } from "@/lib/services/tender-workflow-store";
 
 export default async function AirlineApplicationDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const [application, tenders] = await Promise.all([getLiveApplication(id), listLiveTenders()]);
+  const [session, application] = await Promise.all([getSession(), getLiveApplication(id)]);
   if (!application) notFound();
-  const tender = tenders.find((item) => item.id === application.tenderId);
+  const tender = await getLiveTender(application.tenderId);
+  if (!session || !canViewApplication(session, application, tender)) notFound();
 
   return (
     <>

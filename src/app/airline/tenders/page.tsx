@@ -170,7 +170,7 @@ function TenderPortfolioCard({
           </div>
           <Button asChild className="w-full">
             <Link href={`/airline/tenders/${tender.id}`}>
-              Open Workspace
+              {stage.key === "draft" ? "Finish Draft" : "Open Workspace"}
               <ChevronRight className="h-4 w-4" />
             </Link>
           </Button>

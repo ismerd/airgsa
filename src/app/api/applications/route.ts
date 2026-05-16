@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { getSession } from "@/lib/auth/session";
+import { canViewApplication, canViewTender } from "@/lib/auth/permissions";
 import { listLiveApplications, listLiveTenders } from "@/lib/services/tender-workflow-store";
 
 export async function GET() {
@@ -7,15 +8,11 @@ export async function GET() {
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const [applications, tenders] = await Promise.all([listLiveApplications(), listLiveTenders()]);
-  const airlineTenderIds = new Set(
-    tenders.filter((tender) => tender.airlineEmail === session.email).map((tender) => tender.id),
+  const tenderById = new Map(tenders.map((tender) => [tender.id, tender]));
+  const visibleApplications = applications.filter((application) =>
+    canViewApplication(session, application, tenderById.get(application.tenderId) ?? null),
   );
-  const visibleApplications = session.role === "gsa"
-    ? applications.filter((application) => application.gsaName === session.company)
-    : applications.filter((application) => airlineTenderIds.has(application.tenderId));
-  const visibleTenders = session.role === "gsa"
-    ? tenders
-    : tenders.filter((tender) => tender.airlineEmail === session.email);
+  const visibleTenders = tenders.filter((tender) => canViewTender(session, tender));
 
   return NextResponse.json({
     applications: visibleApplications,

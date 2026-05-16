@@ -5,20 +5,28 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Topbar } from "@/components/dashboard/topbar";
+import { getSession } from "@/lib/auth/session";
+import { canViewApplication } from "@/lib/auth/permissions";
 import { getGsaProfileById } from "@/lib/services/platform";
 import { listLiveApplications, listLiveTenders } from "@/lib/services/tender-workflow-store";
 
 export default async function GsaProfilePage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const [gsa, applications, tenders] = await Promise.all([
+  const [session, gsa, applications, tenders] = await Promise.all([
+    getSession(),
     getGsaProfileById(id),
     listLiveApplications(),
     listLiveTenders(),
   ]);
 
-  if (!gsa) notFound();
+  if (!session || !gsa) notFound();
+  const tenderById = new Map(tenders.map((tender) => [tender.id, tender]));
 
-  const acceptedApplications = applications.filter((application) => application.gsaId === id && application.status === "accepted");
+  const acceptedApplications = applications.filter((application) =>
+    application.gsaId === id &&
+    application.status === "accepted" &&
+    canViewApplication(session, application, tenderById.get(application.tenderId) ?? null),
+  );
   const latestAcceptedApplication = acceptedApplications.sort((left, right) => right.updatedAt.localeCompare(left.updatedAt))[0];
   if (!latestAcceptedApplication) notFound();
 

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSession } from "@/lib/auth/session";
+import { canViewTender } from "@/lib/auth/permissions";
 import { createLiveTender, listLiveTenders, type TenderCreateInput } from "@/lib/services/tender-workflow-store";
 
 export async function GET() {
@@ -7,9 +8,7 @@ export async function GET() {
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const tenders = await listLiveTenders();
-  const visibleTenders = session.role === "airline"
-    ? tenders.filter((tender) => tender.airlineEmail === session.email)
-    : tenders.filter((tender) => tender.status === "open");
+  const visibleTenders = tenders.filter((tender) => canViewTender(session, tender));
 
   return NextResponse.json({
     tenders: visibleTenders,
@@ -25,6 +24,7 @@ export async function POST(req: NextRequest) {
     ...input,
     airline: session.company,
     airlineEmail: session.email,
+    airlineCompanyId: session.companyId,
   });
 
   return NextResponse.json({ tender }, { status: 201 });

@@ -1,12 +1,12 @@
 import type { ReactNode } from "react";
 import Image from "next/image";
 import { revalidatePath } from "next/cache";
-import { cookies } from "next/headers";
 import { BarChart3, Globe2, Package, PlaneTakeoff, Shield, Users, UserCircle } from "lucide-react";
 import { Topbar } from "@/components/dashboard/topbar";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { LogoUploader } from "@/components/dashboard/logo-uploader";
-import { getSession } from "@/lib/auth/session";
+import { getSession, updateSession } from "@/lib/auth/session";
+import { canViewTender } from "@/lib/auth/permissions";
 import { getAirlineProfile } from "@/lib/services/airline-profile";
 import { SAUDIA_CARGO } from "@/lib/saudia-cargo-data";
 import { realGsaPartners } from "@/lib/real-gsa-data";
@@ -18,22 +18,7 @@ async function updateContactName(formData: FormData) {
   "use server";
   const name = (formData.get("name") as string)?.trim();
   if (!name) return;
-  const cookieStore = await cookies();
-  const raw = cookieStore.get("airgsa-session")?.value;
-  if (!raw) return;
-  try {
-    const session = JSON.parse(raw);
-    session.name = name;
-    cookieStore.set("airgsa-session", JSON.stringify(session), {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "lax" as const,
-      maxAge: 60 * 60 * 24 * 7,
-      path: "/",
-    });
-  } catch {
-    return;
-  }
+  await updateSession({ name });
   revalidatePath("/airline/profile");
 }
 
@@ -44,8 +29,9 @@ export default async function AirlineProfilePage() {
     listLiveTenders(),
   ]);
 
-  const activeTenders = tenders.filter((t) => t.status === "open").length;
-  const draftTenders = tenders.filter((t) => t.status === "draft").length;
+  const visibleTenders = session ? tenders.filter((tender) => canViewTender(session, tender)) : [];
+  const activeTenders = visibleTenders.filter((t) => t.status === "open").length;
+  const draftTenders = visibleTenders.filter((t) => t.status === "draft").length;
   const gsaCount = realGsaPartners.length;
 
   return (

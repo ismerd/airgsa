@@ -1,10 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
+import { SESSION_COOKIE_NAME, verifySessionCookie } from "@/lib/auth/session-cookie";
 
 // Paths that don't require authentication
 const PUBLIC_PREFIXES = [
   "/",
   "/login",
   "/signup",
+  "/forgot-password",
+  "/reset-password",
   "/pricing",
   "/api/auth",
   "/_next",
@@ -18,7 +21,7 @@ function isPublic(pathname: string): boolean {
   );
 }
 
-export function middleware(req: NextRequest) {
+export async function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
 
   if (isPublic(pathname)) {
@@ -29,18 +32,11 @@ export function middleware(req: NextRequest) {
     return NextResponse.redirect(new URL("/", req.url));
   }
 
-  const sessionCookie = req.cookies.get("airgsa-session")?.value;
-  if (!sessionCookie) {
+  const session = await verifySessionCookie(req.cookies.get(SESSION_COOKIE_NAME)?.value);
+  if (!session) {
     const loginUrl = new URL("/login", req.url);
     loginUrl.searchParams.set("next", pathname);
     return NextResponse.redirect(loginUrl);
-  }
-
-  let session: { role: string } | null = null;
-  try {
-    session = JSON.parse(sessionCookie) as { role: string };
-  } catch {
-    return NextResponse.redirect(new URL("/login", req.url));
   }
 
   if (!session?.role) {

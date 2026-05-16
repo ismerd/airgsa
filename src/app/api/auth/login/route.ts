@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { validateCredentials } from "@/lib/auth/credentials";
+import { authenticateCredentials } from "@/lib/auth/credentials";
 import { createSession } from "@/lib/auth/session";
 
 export async function POST(req: NextRequest) {
@@ -10,7 +10,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Email and password required" }, { status: 400 });
   }
 
-  const account = validateCredentials(email, password);
+  const account = await authenticateCredentials(email, password);
   if (!account) {
     return NextResponse.json({ error: "Invalid email or password" }, { status: 401 });
   }

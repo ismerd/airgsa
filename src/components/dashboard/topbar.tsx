@@ -4,6 +4,7 @@ import React, { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Bell, Search } from "lucide-react";
+import { CommandAssistant } from "@/components/dashboard/command-assistant";
 import { buttonVariants } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
@@ -120,6 +121,7 @@ export function Topbar({
             <Input className="pl-9" placeholder="Search tenders, GSAs, lanes..." />
           </div>
           <ThemeToggle />
+          <CommandAssistant />
           <div className="relative" ref={wrapperRef}>
             <button
               type="button"

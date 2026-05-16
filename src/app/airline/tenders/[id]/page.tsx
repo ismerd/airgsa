@@ -12,6 +12,7 @@ import {
   ClipboardCheck,
   Globe2,
   Package,
+  Send,
   Search,
   ShieldAlert,
   Sparkles,
@@ -19,6 +20,7 @@ import {
   Trophy,
   UsersRound,
 } from "lucide-react";
+import { AiTextButton } from "@/components/ai/ai-text-button";
 import { Topbar } from "@/components/dashboard/topbar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -193,6 +195,10 @@ export default function TenderWorkspaceDetailPage() {
           </div>
         </section>
 
+        {tender.status === "draft" && (
+          <DraftPublishPanel tender={tender} pending={pendingAction === "publish-tender"} onPublish={publishTender} />
+        )}
+
         {error && <p className="rounded-lg bg-danger-bg px-3 py-2 text-sm text-danger">{error}</p>}
 
         {activeTab === "overview" && (
@@ -294,6 +300,85 @@ export default function TenderWorkspaceDetailPage() {
       setPendingAction(null);
     }
   }
+
+  async function publishTender() {
+    if (!tender) return;
+    setPendingAction("publish-tender");
+    setError(null);
+    try {
+      const res = await fetch(`/api/tenders/${tender.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status: "open" }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setError(data.error ?? "Tender could not be published");
+        return;
+      }
+      setTender(data.tender);
+    } finally {
+      setPendingAction(null);
+    }
+  }
+}
+
+function DraftPublishPanel({
+  tender,
+  pending,
+  onPublish,
+}: {
+  tender: LiveTender;
+  pending: boolean;
+  onPublish: () => void;
+}) {
+  const readiness = [
+    { label: "Market scope", ready: Boolean(tender.countryScope || tender.regions.length) },
+    { label: "Cargo focus", ready: Boolean(tender.productMix.trim()) },
+    { label: "Application deadline", ready: Boolean(tender.deadline) },
+    { label: "Requirements", ready: tender.requirements.length > 0 },
+  ];
+  const missing = readiness.filter((item) => !item.ready);
+
+  return (
+    <section className="rounded-2xl border border-brand/20 bg-brand-light p-5 shadow-sm">
+      <div className="flex flex-col gap-5 xl:flex-row xl:items-center xl:justify-between">
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-brand">Draft not visible yet</p>
+          <h2 className="mt-2 text-xl font-semibold text-ink">Finish this tender and publish it to GSAs</h2>
+          <p className="mt-2 max-w-3xl text-sm leading-6 text-ink-muted">
+            This workspace is still private. Once published, eligible GSA accounts can see the tender and submit applications until the deadline.
+          </p>
+          <div className="mt-4 flex flex-wrap gap-2">
+            {readiness.map((item) => (
+              <span
+                key={item.label}
+                className={`rounded-full border px-3 py-1 text-xs font-semibold ${
+                  item.ready
+                    ? "border-[#0B7A52]/20 bg-success-bg text-success"
+                    : "border-[#B45309]/25 bg-warning-bg text-warning"
+                }`}
+              >
+                {item.ready ? "Ready" : "Check"} - {item.label}
+              </span>
+            ))}
+          </div>
+        </div>
+        <div className="min-w-[280px] rounded-xl border border-border-ui bg-surface p-4">
+          <p className="text-xs font-semibold uppercase tracking-wider text-ink-muted">Publish action</p>
+          <p className="mt-2 text-sm leading-6 text-ink-muted">
+            {missing.length
+              ? `You can publish now, but ${missing.map((item) => item.label.toLowerCase()).join(", ")} should be reviewed first.`
+              : "Core tender fields are ready for publication."}
+          </p>
+          <Button className="mt-4 w-full" disabled={pending} onClick={onPublish}>
+            <Send className="h-4 w-4" />
+            {pending ? "Publishing..." : "Publish to GSA marketplace"}
+          </Button>
+        </div>
+      </div>
+    </section>
+  );
 }
 
 function OverviewTab({ tender, applications }: { tender: LiveTender; applications: LiveTenderApplication[] }) {
@@ -509,7 +594,16 @@ function AwardTab({
 
           <label>
             <span className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-ink-muted">Internal decision note</span>
-            <Textarea value={decisionNote} onChange={(event) => onDecisionNoteChange(event.target.value)} placeholder="Why this GSA was selected, commercial rationale, risks, and next steps..." />
+            <div className="relative">
+              <Textarea className="pr-32 pt-10" value={decisionNote} onChange={(event) => onDecisionNoteChange(event.target.value)} placeholder="Why this GSA was selected, commercial rationale, risks, and next steps..." />
+              <AiTextButton
+                value={decisionNote}
+                onChange={onDecisionNoteChange}
+                fieldLabel="Tender award internal decision note"
+                context={`${tender.title} | ${selected ? `Selected GSA: ${selected.application.gsaName}` : "No selected GSA yet"}`}
+                disabled={!selected}
+              />
+            </div>
           </label>
 
           <div className="grid gap-2 sm:grid-cols-2">

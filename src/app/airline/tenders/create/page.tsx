@@ -4,6 +4,7 @@ import type React from "react";
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, ArrowRight, CheckCircle2, ClipboardList, FileText, Globe2, Package, Send } from "lucide-react";
+import { AiTextButton } from "@/components/ai/ai-text-button";
 import { Topbar } from "@/components/dashboard/topbar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -208,10 +209,22 @@ export default function CreateTenderPage() {
               {step === 2 && (
                 <div className="grid gap-4 md:grid-cols-2">
                   <Field label="required_experience" className="md:col-span-2">
-                    <Textarea value={form.requiredExperience} onChange={(event) => update("requiredExperience", event.target.value)} placeholder="10+ years cargo sales in France&#10;Existing Tier-1 forwarder relationships&#10;Airport sales presence at CDG" />
+                    <Textarea className="pr-32 pt-10" value={form.requiredExperience} onChange={(event) => update("requiredExperience", event.target.value)} placeholder="10+ years cargo sales in France&#10;Existing Tier-1 forwarder relationships&#10;Airport sales presence at CDG" />
+                    <AiTextButton
+                      value={form.requiredExperience}
+                      onChange={(value) => update("requiredExperience", value)}
+                      fieldLabel="Tender required experience"
+                      context={buildAiContext(form)}
+                    />
                   </Field>
                   <Field label="required_certifications" className="md:col-span-2">
-                    <Textarea value={form.requiredCertifications} onChange={(event) => update("requiredCertifications", event.target.value)} placeholder="IATA CASS&#10;GDP pharma handling&#10;ISO 9001 preferred" />
+                    <Textarea className="pr-32 pt-10" value={form.requiredCertifications} onChange={(event) => update("requiredCertifications", event.target.value)} placeholder="IATA CASS&#10;GDP pharma handling&#10;ISO 9001 preferred" />
+                    <AiTextButton
+                      value={form.requiredCertifications}
+                      onChange={(value) => update("requiredCertifications", value)}
+                      fieldLabel="Tender required certifications"
+                      context={buildAiContext(form)}
+                    />
                   </Field>
                 </div>
               )}
@@ -219,10 +232,22 @@ export default function CreateTenderPage() {
               {step === 3 && (
                 <div className="grid gap-4">
                   <Field label="sales_expectations">
-                    <Textarea value={form.salesExpectations} onChange={(event) => update("salesExpectations", event.target.value)} placeholder="Monthly sales target, account coverage, reporting rhythm, commercial proposal expectations..." />
+                    <Textarea className="pr-32 pt-10" value={form.salesExpectations} onChange={(event) => update("salesExpectations", event.target.value)} placeholder="Monthly sales target, account coverage, reporting rhythm, commercial proposal expectations..." />
+                    <AiTextButton
+                      value={form.salesExpectations}
+                      onChange={(value) => update("salesExpectations", value)}
+                      fieldLabel="Tender sales expectations"
+                      context={buildAiContext(form)}
+                    />
                   </Field>
                   <Field label="additional_notes">
-                    <Textarea value={form.additionalNotes} onChange={(event) => update("additionalNotes", event.target.value)} placeholder="Operational constraints, preferred launch plan, special cargo requirements..." />
+                    <Textarea className="pr-32 pt-10" value={form.additionalNotes} onChange={(event) => update("additionalNotes", event.target.value)} placeholder="Operational constraints, preferred launch plan, special cargo requirements..." />
+                    <AiTextButton
+                      value={form.additionalNotes}
+                      onChange={(value) => update("additionalNotes", value)}
+                      fieldLabel="Tender additional notes"
+                      context={buildAiContext(form)}
+                    />
                   </Field>
                 </div>
               )}
@@ -309,7 +334,7 @@ function PreviewBlock({ title, value }: { title: string; value: string }) {
 
 function Field({ label, className, children }: { label: string; className?: string; children: React.ReactNode }) {
   return (
-    <label className={className}>
+    <label className={`relative block ${className ?? ""}`}>
       <span className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-ink-muted">{label}</span>
       {children}
     </label>
@@ -345,6 +370,18 @@ function getStepHelper(step: WizardStep) {
   if (step === 2) return "Separate must-have experience and certifications from general context.";
   if (step === 3) return "Tell GSAs what a strong commercial and sales plan should prove.";
   return "Review the tender exactly as an airline team would see it before publication.";
+}
+
+function buildAiContext(form: TenderWizardForm) {
+  return [
+    form.title ? `Tender title: ${form.title}` : "",
+    form.region ? `Region: ${form.region}` : "",
+    form.airports ? `Airports: ${form.airports}` : "",
+    form.cargoTypes ? `Cargo focus: ${form.cargoTypes}` : "",
+    form.expectedMonthlyTonnage ? `Expected monthly tonnage: ${form.expectedMonthlyTonnage}` : "",
+  ]
+    .filter(Boolean)
+    .join(" | ");
 }
 
 function splitList(value: string) {

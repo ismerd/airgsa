@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSession } from "@/lib/auth/session";
+import { canReviewApplication, canViewApplication } from "@/lib/auth/permissions";
 import { getLiveApplication, getLiveTender, updateLiveApplicationStatus } from "@/lib/services/tender-workflow-store";
 import type { Status } from "@/lib/types";
 
@@ -14,10 +15,7 @@ export async function GET(_: NextRequest, { params }: { params: Promise<{ id: st
   if (!application) return NextResponse.json({ error: "Application not found" }, { status: 404 });
   const tender = await getLiveTender(application.tenderId);
   if (!tender) return NextResponse.json({ error: "Application not found" }, { status: 404 });
-  if (session.role === "airline" && tender.airlineEmail !== session.email) {
-    return NextResponse.json({ error: "Application not found" }, { status: 404 });
-  }
-  if (session.role === "gsa" && application.gsaName !== session.company) {
+  if (!canViewApplication(session, application, tender)) {
     return NextResponse.json({ error: "Application not found" }, { status: 404 });
   }
 
@@ -38,7 +36,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   if (!existingApplication) return NextResponse.json({ error: "Application not found" }, { status: 404 });
 
   const existingTender = await getLiveTender(existingApplication.tenderId);
-  if (!existingTender || existingTender.airlineEmail !== session.email) {
+  if (!canReviewApplication(session, existingApplication, existingTender)) {
     return NextResponse.json({ error: "Application not found" }, { status: 404 });
   }
 

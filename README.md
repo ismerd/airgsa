@@ -33,6 +33,7 @@ The production start script binds to `0.0.0.0` and uses `process.env.PORT || 300
 NEXT_PUBLIC_SUPABASE_URL=
 NEXT_PUBLIC_SUPABASE_ANON_KEY=
 SUPABASE_SERVICE_ROLE_KEY=
+AUTH_SESSION_SECRET=
 LINKEDIN_API_TOKEN=
 LINKEDIN_IMPORT_API_URL=
 ```
@@ -40,6 +41,18 @@ LINKEDIN_IMPORT_API_URL=
 The MVP still runs with mock data if Supabase variables are empty.
 
 `LINKEDIN_API_TOKEN` and `SUPABASE_SERVICE_ROLE_KEY` are server-side secrets. Do not expose them with a `NEXT_PUBLIC_` prefix.
+
+`AUTH_SESSION_SECRET` signs the AirGSA session cookie. Set a long random value in production. Without Supabase configuration the app falls back to demo accounts; with Supabase configured, login uses Supabase Auth and reads the user's role/company from `public.users` and `public.companies`.
+
+Set `ALLOW_DEMO_ACCOUNTS=true` only when you intentionally want demo logins to remain available in a deployed environment.
+
+Supabase Auth password recovery is available through `/forgot-password` and `/reset-password`. In the Supabase dashboard, add your deployed domain to the allowed redirect URLs, including:
+
+```bash
+https://your-domain/reset-password
+```
+
+Admin approval of access requests provisions Supabase users when `SUPABASE_SERVICE_ROLE_KEY` is configured. The user receives a Supabase invite email and sets their own password.
 
 `LINKEDIN_IMPORT_API_URL` is the POST endpoint of your LinkedIn import provider. The app sends the import settings to this endpoint and expects either an array of posts or a response object with `data`, `items`, `results`, `posts`, or `output`.
 

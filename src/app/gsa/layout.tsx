@@ -1,6 +1,7 @@
 import { BarChart3, Bell, Building2, FileSpreadsheet, Megaphone, Newspaper, PanelLeft } from "lucide-react";
 import { Sidebar, type NavGroup } from "@/components/dashboard/sidebar";
 import { getSession } from "@/lib/auth/session";
+import { canViewApplication, canViewTender } from "@/lib/auth/permissions";
 import { realGsaPartners } from "@/lib/real-gsa-data";
 import { listLiveApplications, listLiveTenders } from "@/lib/services/tender-workflow-store";
 
@@ -46,9 +47,13 @@ export default async function GsaLayout({ children }: { children: React.ReactNod
   const partner = realGsaPartners.find((item) => item.email === session?.email) ??
     realGsaPartners.find((item) => item.name === session?.company);
   const appliedTenderIds = new Set(
-    applications.filter((application) => application.gsaName === session?.company).map((application) => application.tenderId),
+    session
+      ? applications.filter((application) => canViewApplication(session, application, null)).map((application) => application.tenderId)
+      : [],
   );
-  const notificationCount = tenders.filter((tender) => tender.status === "open" && !appliedTenderIds.has(tender.id)).length;
+  const notificationCount = session
+    ? tenders.filter((tender) => canViewTender(session, tender) && !appliedTenderIds.has(tender.id)).length
+    : 0;
 
   return (
     <div className="flex min-h-screen bg-page">

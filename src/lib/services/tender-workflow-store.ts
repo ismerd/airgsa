@@ -3,6 +3,7 @@ import path from "node:path";
 import { realGsaPartners } from "@/lib/real-gsa-data";
 import { rowData, withPostgres } from "@/lib/services/postgres-store";
 import type { Status } from "@/lib/types";
+import type { SessionPayload } from "@/lib/auth/session";
 
 const STORE_PATH = path.join(process.cwd(), "data", "tender-workflow.json");
 
@@ -29,6 +30,7 @@ export type LiveTender = {
   title: string;
   airline: string;
   airlineEmail: string;
+  airlineCompanyId?: string;
   countryScope: string;
   regions: string[];
   lanes: string;
@@ -52,6 +54,7 @@ export type LiveTenderApplication = {
   id: string;
   tenderId: string;
   gsaId: string;
+  gsaCompanyId?: string;
   gsaName: string;
   contactName: string;
   email: string;
@@ -76,13 +79,33 @@ export type LiveTenderApplication = {
   updatedAt: string;
 };
 
+export type LivePartnerContract = {
+  id: string;
+  tenderId: string;
+  sourceApplicationId: string;
+  airline: string;
+  airlineEmail: string;
+  airlineCompanyId?: string;
+  gsaId: string;
+  gsaCompanyId?: string;
+  gsaName: string;
+  market: string;
+  startDate: string;
+  endDate?: string;
+  status: Extract<Status, "pending" | "active" | "closed">;
+  commercialTerms?: string;
+  createdAt: string;
+  updatedAt: string;
+};
+
 type TenderWorkflowStore = {
   tenders: LiveTender[];
   applications: LiveTenderApplication[];
+  contracts: LivePartnerContract[];
 };
 
 export type TenderCreateInput = Omit<LiveTender, "id" | "createdAt" | "updatedAt">;
-export type TenderUpdateInput = Partial<Omit<LiveTender, "id" | "airline" | "airlineEmail" | "createdAt" | "updatedAt">>;
+export type TenderUpdateInput = Partial<Omit<LiveTender, "id" | "airline" | "airlineEmail" | "airlineCompanyId" | "createdAt" | "updatedAt">>;
 export type ApplicationCreateInput = Pick<
   LiveTenderApplication,
   | "proposedCommission"
@@ -146,6 +169,7 @@ export async function deleteLiveTender(id: string) {
 
   store.tenders = store.tenders.filter((item) => item.id !== id);
   store.applications = store.applications.filter((application) => application.tenderId !== id);
+  store.contracts = store.contracts.filter((contract) => contract.tenderId !== id);
   await writeStore(store);
   return true;
 }
@@ -160,17 +184,28 @@ export async function getLiveApplication(id: string) {
   return store.applications.find((application) => application.id === id) ?? null;
 }
 
-export async function createLiveApplication(tenderId: string, gsaCompany: string, input: ApplicationCreateInput) {
+export async function listLivePartnerContracts() {
+  const store = await readStore();
+  return store.contracts.sort((left, right) => right.createdAt.localeCompare(left.createdAt));
+}
+
+export async function createLiveApplication(
+  tenderId: string,
+  applicant: Pick<SessionPayload, "company" | "email" | "name" | "companyId">,
+  input: ApplicationCreateInput,
+) {
   const store = await readStore();
   const tender = store.tenders.find((item) => item.id === tenderId);
   if (!tender || tender.status !== "open") throw new Error("Tender is not open");
 
-  const partner = realGsaPartners.find((item) => item.name === gsaCompany);
-  if (!partner) throw new Error("GSA profile not found");
+  const partner = realGsaPartners.find((item) => item.name === applicant.company || item.email === applicant.email);
+  const gsaId = applicant.companyId ?? partner?.id ?? slugId(applicant.company || applicant.email);
 
   const now = new Date().toISOString();
   const existingIndex = store.applications.findIndex(
-    (application) => application.tenderId === tenderId && application.gsaId === partner.id,
+    (application) =>
+      application.tenderId === tenderId &&
+      (application.gsaId === gsaId || (applicant.companyId && application.gsaCompanyId === applicant.companyId)),
   );
   const existingApplication = existingIndex >= 0 ? store.applications[existingIndex] : null;
   if (existingApplication && !canEditApplication(existingApplication)) {
@@ -179,19 +214,20 @@ export async function createLiveApplication(tenderId: string, gsaCompany: string
   const application: LiveTenderApplication = {
     id: existingApplication?.id ?? `app-${Date.now().toString(36)}`,
     tenderId,
-    gsaId: partner.id,
-    gsaName: partner.name,
-    contactName: partner.contactName,
-    email: partner.email,
-    headquarters: partner.headquarters,
-    coverage: partner.coverage,
-    markets: partner.markets,
-    certifications: partner.certifications,
-    cargoFocus: partner.cargoFocus,
-    networkScore: partner.networkScore,
-    financialScore: partner.financialScore,
-    complianceScore: partner.complianceScore,
-    winRate: partner.winRate,
+    gsaId,
+    gsaCompanyId: applicant.companyId,
+    gsaName: partner?.name ?? applicant.company,
+    contactName: partner?.contactName ?? applicant.name,
+    email: partner?.email ?? applicant.email,
+    headquarters: partner?.headquarters ?? "Not provided",
+    coverage: partner?.coverage ?? [],
+    markets: partner?.markets ?? [],
+    certifications: partner?.certifications ?? [],
+    cargoFocus: partner?.cargoFocus ?? "General cargo",
+    networkScore: partner?.networkScore ?? 50,
+    financialScore: partner?.financialScore ?? 50,
+    complianceScore: partner?.complianceScore ?? 50,
+    winRate: partner?.winRate ?? 0,
     ...input,
     status: existingApplication?.status ?? "pending",
     submittedAt: existingApplication?.submittedAt ?? now,
@@ -203,6 +239,13 @@ export async function createLiveApplication(tenderId: string, gsaCompany: string
 
   await writeStore(store);
   return application;
+}
+
+function slugId(value: string) {
+  return value
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-|-$/g, "") || `gsa-${Date.now().toString(36)}`;
 }
 
 export function canEditApplication(application: Pick<LiveTenderApplication, "submittedAt" | "status">) {
@@ -241,6 +284,8 @@ export async function updateLiveApplicationStatus(
   };
 
   if (status === "accepted" && tender && tenderIndex >= 0) {
+    store.contracts = upsertContractFromAward(store.contracts, tender, store.applications[index]);
+
     const awardSlots = getTenderAwardSlots(tender);
     const acceptedForTender = store.applications.filter(
       (application) => application.tenderId === tender.id && application.status === "accepted",
@@ -263,10 +308,45 @@ export async function updateLiveApplicationStatus(
         };
       });
     }
+  } else if (status !== "accepted") {
+    store.contracts = store.contracts.filter((contract) => contract.sourceApplicationId !== applicationId);
   }
 
   await writeStore(store);
   return store.applications[index];
+}
+
+function upsertContractFromAward(
+  contracts: LivePartnerContract[],
+  tender: LiveTender,
+  application: LiveTenderApplication,
+) {
+  const now = new Date().toISOString();
+  const existingIndex = contracts.findIndex((contract) => contract.sourceApplicationId === application.id);
+  const contract: LivePartnerContract = {
+    ...(existingIndex >= 0 ? contracts[existingIndex] : {}),
+    id: existingIndex >= 0 ? contracts[existingIndex].id : `ctr-${Date.now().toString(36)}-${application.gsaId}`,
+    tenderId: tender.id,
+    sourceApplicationId: application.id,
+    airline: tender.airline,
+    airlineEmail: tender.airlineEmail,
+    airlineCompanyId: tender.airlineCompanyId,
+    gsaId: application.gsaId,
+    gsaCompanyId: application.gsaCompanyId,
+    gsaName: application.gsaName,
+    market: tender.countryScope || tender.regions.join(", ") || tender.lanes || "Market scope",
+    startDate: tender.expectedStart || new Date().toISOString().slice(0, 10),
+    status: "pending",
+    commercialTerms: application.proposedCommission,
+    createdAt: existingIndex >= 0 ? contracts[existingIndex].createdAt : now,
+    updatedAt: now,
+  };
+
+  if (existingIndex >= 0) {
+    return contracts.map((item, index) => (index === existingIndex ? contract : item));
+  }
+
+  return [contract, ...contracts];
 }
 
 export function getTenderAwardSlots(tender: Pick<LiveTender, "awardMode" | "maxAwards">) {
@@ -280,21 +360,23 @@ export function getTenderCommercialModel(tender: Pick<LiveTender, "commercialMod
 
 async function readStore(): Promise<TenderWorkflowStore> {
   const dbStore = await withPostgres(async (client) => {
-    const [tendersResult, applicationsResult] = await Promise.all([
+    const [tendersResult, applicationsResult, contractsResult] = await Promise.all([
       client.query("select data from live_tenders order by created_at desc"),
       client.query("select data from live_applications order by submitted_at desc"),
+      client.query("select data from live_partner_contracts order by created_at desc"),
     ]);
 
     return {
       tenders: tendersResult.rows.map((row) => rowData<LiveTender>(row)),
       applications: applicationsResult.rows.map((row) => rowData<LiveTenderApplication>(row)),
+      contracts: contractsResult.rows.map((row) => rowData<LivePartnerContract>(row)),
     };
   });
   if (dbStore) {
-    if (dbStore.tenders.length > 0 || dbStore.applications.length > 0) return dbStore;
+    if (dbStore.tenders.length > 0 || dbStore.applications.length > 0 || dbStore.contracts.length > 0) return dbStore;
 
     const fileStore = await readFileStore();
-    if (fileStore.tenders.length > 0 || fileStore.applications.length > 0) {
+    if (fileStore.tenders.length > 0 || fileStore.applications.length > 0 || fileStore.contracts.length > 0) {
       await writeStore(fileStore);
       return fileStore;
     }
@@ -312,9 +394,10 @@ async function readFileStore(): Promise<TenderWorkflowStore> {
     return {
       tenders: parsed.tenders ?? [],
       applications: parsed.applications ?? [],
+      contracts: parsed.contracts ?? [],
     };
   } catch {
-    return { tenders: [], applications: [] };
+    return { tenders: [], applications: [], contracts: [] };
   }
 }
 
@@ -325,6 +408,7 @@ async function writeStore(store: TenderWorkflowStore) {
       await connection.query("begin");
       await connection.query("delete from live_tenders");
       await connection.query("delete from live_applications");
+      await connection.query("delete from live_partner_contracts");
 
       for (const tender of store.tenders) {
         await connection.query(
@@ -351,6 +435,26 @@ async function writeStore(store: TenderWorkflowStore) {
             application.submittedAt,
             application.updatedAt,
             JSON.stringify(application),
+          ],
+        );
+      }
+
+      for (const contract of store.contracts) {
+        await connection.query(
+          `
+            insert into live_partner_contracts (id, tender_id, application_id, airline_email, gsa_id, status, created_at, updated_at, data)
+            values ($1, $2, $3, $4, $5, $6, $7, $8, $9::jsonb)
+          `,
+          [
+            contract.id,
+            contract.tenderId,
+            contract.sourceApplicationId,
+            contract.airlineEmail,
+            contract.gsaId,
+            contract.status,
+            contract.createdAt,
+            contract.updatedAt,
+            JSON.stringify(contract),
           ],
         );
       }

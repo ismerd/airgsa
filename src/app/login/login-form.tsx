@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -76,9 +77,14 @@ export function LoginForm() {
             </div>
 
             <div className="space-y-1.5">
-              <label htmlFor="password" className="text-xs font-semibold uppercase tracking-wide text-ink-muted">
-                Password
-              </label>
+              <div className="flex items-center justify-between gap-3">
+                <label htmlFor="password" className="text-xs font-semibold uppercase tracking-wide text-ink-muted">
+                  Password
+                </label>
+                <Link href="/forgot-password" className="text-xs font-semibold text-brand hover:underline">
+                  Forgot password?
+                </Link>
+              </div>
               <Input
                 id="password"
                 type="password"
@@ -128,6 +134,13 @@ export function LoginForm() {
               onFill={() => { setEmail("samantha.leaper@airmenzies.com"); setPassword("demo2026"); }}
             />
           </div>
+
+          <p className="mt-5 text-center text-sm text-ink-muted">
+            Not registered yet?{" "}
+            <Link href="/signup" className="font-semibold text-brand hover:underline">
+              Request access
+            </Link>
+          </p>
         </CardContent>
       </Card>
     </div>

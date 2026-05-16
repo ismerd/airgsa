@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSession } from "@/lib/auth/session";
+import { canDeleteTender, canEditTender, canViewTender } from "@/lib/auth/permissions";
 import { deleteLiveTender, getLiveTender, updateLiveTender, type TenderUpdateInput } from "@/lib/services/tender-workflow-store";
 
 export async function GET(_: Request, { params }: { params: Promise<{ id: string }> }) {
@@ -9,10 +10,7 @@ export async function GET(_: Request, { params }: { params: Promise<{ id: string
   const { id } = await params;
   const tender = await getLiveTender(id);
   if (!tender) return NextResponse.json({ error: "Tender not found" }, { status: 404 });
-  if (session.role === "airline" && tender.airlineEmail !== session.email) {
-    return NextResponse.json({ error: "Tender not found" }, { status: 404 });
-  }
-  if (session.role === "gsa" && tender.status !== "open") {
+  if (!canViewTender(session, tender)) {
     return NextResponse.json({ error: "Tender not available" }, { status: 404 });
   }
 
@@ -26,7 +24,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   const { id } = await params;
   const existing = await getLiveTender(id);
   if (!existing) return NextResponse.json({ error: "Tender not found" }, { status: 404 });
-  if (existing.airlineEmail !== session.email) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  if (!canEditTender(session, existing)) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
   const input = (await req.json()) as TenderUpdateInput;
   const tender = await updateLiveTender(id, input);
@@ -40,7 +38,7 @@ export async function DELETE(_: NextRequest, { params }: { params: Promise<{ id:
   const { id } = await params;
   const existing = await getLiveTender(id);
   if (!existing) return NextResponse.json({ error: "Tender not found" }, { status: 404 });
-  if (existing.airlineEmail !== session.email) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  if (!canDeleteTender(session, existing)) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
   await deleteLiveTender(id);
   return NextResponse.json({ ok: true });

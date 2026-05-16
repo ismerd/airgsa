@@ -13,8 +13,9 @@ import {
 } from "lucide-react";
 import { Sidebar, type NavGroup } from "@/components/dashboard/sidebar";
 import { getSession } from "@/lib/auth/session";
+import { canViewApplication } from "@/lib/auth/permissions";
 import { getAirlineProfile } from "@/lib/services/airline-profile";
-import { listLiveApplications } from "@/lib/services/tender-workflow-store";
+import { listLiveApplications, listLiveTenders } from "@/lib/services/tender-workflow-store";
 import { SAUDIA_CARGO } from "@/lib/saudia-cargo-data";
 
 function getNav(pendingApplications: number): NavGroup[] {
@@ -64,8 +65,14 @@ function getNav(pendingApplications: number): NavGroup[] {
 }
 
 export default async function AirlineLayout({ children }: { children: React.ReactNode }) {
-  const [session, profile, applications] = await Promise.all([getSession(), Promise.resolve(getAirlineProfile()), listLiveApplications()]);
-  const pendingApplications = applications.filter((application) => application.status === "pending").length;
+  const [session, profile, applications, tenders] = await Promise.all([getSession(), Promise.resolve(getAirlineProfile()), listLiveApplications(), listLiveTenders()]);
+  const tenderById = new Map(tenders.map((tender) => [tender.id, tender]));
+  const pendingApplications = session
+    ? applications.filter((application) =>
+        application.status === "pending" &&
+        canViewApplication(session, application, tenderById.get(application.tenderId) ?? null),
+      ).length
+    : 0;
   return (
     <div className="flex min-h-screen bg-page">
       <Sidebar

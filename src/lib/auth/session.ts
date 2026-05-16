@@ -1,25 +1,25 @@
 import { cookies } from "next/headers";
-import type { DemoAccount } from "./credentials";
+import {
+  SESSION_COOKIE_NAME,
+  signSessionPayload,
+  verifySessionCookie,
+  type SessionPayload,
+} from "./session-cookie";
 
-export type SessionPayload = {
-  email: string;
-  role: "airline" | "gsa" | "admin";
-  name: string;
-  company: string;
-};
-
-const COOKIE_NAME = "airgsa-session";
 const COOKIE_MAX_AGE = 60 * 60 * 24 * 7; // 7 days
 
-export async function createSession(account: DemoAccount): Promise<void> {
+export type { SessionPayload };
+
+export async function createSession(account: SessionPayload): Promise<void> {
   const cookieStore = await cookies();
   const payload: SessionPayload = {
     email: account.email,
     role: account.role,
     name: account.name,
     company: account.company,
+    companyId: account.companyId,
   };
-  cookieStore.set(COOKIE_NAME, JSON.stringify(payload), {
+  cookieStore.set(SESSION_COOKIE_NAME, await signSessionPayload(payload), {
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",
     sameSite: "lax",
@@ -28,18 +28,18 @@ export async function createSession(account: DemoAccount): Promise<void> {
   });
 }
 
+export async function updateSession(updates: Partial<SessionPayload>): Promise<void> {
+  const current = await getSession();
+  if (!current) return;
+  await createSession({ ...current, ...updates });
+}
+
 export async function getSession(): Promise<SessionPayload | null> {
   const cookieStore = await cookies();
-  const raw = cookieStore.get(COOKIE_NAME)?.value;
-  if (!raw) return null;
-  try {
-    return JSON.parse(raw) as SessionPayload;
-  } catch {
-    return null;
-  }
+  return verifySessionCookie(cookieStore.get(SESSION_COOKIE_NAME)?.value);
 }
 
 export async function clearSession(): Promise<void> {
   const cookieStore = await cookies();
-  cookieStore.delete(COOKIE_NAME);
+  cookieStore.delete(SESSION_COOKIE_NAME);
 }
