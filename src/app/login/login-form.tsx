@@ -29,7 +29,7 @@ export function LoginForm() {
         body: JSON.stringify({ email, password }),
       });
 
-      const data = await res.json();
+      const data = await readJson(res);
 
       if (!res.ok) {
         setError(data.error ?? "Login failed");
@@ -37,8 +37,10 @@ export function LoginForm() {
       }
 
       const role = data.role as "airline" | "gsa" | "admin";
-      const destination = next ?? (role === "admin" ? "/admin" : role === "airline" ? "/airline" : "/gsa");
-      router.push(destination);
+      const fallbackDestination = role === "admin" ? "/admin" : role === "airline" ? "/airline" : "/gsa";
+      const destination = next && next.startsWith("/") && !next.startsWith("//") ? next : fallbackDestination;
+      router.replace(destination);
+      router.refresh();
     } catch {
       setError("Network error. Please try again.");
     } finally {
@@ -145,6 +147,14 @@ export function LoginForm() {
       </Card>
     </div>
   );
+}
+
+async function readJson(res: Response) {
+  try {
+    return await res.json();
+  } catch {
+    return { error: `Login request failed with status ${res.status}` };
+  }
 }
 
 function DemoCredential({
