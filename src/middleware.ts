@@ -36,11 +36,15 @@ export async function middleware(req: NextRequest) {
   if (!session) {
     const loginUrl = new URL("/login", req.url);
     loginUrl.searchParams.set("next", pathname);
-    return NextResponse.redirect(loginUrl);
+    const response = NextResponse.redirect(loginUrl);
+    response.cookies.delete(SESSION_COOKIE_NAME);
+    return response;
   }
 
   if (!session?.role) {
-    return NextResponse.redirect(new URL("/login", req.url));
+    const response = NextResponse.redirect(new URL("/login", req.url));
+    response.cookies.delete(SESSION_COOKIE_NAME);
+    return response;
   }
 
   // Admin-only routes

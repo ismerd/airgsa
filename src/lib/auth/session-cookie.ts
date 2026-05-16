@@ -17,14 +17,17 @@ export async function signSessionPayload(payload: SessionPayload) {
 }
 
 export async function verifySessionCookie(value: string | undefined): Promise<SessionPayload | null> {
-  if (!value) return null;
-  const [body, signature] = value.split(".");
-  if (!body || !signature) return null;
-
-  const valid = await verify(body, base64UrlToBytes(signature));
-  if (!valid) return null;
-
   try {
+    if (!value) return null;
+    const [body, signature] = value.split(".");
+    if (!body || !signature) return null;
+
+    const signatureBytes = base64UrlToBytes(signature);
+    if (!signatureBytes || signatureBytes.byteLength === 0) return null;
+
+    const valid = await verify(body, signatureBytes);
+    if (!valid) return null;
+
     const payload = JSON.parse(decodeBase64Url(body)) as SessionPayload;
     if (!payload.email || !payload.role || !payload.name || !payload.company) return null;
     if (!["airline", "gsa", "admin"].includes(payload.role)) return null;
@@ -41,7 +44,7 @@ async function sign(value: string) {
 
 async function verify(value: string, signature: Uint8Array) {
   const key = await getSigningKey();
-  return crypto.subtle.verify("HMAC", key, toArrayBuffer(signature), encoder.encode(value));
+  return crypto.subtle.verify("HMAC", key, bytesToArrayBuffer(signature), encoder.encode(value));
 }
 
 async function getSigningKey() {
@@ -81,15 +84,16 @@ function bytesToBase64Url(bytes: Uint8Array) {
   return btoa(binary).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/g, "");
 }
 
-function base64UrlToBytes(value: string) {
+function base64UrlToBytes(value: string): Uint8Array | null {
+  if (!/^[A-Za-z0-9_-]+$/.test(value)) return null;
   if (typeof Buffer !== "undefined") return new Uint8Array(Buffer.from(value, "base64url"));
   const padded = value.replace(/-/g, "+").replace(/_/g, "/").padEnd(Math.ceil(value.length / 4) * 4, "=");
   const binary = atob(padded);
   return Uint8Array.from(binary, (char) => char.charCodeAt(0));
 }
 
-function toArrayBuffer(bytes: Uint8Array) {
-  const copy = new Uint8Array(bytes.byteLength);
-  copy.set(bytes);
-  return copy.buffer;
+function bytesToArrayBuffer(bytes: Uint8Array): ArrayBuffer {
+  const buffer = new ArrayBuffer(bytes.byteLength);
+  new Uint8Array(buffer).set(bytes);
+  return buffer;
 }
