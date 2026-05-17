@@ -1,202 +1,162 @@
-import { Activity, Award, BarChart3, Clock, Target, TrendingUp } from "lucide-react";
-import { ChartSection } from "@/components/dashboard/chart-section";
+import { AlertTriangle, Award, BarChart3, CheckCircle2, Clock, PackageCheck, Target, TrendingUp } from "lucide-react";
+import { getSession } from "@/lib/auth/session";
+import { listContractPerformance, listControlActions } from "@/lib/services/mandate-execution-store";
+import { Badge } from "@/components/ui/badge";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Topbar } from "@/components/dashboard/topbar";
-import { Card, CardContent } from "@/components/ui/card";
-import { CurrencyProvider } from "@/lib/currency-context";
-import { kpiSeries } from "@/lib/services/platform";
+import { GsaControlActionsClient } from "./control-actions-client";
 
-const MY_KPIS = [
-  {
-    label: "Quotes This Month",
-    value: "24",
-    sub: "+4 vs last month",
-    trend: "up" as const,
-    icon: Target,
-  },
-  {
-    label: "Win Rate",
-    value: "71%",
-    sub: "+5 pp vs last month",
-    trend: "up" as const,
-    icon: Award,
-  },
-  {
-    label: "Avg Response Time",
-    value: "1.8h",
-    sub: "Target 2.0h ✓",
-    trend: "up" as const,
-    icon: Clock,
-  },
-  {
-    label: "Revenue This Month",
-    value: "€286k",
-    sub: "Target €250k — 114%",
-    trend: "up" as const,
-    icon: TrendingUp,
-  },
-];
-
-const TOP_ACCOUNTS = [
-  { name: "Fashion Logistics", revenue: "€533k", volume: "100,970 kg", trend: "+13.9%" },
-  { name: "DHL Express", revenue: "€98k", volume: "82,310 kg", trend: "-9.8%" },
-  { name: "DSV Air & Sea", revenue: "€96k", volume: "52,637 kg", trend: "-14.1%" },
-  { name: "Tracosa", revenue: "€94k", volume: "63,968 kg", trend: "-5.8%" },
-  { name: "Universal Global", revenue: "€81k", volume: "72,035 kg", trend: "+7.7%" },
-];
-
-export default function GsaPerformancePage() {
-  const gsaData = kpiSeries.map((point) => ({ ...point, revenue: Math.round(point.revenue * 0.42) }));
+export default async function GsaPerformancePage() {
+  const session = await getSession();
+  const performance = session ? await listContractPerformance(session) : [];
+  const controlActions = session ? await listControlActions(session) : [];
+  const totals = performance.reduce(
+    (sum, item) => ({
+      revenue: sum.revenue + item.revenueAmount,
+      revenueTarget: sum.revenueTarget + item.revenueTarget,
+      tonnageKg: sum.tonnageKg + item.tonnageKg,
+      tonnageTargetKg: sum.tonnageTargetKg + item.tonnageTargetKg,
+      quoteCount: sum.quoteCount + item.quoteCount,
+      bookingCount: sum.bookingCount + item.bookingCount,
+      pendingApprovals: sum.pendingApprovals + item.pendingApprovalCount,
+      slaBreaches: sum.slaBreaches + item.slaBreachCount,
+    }),
+    { revenue: 0, revenueTarget: 0, tonnageKg: 0, tonnageTargetKg: 0, quoteCount: 0, bookingCount: 0, pendingApprovals: 0, slaBreaches: 0 },
+  );
+  const revenuePct = percent(totals.revenue, totals.revenueTarget);
+  const tonnagePct = percent(totals.tonnageKg, totals.tonnageTargetKg);
+  const winRatePct = totals.quoteCount > 0 ? Math.round((totals.bookingCount / totals.quoteCount) * 100) : 0;
+  const atRiskContracts = performance.filter((item) => item.riskLevel !== "green");
 
   return (
-    <CurrencyProvider>
-      <Topbar title="My Performance" subtitle="Personal commercial scorecard" />
+    <>
+      <Topbar title="My Performance" subtitle="Live contract scorecard" />
       <main className="space-y-5 p-5">
-        {/* Personal KPIs */}
-        <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          {MY_KPIS.map((kpi) => (
-            <KpiCard key={kpi.label} {...kpi} />
-          ))}
+        <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+          <KpiCard icon={<TrendingUp className="h-5 w-5" />} label="Revenue attainment" value={`${revenuePct}%`} sub={`${formatMoney(totals.revenue)} / ${formatMoney(totals.revenueTarget)}`} tone={revenuePct >= 90 ? "success" : revenuePct >= 60 ? "warning" : "danger"} />
+          <KpiCard icon={<PackageCheck className="h-5 w-5" />} label="Tonnage attainment" value={`${tonnagePct}%`} sub={`${Math.round(totals.tonnageKg).toLocaleString()} / ${Math.round(totals.tonnageTargetKg).toLocaleString()} kg`} tone={tonnagePct >= 90 ? "success" : tonnagePct >= 60 ? "warning" : "danger"} />
+          <KpiCard icon={<Award className="h-5 w-5" />} label="Quote win rate" value={`${winRatePct}%`} sub={`${totals.bookingCount} bookings from ${totals.quoteCount} quotes`} tone={winRatePct >= 35 ? "success" : winRatePct >= 20 ? "warning" : "danger"} />
+          <KpiCard icon={<Clock className="h-5 w-5" />} label="SLA breaches" value={String(totals.slaBreaches)} sub={`${totals.pendingApprovals} pending approvals`} tone={totals.slaBreaches === 0 ? "success" : "danger"} />
         </section>
 
-        {/* FAB Ratio */}
         <Card>
-          <CardContent className="p-5">
-            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-              <div className="flex items-center gap-4">
-                <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-brand-light">
-                  <Activity className="h-5 w-5 text-brand" />
-                </div>
-                <div>
-                  <p className="text-xs font-semibold uppercase tracking-wider text-ink-muted">Flown As Booked Ratio (FAB)</p>
-                  <p className="mt-0.5 text-2xl font-bold text-ink">91% <span className="text-sm font-medium text-success">↑ above 88% benchmark</span></p>
-                  <p className="text-xs text-ink-muted">Shipments loaded on the originally booked flight vs. total booked</p>
-                </div>
-              </div>
-              <div className="min-w-[200px]">
-                <div className="mb-1.5 flex items-center justify-between text-xs">
-                  <span className="text-ink-muted">Industry benchmark</span>
-                  <span className="font-bold text-success">91% / 88%</span>
-                </div>
-                <div className="h-3 overflow-hidden rounded-full bg-surface2">
-                  <div className="h-full rounded-full bg-gradient-to-r from-brand to-success" style={{ width: "91%" }} />
-                </div>
-                <div className="mt-1 flex justify-between text-[10px] text-ink-muted">
-                  <span>0%</span>
-                  <span className="text-warning">Benchmark 88%</span>
-                  <span>100%</span>
-                </div>
-              </div>
-            </div>
-            <div className="mt-4 grid grid-cols-3 gap-3 border-t border-border-ui pt-4">
-              <div className="text-center">
-                <p className="text-lg font-bold text-ink">148</p>
-                <p className="text-[10px] font-semibold uppercase tracking-wider text-ink-muted">Shipments Booked</p>
-              </div>
-              <div className="text-center">
-                <p className="text-lg font-bold text-success">135</p>
-                <p className="text-[10px] font-semibold uppercase tracking-wider text-ink-muted">Flown As Booked</p>
-              </div>
-              <div className="text-center">
-                <p className="text-lg font-bold text-danger">13</p>
-                <p className="text-[10px] font-semibold uppercase tracking-wider text-ink-muted">Offloaded / Delayed</p>
-              </div>
-            </div>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2"><Target className="h-5 w-5 text-brand" /> Contract commitments</CardTitle>
+            <p className="text-sm text-ink-muted">Targets are controlled by the airline contract and calculated from live quotes and bookings.</p>
+          </CardHeader>
+          <CardContent className="overflow-x-auto p-0">
+            <table className="w-full min-w-[900px] text-sm">
+              <thead className="border-b border-border-ui bg-surface2 text-xs uppercase tracking-wider text-ink-muted">
+                <tr>
+                  {["Airline", "Market", "Risk", "Revenue", "Tonnage", "Win rate", "Quotes"].map((header) => (
+                    <th key={header} className="px-4 py-3 text-left">{header}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-border-ui">
+                {performance.map((item) => (
+                  <tr key={item.contractId}>
+                    <td className="px-4 py-3 font-semibold text-ink">{item.airline}</td>
+                    <td className="px-4 py-3 text-ink-muted">{item.market}</td>
+                    <td className="px-4 py-3"><Badge variant={riskVariant(item.riskLevel)}>{item.riskLevel}</Badge></td>
+                    <td className="px-4 py-3 text-ink">{item.revenueAttainmentPct}% <span className="text-ink-muted">({formatMoney(item.revenueAmount)})</span></td>
+                    <td className="px-4 py-3 text-ink">{item.tonnageAttainmentPct}% <span className="text-ink-muted">({Math.round(item.tonnageKg).toLocaleString()} kg)</span></td>
+                    <td className="px-4 py-3 text-ink">{item.winRatePct}% <span className="text-ink-muted">target {item.winRateTargetPct}%</span></td>
+                    <td className="px-4 py-3 text-ink">{item.quoteCount} <span className="text-ink-muted">target {item.quoteTarget}</span></td>
+                  </tr>
+                ))}
+                {performance.length === 0 && <tr><td colSpan={7} className="px-4 py-8 text-center text-ink-muted">No active contract performance yet.</td></tr>}
+              </tbody>
+            </table>
           </CardContent>
         </Card>
 
-        {/* Target progress bar */}
-        <Card>
-          <CardContent className="p-5">
-            <div className="flex items-center justify-between gap-4">
-              <div>
-                <p className="text-xs font-semibold uppercase tracking-wider text-ink-muted">Monthly revenue target</p>
-                <p className="mt-1 text-2xl font-bold text-ink">€286k <span className="text-sm font-medium text-ink-muted">of €250k target</span></p>
-              </div>
-              <div className="flex items-center gap-2">
-                <BarChart3 className="h-5 w-5 text-success" />
-                <span className="text-lg font-bold text-success">114%</span>
-              </div>
-            </div>
-            <div className="mt-4 h-3 overflow-hidden rounded-full bg-surface2">
-              <div className="h-full w-[114%] max-w-full rounded-full bg-gradient-to-r from-brand to-success" />
-            </div>
-            <div className="mt-2 flex justify-between text-xs text-ink-muted">
-              <span>€0</span>
-              <span className="text-ink">Target: €250k</span>
-              <span className="font-semibold text-success">€286k ✓</span>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Chart + Top accounts */}
-        <div className="grid gap-5 xl:grid-cols-[1fr_280px]">
-          <div>
-            <ChartSection allData={gsaData} />
-          </div>
+        <div className="grid gap-5 xl:grid-cols-[1fr_420px]">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2"><AlertTriangle className="h-5 w-5 text-warning" /> Airline control actions</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <GsaControlActionsClient actions={controlActions} />
+            </CardContent>
+          </Card>
 
           <Card>
-            <CardContent className="p-5">
-              <p className="mb-4 text-xs font-semibold uppercase tracking-wider text-ink-muted">Top Accounts by Revenue</p>
-              <div className="space-y-3">
-                {TOP_ACCOUNTS.map((account, index) => (
-                  <div key={account.name} className="flex items-center gap-3">
-                    <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-surface2 text-[11px] font-bold text-ink-muted">
-                      {index + 1}
-                    </span>
-                    <div className="min-w-0 flex-1">
-                      <p className="truncate text-sm font-semibold text-ink">{account.name}</p>
-                      <p className="text-xs text-ink-muted">{account.volume}</p>
-                    </div>
-                    <div className="text-right">
-                      <p className="text-sm font-bold text-ink">{account.revenue}</p>
-                      <p className={`text-xs font-semibold ${account.trend.startsWith("+") ? "text-success" : "text-danger"}`}>
-                        {account.trend}
-                      </p>
-                    </div>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2"><BarChart3 className="h-5 w-5 text-brand" /> Route risk</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              {performance.flatMap((item) => item.routePerformance.filter((route) => route.assigned && route.riskLevel !== "green").map((route) => (
+                <div key={`${item.contractId}-${route.routeId}`} className="rounded-lg border border-border-ui bg-surface2 p-3">
+                  <div className="flex items-center justify-between gap-3">
+                    <p className="font-semibold text-ink">{route.origin}-{route.destination}</p>
+                    <Badge variant={riskVariant(route.riskLevel)}>{route.riskLevel}</Badge>
                   </div>
-                ))}
-              </div>
+                  <p className="mt-1 text-xs text-ink-muted">{route.quoteCount} quotes, {route.bookingCount} bookings, {formatMoney(route.revenueAmount)}</p>
+                </div>
+              )))}
+              {atRiskContracts.length === 0 && (
+                <div className="rounded-lg border border-success/25 bg-success-bg p-4 text-sm text-success">
+                  Assigned routes are currently within control thresholds.
+                </div>
+              )}
             </CardContent>
           </Card>
         </div>
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2"><CheckCircle2 className="h-5 w-5 text-success" /> What matters this month</CardTitle>
+          </CardHeader>
+          <CardContent className="grid gap-3 md:grid-cols-3">
+            <FocusItem label="Close revenue gap" value={formatMoney(Math.max(0, totals.revenueTarget - totals.revenue))} />
+            <FocusItem label="Book remaining tonnage" value={`${Math.max(0, Math.round(totals.tonnageTargetKg - totals.tonnageKg)).toLocaleString()} kg`} />
+            <FocusItem label="Convert open quotes" value={`${Math.max(0, totals.quoteCount - totals.bookingCount)} open opportunities`} />
+          </CardContent>
+        </Card>
       </main>
-    </CurrencyProvider>
+    </>
   );
 }
 
-function KpiCard({
-  label,
-  value,
-  sub,
-  trend,
-  icon: Icon,
-}: {
-  label: string;
-  value: string;
-  sub: string;
-  trend: "up" | "down" | "neutral";
-  icon: React.ElementType;
-}) {
+function KpiCard({ icon, label, value, sub, tone }: { icon: React.ReactNode; label: string; value: string; sub: string; tone: "success" | "warning" | "danger" }) {
   const colors = {
-    up: "bg-success-bg text-success",
-    down: "bg-danger-bg text-danger",
-    neutral: "bg-brand-light text-brand",
-  };
-  const subColors = {
-    up: "text-success",
-    down: "text-danger",
-    neutral: "text-ink-muted",
+    success: "bg-success-bg text-success",
+    warning: "bg-warning-bg text-warning",
+    danger: "bg-danger-bg text-danger",
   };
   return (
     <Card>
       <CardContent className="p-5">
-        <div className={`flex h-11 w-11 items-center justify-center rounded-xl ${colors[trend]}`}>
-          <Icon className="h-5 w-5" />
-        </div>
+        <div className={`flex h-11 w-11 items-center justify-center rounded-xl ${colors[tone]}`}>{icon}</div>
         <p className="mt-4 text-2xl font-bold text-ink">{value}</p>
         <p className="mt-0.5 text-xs font-semibold uppercase tracking-wider text-ink-muted">{label}</p>
-        <p className={`mt-1 text-xs font-medium ${subColors[trend]}`}>{sub}</p>
+        <p className="mt-1 text-xs font-medium text-ink-muted">{sub}</p>
       </CardContent>
     </Card>
   );
+}
+
+function FocusItem({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded-lg border border-border-ui bg-surface2 p-4">
+      <p className="text-xs font-semibold uppercase tracking-wider text-ink-muted">{label}</p>
+      <p className="mt-1 text-lg font-bold text-ink">{value}</p>
+    </div>
+  );
+}
+
+function riskVariant(risk: "green" | "amber" | "red"): "success" | "warning" | "danger" {
+  if (risk === "green") return "success";
+  if (risk === "amber") return "warning";
+  return "danger";
+}
+
+function percent(actual: number, target: number) {
+  if (!target || target <= 0) return 0;
+  return Math.round((actual / target) * 100);
+}
+
+function formatMoney(value: number) {
+  return `EUR ${value.toLocaleString("en-GB", { maximumFractionDigits: 0 })}`;
 }

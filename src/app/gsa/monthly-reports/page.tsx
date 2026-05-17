@@ -1,434 +1,301 @@
 "use client";
 
-import { useMemo, useState } from "react";
-import {
-  ArrowRight,
-  CheckCircle2,
-  FileSpreadsheet,
-  RefreshCw,
-  UploadCloud,
-  UserRound,
-  UsersRound,
-} from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
+import { FileSpreadsheet, Send, UploadCloud } from "lucide-react";
 import { Topbar } from "@/components/dashboard/topbar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { Select } from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
+import type { ContractPerformanceSnapshot, MonthlyContractReport } from "@/lib/services/mandate-execution-store";
+import type { LivePartnerContract } from "@/lib/services/tender-workflow-store";
 
-type Priority = "high" | "medium" | "watch";
-
-type AccountRow = {
-  id: string;
-  agent: string;
-  originCountry: string;
-  destination: string;
-  qrCw: number;
-  benchmarkCw: number;
-  marketCw: number;
-  qrRevenue: number;
-  marketRevenue: number;
-  yieldGap: number;
-  priority: Priority;
-  assignedTo: string;
+type ReportForm = {
+  contractId: string;
+  period: string;
+  reportedRevenue: string;
+  reportedTonnageKg: string;
+  reportedQuotes: string;
+  reportedBookings: string;
+  summary: string;
+  pipelineNotes: string;
+  risks: string;
+  supportNeeded: string;
+  attachmentName: string;
 };
 
-type TeamMember = {
-  name: string;
-  role: string;
-  markets: string[];
-};
-
-const team: TeamMember[] = [
-  { name: "Sofia Keller", role: "Key accounts", markets: ["DXB", "DOH", "MCT"] },
-  { name: "Marc Vidal", role: "North Africa", markets: ["JNB", "CPT", "CAI"] },
-  { name: "Nadia Rahman", role: "Express & e-commerce", markets: ["BOM", "DEL", "KHI"] },
-  { name: "Jonas Richter", role: "Recovery desk", markets: ["SHJ", "AUH", "SIN"] },
-];
-
-const sampleRows: AccountRow[] = [
-  {
-    id: "acc-001",
-    agent: "DHL EXPRESS",
-    originCountry: "SPAIN",
-    destination: "JNB",
-    qrCw: 0,
-    benchmarkCw: 114300,
-    marketCw: 114300,
-    qrRevenue: 0,
-    marketRevenue: 339815,
-    yieldGap: 0,
-    priority: "high",
-    assignedTo: "Marc Vidal",
-  },
-  {
-    id: "acc-002",
-    agent: "ALONSO FORWARDING HOLDING",
-    originCountry: "SPAIN",
-    destination: "DXB",
-    qrCw: 9284,
-    benchmarkCw: 73026,
-    marketCw: 82310,
-    qrRevenue: 10119,
-    marketRevenue: 98385,
-    yieldGap: -9.83,
-    priority: "high",
-    assignedTo: "Sofia Keller",
-  },
-  {
-    id: "acc-003",
-    agent: "UNIVERSAL GLOBAL LOGISTICS",
-    originCountry: "SPAIN",
-    destination: "DXB",
-    qrCw: 3043,
-    benchmarkCw: 72035,
-    marketCw: 75078,
-    qrRevenue: 3538,
-    marketRevenue: 81283,
-    yieldGap: 7.73,
-    priority: "medium",
-    assignedTo: "Sofia Keller",
-  },
-  {
-    id: "acc-004",
-    agent: "DSV AIR SEA",
-    originCountry: "SPAIN",
-    destination: "SHJ",
-    qrCw: 1054,
-    benchmarkCw: 52637,
-    marketCw: 53691,
-    qrRevenue: 1626,
-    marketRevenue: 96125,
-    yieldGap: -14.07,
-    priority: "high",
-    assignedTo: "Jonas Richter",
-  },
-  {
-    id: "acc-005",
-    agent: "FASHION LOGISTICS",
-    originCountry: "SPAIN",
-    destination: "CPT",
-    qrCw: 88553,
-    benchmarkCw: 100970,
-    marketCw: 189523,
-    qrRevenue: 266563,
-    marketRevenue: 533413,
-    yieldGap: 13.9,
-    priority: "medium",
-    assignedTo: "Marc Vidal",
-  },
-  {
-    id: "acc-006",
-    agent: "SCHENKER",
-    originCountry: "SPAIN",
-    destination: "CPT",
-    qrCw: 23576,
-    benchmarkCw: 12279,
-    marketCw: 35855,
-    qrRevenue: 48726,
-    marketRevenue: 73608,
-    yieldGap: 1.99,
-    priority: "watch",
-    assignedTo: "Marc Vidal",
-  },
-  {
-    id: "acc-007",
-    agent: "TRACOSA",
-    originCountry: "SPAIN",
-    destination: "DXB",
-    qrCw: 7742,
-    benchmarkCw: 63968,
-    marketCw: 71710,
-    qrRevenue: 9649,
-    marketRevenue: 94311,
-    yieldGap: -5.83,
-    priority: "medium",
-    assignedTo: "Sofia Keller",
-  },
-  {
-    id: "acc-008",
-    agent: "GLOBETAINER ALGERIA SARL",
-    originCountry: "ALGERIA",
-    destination: "YMQ",
-    qrCw: 5690,
-    benchmarkCw: 0,
-    marketCw: 5690,
-    qrRevenue: 13458,
-    marketRevenue: 13458,
-    yieldGap: 0,
-    priority: "watch",
-    assignedTo: "Nadia Rahman",
-  },
-];
-
-const priorityConfig: Record<Priority, { label: string; variant: "danger" | "warning" | "muted" }> = {
-  high: { label: "High", variant: "danger" },
-  medium: { label: "Medium", variant: "warning" },
-  watch: { label: "Watch", variant: "muted" },
+const emptyForm: ReportForm = {
+  contractId: "",
+  period: new Date().toISOString().slice(0, 7),
+  reportedRevenue: "0",
+  reportedTonnageKg: "0",
+  reportedQuotes: "0",
+  reportedBookings: "0",
+  summary: "",
+  pipelineNotes: "",
+  risks: "",
+  supportNeeded: "",
+  attachmentName: "",
 };
 
 export default function GsaMonthlyReportsPage() {
-  const [fileName, setFileName] = useState("");
-  const [isDistributed, setIsDistributed] = useState(false);
-  const [rows, setRows] = useState<AccountRow[]>(sampleRows);
+  const [contracts, setContracts] = useState<LivePartnerContract[]>([]);
+  const [performance, setPerformance] = useState<ContractPerformanceSnapshot[]>([]);
+  const [reports, setReports] = useState<MonthlyContractReport[]>([]);
+  const [form, setForm] = useState<ReportForm>(emptyForm);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  const totals = useMemo(() => {
-    return rows.reduce(
-      (sum, row) => ({
-        qrCw: sum.qrCw + row.qrCw,
-        marketCw: sum.marketCw + row.marketCw,
-        qrRevenue: sum.qrRevenue + row.qrRevenue,
-        marketRevenue: sum.marketRevenue + row.marketRevenue,
-      }),
-      { qrCw: 0, marketCw: 0, qrRevenue: 0, marketRevenue: 0 },
-    );
-  }, [rows]);
+  useEffect(() => {
+    refresh();
+  }, []);
 
-  const assignmentCounts = useMemo(() => {
-    return team.map((member) => ({
-      ...member,
-      accounts: rows.filter((row) => row.assignedTo === member.name).length,
-      priority: rows.filter((row) => row.assignedTo === member.name && row.priority === "high").length,
-    }));
-  }, [rows]);
+  useEffect(() => {
+    if (!form.contractId && contracts.length > 0) {
+      const contract = contracts[0];
+      const snapshot = performance.find((item) => item.contractId === contract.id);
+      setForm((current) => hydrateForm(current, contract.id, snapshot));
+    }
+  }, [contracts, performance, form.contractId]);
 
-  function handleFileChange(event: React.ChangeEvent<HTMLInputElement>) {
-    const file = event.target.files?.[0];
-    if (!file) return;
-    setFileName(file.name);
-    setIsDistributed(true);
+  const selectedContract = contracts.find((contract) => contract.id === form.contractId) ?? null;
+  const selectedPerformance = performance.find((item) => item.contractId === form.contractId) ?? null;
+  const currentReport = reports.find((report) => report.contractId === form.contractId && report.period === form.period);
+  const totals = useMemo(() => ({
+    submitted: reports.filter((report) => report.status === "submitted").length,
+    accepted: reports.filter((report) => report.status === "accepted").length,
+    changes: reports.filter((report) => report.status === "changes-requested").length,
+  }), [reports]);
+
+  async function refresh() {
+    const [contractRes, performanceRes, reportRes] = await Promise.all([
+      fetch("/api/contracts", { cache: "no-store" }),
+      fetch("/api/performance", { cache: "no-store" }),
+      fetch("/api/monthly-reports", { cache: "no-store" }),
+    ]);
+    const [contractData, performanceData, reportData] = await Promise.all([contractRes.json(), performanceRes.json(), reportRes.json()]);
+    setContracts(contractRes.ok ? contractData.contracts ?? [] : []);
+    setPerformance(performanceRes.ok ? performanceData.performance ?? [] : []);
+    setReports(reportRes.ok ? reportData.monthlyReports ?? [] : []);
   }
 
-  function redistribute() {
-    setRows((current) =>
-      current.map((row, index) => {
-        const routeOwner = team.find((member) => member.markets.includes(row.destination));
-        return {
-          ...row,
-          assignedTo: routeOwner?.name ?? team[index % team.length].name,
-        };
-      }),
-    );
-    setIsDistributed(true);
+  function update<K extends keyof ReportForm>(key: K, value: ReportForm[K]) {
+    setForm((current) => ({ ...current, [key]: value }));
   }
 
-  function assignRow(rowId: string, assignedTo: string) {
-    setRows((current) => current.map((row) => (row.id === rowId ? { ...row, assignedTo } : row)));
+  function loadActuals() {
+    if (!selectedPerformance) return;
+    setForm((current) => hydrateForm(current, current.contractId, selectedPerformance));
+  }
+
+  function loadExisting(report: MonthlyContractReport) {
+    setForm({
+      contractId: report.contractId,
+      period: report.period,
+      reportedRevenue: String(report.reportedRevenue),
+      reportedTonnageKg: String(report.reportedTonnageKg),
+      reportedQuotes: String(report.reportedQuotes),
+      reportedBookings: String(report.reportedBookings),
+      summary: report.summary,
+      pipelineNotes: report.pipelineNotes ?? "",
+      risks: report.risks ?? "",
+      supportNeeded: report.supportNeeded ?? "",
+      attachmentName: report.attachmentName ?? "",
+    });
+  }
+
+  async function saveReport(submit: boolean) {
+    setSaving(true);
+    setError(null);
+    try {
+      const res = await fetch("/api/monthly-reports", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          ...form,
+          reportedRevenue: Number(form.reportedRevenue),
+          reportedTonnageKg: Number(form.reportedTonnageKg),
+          reportedQuotes: Number(form.reportedQuotes),
+          reportedBookings: Number(form.reportedBookings),
+          submit,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error ?? "Monthly report could not be saved");
+      await refresh();
+    } catch (err) {
+      setError((err as Error).message);
+    } finally {
+      setSaving(false);
+    }
   }
 
   return (
     <>
-      <Topbar title="Monthly reports" subtitle="GSA customer allocation" />
+      <Topbar title="Monthly reports" subtitle="Contract reporting to airline" />
       <main className="space-y-5 p-5">
-        <section className="grid gap-4 xl:grid-cols-[minmax(0,1.05fr)_minmax(360px,0.95fr)]">
+        {error && <div className="rounded-lg border border-danger/25 bg-danger-bg p-3 text-sm text-danger">{error}</div>}
+
+        <section className="grid gap-4 sm:grid-cols-3">
+          <Metric label="Submitted" value={String(totals.submitted)} />
+          <Metric label="Accepted" value={String(totals.accepted)} />
+          <Metric label="Changes requested" value={String(totals.changes)} />
+        </section>
+
+        <div className="grid gap-5 xl:grid-cols-[1fr_420px]">
           <Card>
             <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <FileSpreadsheet className="h-5 w-5 text-brand" />
-                Upload monthly report
-              </CardTitle>
+              <CardTitle className="flex items-center gap-2"><FileSpreadsheet className="h-5 w-5 text-brand" /> Prepare monthly report</CardTitle>
+              <p className="text-sm text-ink-muted">Report actual performance and recovery plan against the airline contract.</p>
             </CardHeader>
             <CardContent className="space-y-4">
-              <label className="flex min-h-44 cursor-pointer flex-col items-center justify-center rounded-lg border border-dashed border-brand/35 bg-brand-light/40 px-5 text-center transition-colors hover:border-brand">
-                <UploadCloud className="h-9 w-9 text-brand" />
-                <span className="mt-3 text-sm font-semibold text-ink">
-                  {fileName || "Select Excel report"}
-                </span>
-                <span className="mt-1 text-xs text-ink-muted">.xlsx, .xls or .csv</span>
-                <Input
-                  type="file"
-                  accept=".xlsx,.xls,.csv"
-                  className="sr-only"
-                  onChange={handleFileChange}
-                />
-              </label>
+              {contracts.length === 0 ? (
+                <div className="rounded-lg border border-border-ui bg-surface2 p-4 text-sm text-ink-muted">No active contracts available for reporting.</div>
+              ) : (
+                <>
+                  <div className="grid gap-3 md:grid-cols-3">
+                    <Field label="Contract">
+                      <Select value={form.contractId} onChange={(event) => {
+                        const snapshot = performance.find((item) => item.contractId === event.target.value);
+                        setForm((current) => hydrateForm(current, event.target.value, snapshot));
+                      }}>
+                        {contracts.map((contract) => <option key={contract.id} value={contract.id}>{contract.airline} - {contract.market}</option>)}
+                      </Select>
+                    </Field>
+                    <Field label="Period">
+                      <Input type="month" value={form.period} onChange={(event) => update("period", event.target.value)} />
+                    </Field>
+                    <Field label="Attachment">
+                      <label className="flex h-10 cursor-pointer items-center gap-2 rounded-lg border border-border-ui bg-surface px-3 text-sm text-ink-muted">
+                        <UploadCloud className="h-4 w-4" />
+                        {form.attachmentName || "Attach file name"}
+                        <Input
+                          type="file"
+                          accept=".xlsx,.xls,.csv,.pdf"
+                          className="sr-only"
+                          onChange={(event) => update("attachmentName", event.target.files?.[0]?.name ?? "")}
+                        />
+                      </label>
+                    </Field>
+                  </div>
 
-              <div className="grid gap-3 sm:grid-cols-3">
-                <ReportMetric label="Rows detected" value={fileName ? "14,386" : "8 sample"} />
-                <ReportMetric label="Agents" value={fileName ? "921" : "8"} />
-                <ReportMetric label="Month" value="Jan-26" />
-              </div>
+                  <div className="grid gap-3 md:grid-cols-4">
+                    <Field label="Revenue EUR"><Input type="number" value={form.reportedRevenue} onChange={(event) => update("reportedRevenue", event.target.value)} /></Field>
+                    <Field label="Tonnage kg"><Input type="number" value={form.reportedTonnageKg} onChange={(event) => update("reportedTonnageKg", event.target.value)} /></Field>
+                    <Field label="Quotes"><Input type="number" value={form.reportedQuotes} onChange={(event) => update("reportedQuotes", event.target.value)} /></Field>
+                    <Field label="Bookings"><Input type="number" value={form.reportedBookings} onChange={(event) => update("reportedBookings", event.target.value)} /></Field>
+                  </div>
 
-              <div className="flex flex-wrap items-center gap-3">
-                <Button onClick={redistribute}>
-                  <UsersRound className="h-4 w-4" />
-                  Auto distribute customers
-                </Button>
-                {isDistributed && (
-                  <span className="inline-flex items-center gap-2 text-sm font-medium text-success">
-                    <CheckCircle2 className="h-4 w-4" />
-                    Customers assigned
-                  </span>
-                )}
-              </div>
+                  <div className="grid gap-3 md:grid-cols-2">
+                    <Field label="Executive summary"><Textarea value={form.summary} onChange={(event) => update("summary", event.target.value)} /></Field>
+                    <Field label="Pipeline notes"><Textarea value={form.pipelineNotes} onChange={(event) => update("pipelineNotes", event.target.value)} /></Field>
+                    <Field label="Risks"><Textarea value={form.risks} onChange={(event) => update("risks", event.target.value)} /></Field>
+                    <Field label="Support needed"><Textarea value={form.supportNeeded} onChange={(event) => update("supportNeeded", event.target.value)} /></Field>
+                  </div>
+
+                  {currentReport?.airlineReviewNote && (
+                    <div className="rounded-lg border border-warning/25 bg-warning-bg p-3 text-sm text-warning">
+                      Airline review: {currentReport.airlineReviewNote}
+                    </div>
+                  )}
+
+                  <div className="flex flex-wrap gap-2">
+                    <Button variant="outline" onClick={loadActuals} disabled={!selectedPerformance}>Use live actuals</Button>
+                    <Button variant="outline" onClick={() => saveReport(false)} disabled={saving || !selectedContract || !form.summary}>Save draft</Button>
+                    <Button onClick={() => saveReport(true)} disabled={saving || !selectedContract || !form.summary}>
+                      <Send className="h-4 w-4" />
+                      Submit to airline
+                    </Button>
+                  </div>
+                </>
+              )}
             </CardContent>
           </Card>
 
           <Card>
             <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <UsersRound className="h-5 w-5 text-brand" />
-                Team workload
-              </CardTitle>
+              <CardTitle>Live actuals</CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
-              {assignmentCounts.map((member) => (
-                <div key={member.name} className="rounded-lg border border-border-ui bg-surface2 p-3">
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="min-w-0">
-                      <p className="truncate text-sm font-semibold text-ink">{member.name}</p>
-                      <p className="text-xs text-ink-muted">{member.role}</p>
-                    </div>
-                    <Badge variant={member.priority > 0 ? "warning" : "muted"}>
-                      {member.accounts} accounts
-                    </Badge>
-                  </div>
-                  <div className="mt-3 flex flex-wrap gap-1.5">
-                    {member.markets.map((market) => (
-                      <span key={market} className="rounded-md bg-surface px-2 py-1 text-[11px] font-semibold text-ink-muted">
-                        {market}
-                      </span>
-                    ))}
-                  </div>
-                </div>
-              ))}
+              <Metric label="Revenue" value={formatMoney(selectedPerformance?.revenueAmount ?? 0)} />
+              <Metric label="Tonnage" value={`${Math.round(selectedPerformance?.tonnageKg ?? 0).toLocaleString()} kg`} />
+              <Metric label="Quotes" value={String(selectedPerformance?.quoteCount ?? 0)} />
+              <Metric label="Bookings" value={String(selectedPerformance?.bookingCount ?? 0)} />
             </CardContent>
           </Card>
-        </section>
-
-        <section className="grid gap-4 md:grid-cols-4">
-          <ReportMetric label="QR CW" value={`${formatNumber(totals.qrCw)} kg`} />
-          <ReportMetric label="Market CW" value={`${formatNumber(totals.marketCw)} kg`} />
-          <ReportMetric label="QR revenue" value={formatCurrency(totals.qrRevenue)} />
-          <ReportMetric label="Market revenue" value={formatCurrency(totals.marketRevenue)} />
-        </section>
+        </div>
 
         <Card>
           <CardHeader>
-            <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-              <CardTitle>Customer distribution</CardTitle>
-              <Button variant="outline" size="sm" onClick={redistribute}>
-                <RefreshCw className="h-4 w-4" />
-                Rebalance
-              </Button>
-            </div>
+            <CardTitle>Report history</CardTitle>
           </CardHeader>
-          <CardContent>
-            <div className="overflow-x-auto">
-              <table className="w-full min-w-[980px] text-left text-sm">
-                <thead>
-                  <tr className="border-b border-border-ui text-xs uppercase tracking-wider text-ink-muted">
-                    <th className="px-3 py-3 font-semibold">Agent group</th>
-                    <th className="px-3 py-3 font-semibold">Origin</th>
-                    <th className="px-3 py-3 font-semibold">Route</th>
-                    <th className="px-3 py-3 text-right font-semibold">QR CW</th>
-                    <th className="px-3 py-3 text-right font-semibold">Market CW</th>
-                    <th className="px-3 py-3 text-right font-semibold">QR revenue</th>
-                    <th className="px-3 py-3 text-right font-semibold">Yield gap</th>
-                    <th className="px-3 py-3 font-semibold">Priority</th>
-                    <th className="px-3 py-3 font-semibold">Assigned to</th>
+          <CardContent className="overflow-x-auto p-0">
+            <table className="w-full min-w-[760px] text-sm">
+              <thead className="border-b border-border-ui bg-surface2 text-xs uppercase tracking-wider text-ink-muted">
+                <tr>
+                  {["Period", "Airline", "Market", "Revenue", "Tonnage", "Status", "Action"].map((header) => <th key={header} className="px-4 py-3 text-left">{header}</th>)}
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-border-ui">
+                {reports.map((report) => (
+                  <tr key={report.id}>
+                    <td className="px-4 py-3 font-semibold text-ink">{report.period}</td>
+                    <td className="px-4 py-3 text-ink-muted">{report.airline}</td>
+                    <td className="px-4 py-3 text-ink-muted">{report.market}</td>
+                    <td className="px-4 py-3 text-ink">{formatMoney(report.reportedRevenue)}</td>
+                    <td className="px-4 py-3 text-ink-muted">{Math.round(report.reportedTonnageKg).toLocaleString()} kg</td>
+                    <td className="px-4 py-3"><Badge variant={statusVariant(report.status)}>{report.status}</Badge></td>
+                    <td className="px-4 py-3">
+                      <Button size="sm" variant="outline" onClick={() => loadExisting(report)}>Load</Button>
+                    </td>
                   </tr>
-                </thead>
-                <tbody className="divide-y divide-border-ui">
-                  {rows.map((row) => {
-                    const priority = priorityConfig[row.priority];
-                    return (
-                      <tr key={row.id} className="bg-surface transition-colors hover:bg-surface2">
-                        <td className="px-3 py-3 font-semibold text-ink">{row.agent}</td>
-                        <td className="px-3 py-3 text-ink-muted">{row.originCountry}</td>
-                        <td className="px-3 py-3">
-                          <span className="inline-flex items-center gap-1.5 font-mono text-xs font-semibold text-ink">
-                            MAD
-                            <ArrowRight className="h-3 w-3 text-ink-muted" />
-                            {row.destination}
-                          </span>
-                        </td>
-                        <td className="px-3 py-3 text-right text-ink-muted">{formatNumber(row.qrCw)}</td>
-                        <td className="px-3 py-3 text-right text-ink-muted">{formatNumber(row.marketCw)}</td>
-                        <td className="px-3 py-3 text-right text-ink-muted">{formatCurrency(row.qrRevenue)}</td>
-                        <td className={`px-3 py-3 text-right font-semibold ${row.yieldGap < 0 ? "text-danger" : "text-success"}`}>
-                          {row.yieldGap.toFixed(1)}%
-                        </td>
-                        <td className="px-3 py-3">
-                          <Badge variant={priority.variant}>{priority.label}</Badge>
-                        </td>
-                        <td className="px-3 py-3">
-                          <label className="sr-only" htmlFor={`${row.id}-owner`}>
-                            Assigned employee
-                          </label>
-                          <select
-                            id={`${row.id}-owner`}
-                            value={row.assignedTo}
-                            onChange={(event) => assignRow(row.id, event.target.value)}
-                            className="h-9 w-full rounded-md border border-border-ui bg-surface px-2 text-sm text-ink outline-none transition-colors focus:border-brand focus:ring-2 focus:ring-brand/15"
-                          >
-                            {team.map((member) => (
-                              <option key={member.name} value={member.name}>
-                                {member.name}
-                              </option>
-                            ))}
-                          </select>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
+                ))}
+                {reports.length === 0 && <tr><td colSpan={7} className="px-4 py-8 text-center text-ink-muted">No monthly reports yet.</td></tr>}
+              </tbody>
+            </table>
           </CardContent>
         </Card>
-
-        <section className="grid gap-4 lg:grid-cols-3">
-          {team.map((member) => (
-            <Card key={member.name}>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2 text-base">
-                  <UserRound className="h-4 w-4 text-brand" />
-                  {member.name}
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-2">
-                  {rows
-                    .filter((row) => row.assignedTo === member.name)
-                    .map((row) => (
-                      <div key={row.id} className="flex items-center justify-between gap-3 rounded-lg border border-border-ui bg-surface2 px-3 py-2">
-                        <div className="min-w-0">
-                          <p className="truncate text-sm font-semibold text-ink">{row.agent}</p>
-                          <p className="text-xs text-ink-muted">MAD {"->"} {row.destination}</p>
-                        </div>
-                        <Badge variant={priorityConfig[row.priority].variant}>{priorityConfig[row.priority].label}</Badge>
-                      </div>
-                    ))}
-                </div>
-              </CardContent>
-            </Card>
-          ))}
-        </section>
       </main>
     </>
   );
 }
 
-function ReportMetric({ label, value }: { label: string; value: string }) {
+function hydrateForm(current: ReportForm, contractId: string, snapshot?: ContractPerformanceSnapshot): ReportForm {
+  return {
+    ...current,
+    contractId,
+    reportedRevenue: String(snapshot?.revenueAmount ?? current.reportedRevenue),
+    reportedTonnageKg: String(Math.round(snapshot?.tonnageKg ?? Number(current.reportedTonnageKg))),
+    reportedQuotes: String(snapshot?.quoteCount ?? current.reportedQuotes),
+    reportedBookings: String(snapshot?.bookingCount ?? current.reportedBookings),
+  };
+}
+
+function Field({ label, children }: { label: string; children: React.ReactNode }) {
+  return <label><span className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-ink-muted">{label}</span>{children}</label>;
+}
+
+function Metric({ label, value }: { label: string; value: string }) {
   return (
     <Card>
       <CardContent className="p-4">
         <p className="text-xs font-semibold uppercase tracking-wider text-ink-muted">{label}</p>
-        <p className="mt-2 text-2xl font-bold text-ink">{value}</p>
+        <p className="mt-2 text-xl font-bold text-ink">{value}</p>
       </CardContent>
     </Card>
   );
 }
 
-function formatNumber(value: number) {
-  return new Intl.NumberFormat("en-US", { maximumFractionDigits: 0 }).format(value);
+function statusVariant(status: MonthlyContractReport["status"]): "default" | "success" | "warning" | "danger" | "muted" {
+  if (status === "accepted") return "success";
+  if (status === "submitted") return "default";
+  if (status === "changes-requested") return "warning";
+  if (status === "rejected") return "danger";
+  return "muted";
 }
 
-function formatCurrency(value: number) {
-  return new Intl.NumberFormat("en-US", {
-    style: "currency",
-    currency: "USD",
-    maximumFractionDigits: 0,
-  }).format(value);
+function formatMoney(value: number) {
+  return `EUR ${value.toLocaleString("en-GB", { maximumFractionDigits: 0 })}`;
 }

@@ -119,6 +119,9 @@ export type ContractControlRules = {
   autoApprovalVariancePct?: number;
   requireAirlineApprovalBelowFloor?: boolean;
   quoteResponseSlaHours?: number;
+  monthlyRevenueTarget?: number;
+  minimumMonthlyQuotes?: number;
+  quoteWinRateTargetPct?: number;
   namedAccounts?: string[];
   productScope?: string[];
   territoryExclusivity?: "exclusive" | "shared" | "non-exclusive";
@@ -588,6 +591,9 @@ function buildDefaultControlRules(tender: LiveTender, application: LiveTenderApp
     autoApprovalVariancePct: 0,
     requireAirlineApprovalBelowFloor: true,
     quoteResponseSlaHours: 4,
+    monthlyRevenueTarget: Math.max(50000, Math.round((tender.annualTonnage || 0) * baseFloor / 12)),
+    minimumMonthlyQuotes: 12,
+    quoteWinRateTargetPct: 35,
     namedAccounts: [],
     productScope: tender.productMix.split(",").map((item) => item.trim()).filter(Boolean),
     territoryExclusivity: tender.awardMode === "single" ? "exclusive" : "shared",
