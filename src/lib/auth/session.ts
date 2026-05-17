@@ -15,6 +15,7 @@ export async function createSession(account: SessionPayload): Promise<void> {
   const payload: SessionPayload = {
     email: account.email,
     role: account.role,
+    accessRole: account.accessRole,
     name: account.name,
     company: account.company,
     companyId: account.companyId,

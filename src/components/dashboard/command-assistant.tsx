@@ -71,6 +71,20 @@ const actions: AssistantAction[] = [
     response: "Ich öffne dein GSA-Profil.",
   },
   {
+    label: "Cargo workspace",
+    href: "/gsa/cargo-workspace",
+    role: "gsa",
+    keywords: ["cargo workspace", "ecargoware", "fr8manage", "booking", "awb", "tracking", "rates", "raten", "sendung"],
+    response: "Ich oeffne den Cargo Workspace.",
+  },
+  {
+    label: "Team access",
+    href: "/gsa/team",
+    role: "gsa",
+    keywords: ["team", "mitarbeiter", "access", "rechte", "permissions", "user management"],
+    response: "Ich oeffne Team & Access.",
+  },
+  {
     label: "Notifications",
     href: "/gsa/notifications",
     role: "gsa",

@@ -1730,5 +1730,212 @@
       "submittedAt": "2026-05-14T14:36:50.128Z",
       "updatedAt": "2026-05-14T17:49:44.226Z"
     }
+  ],
+  "contracts": [
+    {
+      "id": "ctr-app-demo-nordics-closed-air-menzies",
+      "tenderId": "tnd-demo-nordics-closed-2026",
+      "sourceApplicationId": "app-demo-nordics-closed-air-menzies",
+      "airline": "Saudia Cargo",
+      "airlineEmail": "saudia@airgsa.demo",
+      "gsaId": "gsa-air-menzies",
+      "gsaName": "Air Menzies International",
+      "contactName": "Samantha Leaper",
+      "email": "samantha.leaper@airmenzies.com",
+      "headquarters": "Crawley, United Kingdom",
+      "coverage": [
+        "United Kingdom",
+        "Ireland",
+        "Global network"
+      ],
+      "markets": [
+        "UK",
+        "Ireland",
+        "Global"
+      ],
+      "certifications": [
+        "IATA",
+        "CASS",
+        "GDP"
+      ],
+      "cargoFocus": "Wholesale air cargo, pharma, express",
+      "networkScore": 92,
+      "financialScore": 87,
+      "complianceScore": 94,
+      "winRate": 40,
+      "market": "Sweden, Denmark, Norway, Finland",
+      "startDate": "2026-06-15",
+      "endDate": "2029-12-30",
+      "status": "pending",
+      "commercialTerms": "5.1% base commission with wholesale consolidation plan",
+      "reportingCadence": "weekly",
+      "contractRoutes": [
+        {
+          "id": "route-cph-jed",
+          "origin": "CPH",
+          "destination": "JED",
+          "operatingDays": "Tue/Fri",
+          "frequencyPerWeek": 2,
+          "aircraft": "Nordics gateway",
+          "status": "available"
+        },
+        {
+          "id": "route-arn-ruh",
+          "origin": "ARN",
+          "destination": "RUH",
+          "operatingDays": "Thu",
+          "frequencyPerWeek": 1,
+          "aircraft": "Regional feed",
+          "status": "available"
+        }
+      ],
+      "createdAt": "2026-05-16T23:26:19.005Z",
+      "updatedAt": "2026-05-16T23:26:42.511Z",
+      "targetLoadFactor": 50,
+      "monthlyTonnageTargetKg": 1500000
+    },
+    {
+      "id": "ctr-app-demo-dach-pharma-aeb",
+      "tenderId": "tnd-demo-dach-pharma-2026",
+      "sourceApplicationId": "app-demo-dach-pharma-aeb",
+      "airline": "Saudia Cargo",
+      "airlineEmail": "saudia@airgsa.demo",
+      "gsaId": "gsa-aeb",
+      "gsaName": "AEB",
+      "contactName": "Ian Crauwels",
+      "email": "ian.crauwels@aeb.com",
+      "headquarters": "Stuttgart, Germany",
+      "coverage": [
+        "Germany",
+        "DACH",
+        "Benelux"
+      ],
+      "markets": [
+        "DACH",
+        "Benelux"
+      ],
+      "certifications": [
+        "IATA",
+        "CASS",
+        "GDP"
+      ],
+      "cargoFocus": "General cargo, pharma, industrial freight",
+      "networkScore": 91,
+      "financialScore": 86,
+      "complianceScore": 94,
+      "winRate": 39,
+      "market": "Germany, Austria, Switzerland",
+      "startDate": "2026-07-01",
+      "status": "pending",
+      "commercialTerms": "5.0% base commission with pharma and DACH forwarder accelerator",
+      "reportingCadence": "weekly",
+      "contractRoutes": [
+        {
+          "id": "route-fra-jed",
+          "origin": "FRA",
+          "destination": "JED",
+          "operatingDays": "Daily",
+          "frequencyPerWeek": 7,
+          "aircraft": "Core gateway",
+          "status": "available"
+        },
+        {
+          "id": "route-fra-ruh",
+          "origin": "FRA",
+          "destination": "RUH",
+          "operatingDays": "Tue/Thu/Sat",
+          "frequencyPerWeek": 3,
+          "aircraft": "Industrial cargo",
+          "status": "available"
+        },
+        {
+          "id": "route-muc-jed",
+          "origin": "MUC",
+          "destination": "JED",
+          "operatingDays": "Mon/Fri",
+          "frequencyPerWeek": 2,
+          "aircraft": "RFS and belly feed",
+          "status": "available"
+        },
+        {
+          "id": "route-zrh-jed",
+          "origin": "ZRH",
+          "destination": "JED",
+          "operatingDays": "Wed/Sun",
+          "frequencyPerWeek": 2,
+          "aircraft": "Pharma feed",
+          "status": "available"
+        }
+      ],
+      "createdAt": "2026-05-16T23:26:19.005Z",
+      "updatedAt": "2026-05-16T23:26:19.005Z"
+    },
+    {
+      "id": "ctr-app-demo-france-cargo-airlines-services",
+      "tenderId": "tnd-demo-france-2026",
+      "sourceApplicationId": "app-demo-france-cargo-airlines-services",
+      "airline": "Saudia Cargo",
+      "airlineEmail": "saudia@airgsa.demo",
+      "gsaId": "gsa-cargo-airlines-services",
+      "gsaName": "Cargo Airlines Services SAS",
+      "contactName": "Cedric Lepretre",
+      "email": "cedric@cargoairlines.aero",
+      "headquarters": "Paris, France",
+      "coverage": [
+        "France",
+        "Benelux",
+        "Southern Europe"
+      ],
+      "markets": [
+        "France",
+        "Benelux"
+      ],
+      "certifications": [
+        "IATA",
+        "CASS",
+        "GDP"
+      ],
+      "cargoFocus": "Airline representation, pharma, general cargo",
+      "networkScore": 90,
+      "financialScore": 85,
+      "complianceScore": 93,
+      "winRate": 38,
+      "market": "France",
+      "startDate": "2026-08-05",
+      "status": "pending",
+      "commercialTerms": "5.0% base commission and 1.5% high-yield cargo bonus",
+      "reportingCadence": "weekly",
+      "contractRoutes": [
+        {
+          "id": "route-cdg-jed",
+          "origin": "CDG",
+          "destination": "JED",
+          "operatingDays": "Mon/Wed/Fri",
+          "frequencyPerWeek": 3,
+          "aircraft": "Belly and freighter capacity",
+          "status": "available"
+        },
+        {
+          "id": "route-cdg-ruh",
+          "origin": "CDG",
+          "destination": "RUH",
+          "operatingDays": "Tue/Sat",
+          "frequencyPerWeek": 2,
+          "aircraft": "High-yield cargo focus",
+          "status": "available"
+        },
+        {
+          "id": "route-lys-jed",
+          "origin": "LYS",
+          "destination": "JED",
+          "operatingDays": "Thu",
+          "frequencyPerWeek": 1,
+          "aircraft": "Regional feed",
+          "status": "available"
+        }
+      ],
+      "createdAt": "2026-05-16T23:26:19.005Z",
+      "updatedAt": "2026-05-16T23:26:19.005Z"
+    }
   ]
 }

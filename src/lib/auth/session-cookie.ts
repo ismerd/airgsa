@@ -1,6 +1,7 @@
 export type SessionPayload = {
   email: string;
   role: "airline" | "gsa" | "admin";
+  accessRole?: "owner" | "admin" | "manager" | "operator" | "viewer";
   name: string;
   company: string;
   companyId?: string;
@@ -31,6 +32,7 @@ export async function verifySessionCookie(value: string | undefined): Promise<Se
     const payload = JSON.parse(decodeBase64Url(body)) as SessionPayload;
     if (!payload.email || !payload.role || !payload.name || !payload.company) return null;
     if (!["airline", "gsa", "admin"].includes(payload.role)) return null;
+    if (payload.accessRole && !["owner", "admin", "manager", "operator", "viewer"].includes(payload.accessRole)) return null;
     return payload;
   } catch {
     return null;

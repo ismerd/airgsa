@@ -1,21 +1,40 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { ArrowRight, Route } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { assignableRoutes } from "@/lib/airline-gsa-workflow";
-import { realGsaPartners } from "@/lib/real-gsa-data";
-import { applications } from "@/lib/services/platform";
-import { useAirlineGsaWorkflow } from "@/lib/use-airline-gsa-workflow";
+import type { LivePartnerContract } from "@/lib/services/tender-workflow-store";
 
 export function AirlineGsaAssignmentSummary() {
-  const workflow = useAirlineGsaWorkflow(applications);
-  const acceptedPartners = realGsaPartners.filter((partner) => workflow.state.acceptedGsas[partner.id]);
-  const assignedRouteIds = new Set(
-    Object.values(workflow.state.acceptedGsas).flatMap((assignment) => assignment.routeIds),
+  const [contracts, setContracts] = useState<LivePartnerContract[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    let active = true;
+
+    fetch("/api/contracts", { cache: "no-store" })
+      .then((res) => (res.ok ? res.json() : { contracts: [] }))
+      .then((data) => {
+        if (active) setContracts(data.contracts ?? []);
+      })
+      .catch(() => {
+        if (active) setContracts([]);
+      })
+      .finally(() => {
+        if (active) setLoading(false);
+      });
+
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  const assignedRoutes = contracts.flatMap((contract) =>
+    contract.contractRoutes.filter((route) => route.status === "assigned"),
   );
-  const assignedRoutes = assignableRoutes.filter((route) => assignedRouteIds.has(route.id));
+  const weeklyFrequency = assignedRoutes.reduce((sum, route) => sum + route.frequencyPerWeek, 0);
 
   return (
     <Card>
@@ -23,7 +42,7 @@ export function AirlineGsaAssignmentSummary() {
         <div>
           <CardTitle>Accepted GSA route assignments</CardTitle>
           <p className="mt-0.5 text-sm text-ink-muted">
-            Accepted applications become active partners here and can be assigned lanes.
+            Accepted applications become persistent contracts and assigned tender routes.
           </p>
         </div>
         <Button asChild variant="outline" size="sm">
@@ -34,18 +53,15 @@ export function AirlineGsaAssignmentSummary() {
         </Button>
       </CardHeader>
       <CardContent>
-        {acceptedPartners.length === 0 ? (
+        {!loading && contracts.length === 0 ? (
           <div className="rounded-lg border border-border-ui bg-surface2 p-4 text-sm text-ink-muted">
             No accepted GSAs yet. Accept an application to start assigning routes.
           </div>
         ) : (
           <div className="grid gap-3 md:grid-cols-3">
-            <SummaryTile label="Accepted partners" value={String(acceptedPartners.length)} />
+            <SummaryTile label="Accepted contracts" value={loading ? "..." : String(contracts.length)} />
             <SummaryTile label="Assigned routes" value={String(assignedRoutes.length)} />
-            <SummaryTile
-              label="Weekly assigned capacity"
-              value={`${Math.round(assignedRoutes.reduce((sum, route) => sum + route.weeklyCapacityKg, 0) / 1000)}t`}
-            />
+            <SummaryTile label="Weekly frequency" value={`${weeklyFrequency}x`} />
           </div>
         )}
       </CardContent>

@@ -1,0 +1,47 @@
+[
+  {
+    "id": "team-gsa-lena",
+    "email": "lena.hartmann@forto.example",
+    "password": "demo2026",
+    "role": "gsa",
+    "accessRole": "operator",
+    "name": "Lena Hartmann",
+    "company": "Forto Logistics",
+    "title": "Cargo operator",
+    "status": "active",
+    "quotes": 42,
+    "bookings": 18,
+    "responseTime": "14 min",
+    "createdAt": "2026-05-16T00:00:00.000Z"
+  },
+  {
+    "id": "team-airline-fatima",
+    "email": "fatima.ops@saudia.example",
+    "password": "demo2026",
+    "role": "airline",
+    "accessRole": "operator",
+    "name": "Fatima Operations",
+    "company": "Saudia Cargo",
+    "title": "Capacity operator",
+    "status": "active",
+    "quotes": 0,
+    "bookings": 0,
+    "responseTime": "18 min",
+    "createdAt": "2026-05-16T00:00:00.000Z"
+  },
+  {
+    "id": "team-1778949921673",
+    "email": "panpanyu1995@gmail.com",
+    "password": "panpan2026",
+    "role": "gsa",
+    "accessRole": "operator",
+    "name": "Panpan",
+    "company": "Forto Logistics",
+    "title": "Cargo Operator",
+    "status": "active",
+    "quotes": 0,
+    "bookings": 0,
+    "responseTime": "-",
+    "createdAt": "2026-05-16T16:45:21.673Z"
+  }
+]

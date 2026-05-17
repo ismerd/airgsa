@@ -8,7 +8,6 @@ import {
   PanelLeft,
   Plane,
   PlaneTakeoff,
-  UserCircle,
   Users,
 } from "lucide-react";
 import { Sidebar, type NavGroup } from "@/components/dashboard/sidebar";
@@ -18,7 +17,25 @@ import { getAirlineProfile } from "@/lib/services/airline-profile";
 import { listLiveApplications, listLiveTenders } from "@/lib/services/tender-workflow-store";
 import { SAUDIA_CARGO } from "@/lib/saudia-cargo-data";
 
-function getNav(pendingApplications: number): NavGroup[] {
+function getNav(pendingApplications: number, accessRole?: string): NavGroup[] {
+  if (accessRole === "operator") {
+    return [
+      {
+        heading: "Operations",
+        items: [
+          { label: "Dashboard", href: "/airline", icon: PanelLeft },
+          { label: "Capacity alerts", href: "/airline/capacity-alerts", icon: BellRing },
+        ],
+      },
+      {
+        heading: "My results",
+        items: [
+          { label: "Performance", href: "/airline/performance", icon: BarChart3 },
+        ],
+      },
+    ];
+  }
+
   return [
   {
     heading: "Overview",
@@ -58,7 +75,7 @@ function getNav(pendingApplications: number): NavGroup[] {
   {
     heading: "Account",
     items: [
-      { label: "Profile", href: "/airline/profile", icon: UserCircle },
+      { label: "Team & access", href: "/airline/team", icon: Users },
     ],
   },
   ];
@@ -76,7 +93,7 @@ export default async function AirlineLayout({ children }: { children: React.Reac
   return (
     <div className="flex min-h-screen bg-page">
       <Sidebar
-        groups={getNav(pendingApplications)}
+        groups={getNav(pendingApplications, session?.accessRole)}
         role="Airline"
         brand={{
           name: SAUDIA_CARGO.name,

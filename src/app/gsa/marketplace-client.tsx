@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { Bell, Inbox, MapPin } from "lucide-react";
+import { GsaAssignedRoutesSummary } from "@/components/dashboard/gsa-assigned-routes-summary";
 import { TenderCard } from "@/components/dashboard/tender-card";
 import { Topbar } from "@/components/dashboard/topbar";
 import { Badge } from "@/components/ui/badge";
@@ -50,6 +51,8 @@ export function GsaMarketplaceClient({ gsaName, markets }: { gsaName: string; ma
     <>
       <Topbar title="Open tender marketplace" subtitle={gsaName} />
       <main className="space-y-5 p-5">
+        <GsaAssignedRoutesSummary companyName={gsaName} />
+
         {newTenders.length > 0 && (
           <Card className="border-brand/25">
             <CardContent className="flex flex-col gap-3 p-4 md:flex-row md:items-center md:justify-between">

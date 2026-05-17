@@ -1,44 +1,87 @@
-import { BarChart3, Bell, Building2, FileSpreadsheet, Megaphone, Newspaper, PanelLeft } from "lucide-react";
+import { BarChart3, Building2, CalendarDays, FileSpreadsheet, Inbox, Megaphone, Newspaper, Package, PackageSearch, PanelLeft, Users, UserRound } from "lucide-react";
 import { Sidebar, type NavGroup } from "@/components/dashboard/sidebar";
 import { getSession } from "@/lib/auth/session";
 import { canViewApplication, canViewTender } from "@/lib/auth/permissions";
 import { realGsaPartners } from "@/lib/real-gsa-data";
 import { listLiveApplications, listLiveTenders } from "@/lib/services/tender-workflow-store";
 
-function getNav(notificationCount: number): NavGroup[] {
+const PENDING_QUOTES = 3;
+
+function getNav(notificationCount: number, accessRole?: string): NavGroup[] {
+  if (accessRole === "operator") {
+    return [
+      {
+        heading: "Workspace",
+        items: [
+          { label: "Quote Inbox", href: "/gsa/quotes", icon: Inbox, badgeCount: PENDING_QUOTES },
+          { label: "Cargo Workspace", href: "/gsa/cargo-workspace", icon: PackageSearch },
+        ],
+      },
+      {
+        heading: "Shipments",
+        items: [
+          { label: "Active Shipments", href: "/gsa/shipments", icon: Package },
+          { label: "Flight Schedule", href: "/gsa/flights", icon: CalendarDays },
+        ],
+      },
+      {
+        heading: "Overview",
+        items: [
+          { label: "Customers", href: "/gsa/customers", icon: UserRound },
+          { label: "Performance", href: "/gsa/performance", icon: BarChart3 },
+        ],
+      },
+    ];
+  }
+
   return [
-  {
-    heading: "Overview",
-    items: [
-      { label: "Marketplace", href: "/gsa", icon: PanelLeft },
-    ],
-  },
-  {
-    heading: "Opportunities",
-    items: [
-      { label: "Notifications", href: "/gsa/notifications", icon: Bell, badgeCount: notificationCount },
-    ],
-  },
-  {
-    heading: "Analytics",
-    items: [
-      { label: "Performance", href: "/gsa/performance", icon: BarChart3 },
-      { label: "Monthly reports", href: "/gsa/monthly-reports", icon: FileSpreadsheet },
-    ],
-  },
-  {
-    heading: "Company",
-    items: [
-      { label: "Company profile", href: "/gsa/profile", icon: Building2 },
-    ],
-  },
-  {
-    heading: "Market Intelligence",
-    items: [
-      { label: "Intelligence", href: "/news", icon: Newspaper },
-      { label: "Marketing", href: "/gsa/campaigns", icon: Megaphone },
-    ],
-  },
+    {
+      heading: "Market",
+      items: [
+        { label: "Marketplace", href: "/gsa", icon: PanelLeft },
+      ],
+    },
+    {
+      heading: "Operations",
+      items: [
+        { label: "Quote Inbox", href: "/gsa/quotes", icon: Inbox, badgeCount: PENDING_QUOTES },
+        { label: "Cargo Workspace", href: "/gsa/cargo-workspace", icon: PackageSearch },
+      ],
+    },
+    {
+      heading: "Shipments",
+      items: [
+        { label: "Active Shipments", href: "/gsa/shipments", icon: Package },
+        { label: "Flight Schedule", href: "/gsa/flights", icon: CalendarDays },
+      ],
+    },
+    {
+      heading: "Customers",
+      items: [
+        { label: "My Customers", href: "/gsa/customers", icon: UserRound },
+        { label: "Customer Reports", href: "/gsa/monthly-reports", icon: FileSpreadsheet },
+      ],
+    },
+    {
+      heading: "Analytics",
+      items: [
+        { label: "Performance", href: "/gsa/performance", icon: BarChart3 },
+      ],
+    },
+    {
+      heading: "Company",
+      items: [
+        { label: "Company Profile", href: "/gsa/profile", icon: Building2 },
+        { label: "Team & Access", href: "/gsa/team", icon: Users },
+      ],
+    },
+    {
+      heading: "Intelligence",
+      items: [
+        { label: "Market News", href: "/news", icon: Newspaper },
+        { label: "Marketing", href: "/gsa/campaigns", icon: Megaphone },
+      ],
+    },
   ];
 }
 
@@ -58,7 +101,7 @@ export default async function GsaLayout({ children }: { children: React.ReactNod
   return (
     <div className="flex min-h-screen bg-page">
       <Sidebar
-        groups={getNav(notificationCount)}
+        groups={getNav(notificationCount, session?.accessRole)}
         role="GSA"
         brand={{
           name: partner?.name ?? session?.company ?? "GSA",

@@ -56,10 +56,25 @@ export async function middleware(req: NextRequest) {
   if (pathname.startsWith("/airline") && session.role !== "airline") {
     return NextResponse.redirect(new URL("/login", req.url));
   }
+  if (pathname.startsWith("/airline") && session.role === "airline" && session.accessRole === "operator") {
+    const allowed = pathname === "/airline" || pathname.startsWith("/airline/capacity-alerts") || pathname.startsWith("/airline/performance");
+    if (!allowed) return NextResponse.redirect(new URL("/airline", req.url));
+  }
 
   // GSA-only routes
   if (pathname.startsWith("/gsa") && session.role !== "gsa") {
     return NextResponse.redirect(new URL("/login", req.url));
+  }
+  if (pathname.startsWith("/gsa") && session.role === "gsa" && session.accessRole === "operator") {
+    const allowed =
+      pathname.startsWith("/gsa/cargo-workspace") ||
+      pathname.startsWith("/gsa/performance") ||
+      pathname.startsWith("/gsa/notifications") ||
+      pathname.startsWith("/gsa/quotes") ||
+      pathname.startsWith("/gsa/customers") ||
+      pathname.startsWith("/gsa/shipments") ||
+      pathname.startsWith("/gsa/flights");
+    if (!allowed) return NextResponse.redirect(new URL("/gsa/cargo-workspace", req.url));
   }
 
   return NextResponse.next();

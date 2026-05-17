@@ -17,7 +17,7 @@ export async function POST(req: NextRequest) {
     }
 
     await createSession(account);
-    return NextResponse.json({ role: account.role, company: account.company });
+    return NextResponse.json({ role: account.role, accessRole: account.accessRole, company: account.company });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Login failed";
     return NextResponse.json({ error: message }, { status: 500 });
