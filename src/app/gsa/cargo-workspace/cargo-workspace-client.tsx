@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import type { ReactNode } from "react";
 import {
   ArrowRight,
@@ -19,8 +19,11 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { Select } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import type { EcargowareOperation } from "@/lib/integrations/ecargoware-catalog";
+import type { MandateBooking, MandateQuote } from "@/lib/services/mandate-execution-store";
+import type { LivePartnerContract } from "@/lib/services/tender-workflow-store";
 
 type Tab = "rates" | "bookings" | "tracking";
 type BookingSubView = "create" | "search" | "update" | "cancel";
@@ -35,6 +38,12 @@ type ExecutionResult = {
 };
 
 type RateForm = {
+  contractId: string;
+  routeId: string;
+  customer: string;
+  contactName: string;
+  contactEmail: string;
+  requestedRatePerKg: string;
   origin: string;
   destination: string;
   carrier: string;
@@ -70,7 +79,7 @@ type TrackForm = {
 
 const PRODUCT_TYPES = ["General", "Pharma", "Express", "Perishables", "Automotive", "Fashion & Apparel", "Electronics", "Dangerous Goods"];
 
-const emptyRate: RateForm = { origin: "", destination: "", carrier: "SV", productType: "General", grossWeight: "", pieces: "", flightDate: "2026-06-01" };
+const emptyRate: RateForm = { contractId: "", routeId: "", customer: "", contactName: "", contactEmail: "", requestedRatePerKg: "", origin: "", destination: "", carrier: "SV", productType: "General", grossWeight: "", pieces: "", flightDate: "2026-06-01" };
 const emptyBooking: BookingForm = { awbNo: "", customerName: "", iataNo: "", origin: "", destination: "", flight: "", flightDate: "2026-06-01", grossWeight: "", chargeWeight: "", pieces: "", productType: "GENERAL", commodity: "", stackable: "Y", cancelReturn: "GSA", searchFromDate: "2026-06-01", searchToDate: "2026-06-30" };
 const emptyTrack: TrackForm = { awbNo: "", awbNos: "" };
 
@@ -80,12 +89,52 @@ export function CargoWorkspaceClient({ operations }: { operations: EcargowareOpe
   const [rateForm, setRateForm] = useState<RateForm>(emptyRate);
   const [bookingForm, setBookingForm] = useState<BookingForm>(emptyBooking);
   const [trackForm, setTrackForm] = useState<TrackForm>(emptyTrack);
+  const [contracts, setContracts] = useState<LivePartnerContract[]>([]);
+  const [quotes, setQuotes] = useState<MandateQuote[]>([]);
+  const [bookings, setBookings] = useState<MandateBooking[]>([]);
   const [result, setResult] = useState<ExecutionResult | null>(null);
   const [running, setRunning] = useState(false);
   const [confirmedCancel, setConfirmedCancel] = useState(false);
 
+  useEffect(() => {
+    refreshWorkflow();
+  }, []);
+
+  useEffect(() => {
+    if (!rateForm.contractId && contracts.length > 0) {
+      const contract = contracts[0];
+      const route = firstAssignedRoute(contract);
+      setRateForm((current) => ({
+        ...current,
+        contractId: contract.id,
+        routeId: route?.id ?? "",
+        origin: route?.origin ?? current.origin,
+        destination: route?.destination ?? current.destination,
+      }));
+    }
+  }, [contracts, rateForm.contractId]);
+
+  const selectedContract = contracts.find((contract) => contract.id === rateForm.contractId) ?? null;
+  const selectedRoute = selectedContract?.contractRoutes.find((route) => route.id === rateForm.routeId) ?? null;
+  const approvedQuotes = quotes.filter((quote) =>
+    (quote.status === "auto-approved" || quote.status === "airline-approved") &&
+    !bookings.some((booking) => booking.quoteId === quote.id)
+  );
+
   function hasOperation(id: string) {
     return operations.some((op) => op.id === id);
+  }
+
+  async function refreshWorkflow() {
+    const [contractRes, quoteRes, bookingRes] = await Promise.all([
+      fetch("/api/contracts", { cache: "no-store" }),
+      fetch("/api/quotes", { cache: "no-store" }),
+      fetch("/api/bookings", { cache: "no-store" }),
+    ]);
+    const [contractData, quoteData, bookingData] = await Promise.all([contractRes.json(), quoteRes.json(), bookingRes.json()]);
+    setContracts(contractRes.ok ? contractData.contracts ?? [] : []);
+    setQuotes(quoteRes.ok ? quoteData.quotes ?? [] : []);
+    setBookings(bookingRes.ok ? bookingData.bookings ?? [] : []);
   }
 
   async function callApi(operationId: string, payload: object) {
@@ -127,6 +176,68 @@ export function CargoWorkspaceClient({ operations }: { operations: EcargowareOpe
     setResult(null);
   }
 
+  async function createContractQuote(rateOverride?: number) {
+    if (!selectedContract || !selectedRoute) return;
+    setRunning(true);
+    setResult(null);
+    try {
+      const requestedRatePerKg = rateOverride ?? Number(rateForm.requestedRatePerKg);
+      const res = await fetch("/api/quotes", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          contractId: selectedContract.id,
+          routeId: selectedRoute.id,
+          origin: selectedRoute.origin,
+          destination: selectedRoute.destination,
+          customer: rateForm.customer,
+          contactName: rateForm.contactName || rateForm.customer,
+          contactEmail: rateForm.contactEmail || "ops@example.com",
+          cargoType: rateForm.productType,
+          weightKg: Number(rateForm.grossWeight),
+          pieces: Number(rateForm.pieces || 1),
+          requestedRatePerKg,
+          flightDate: rateForm.flightDate,
+          deadline: `${rateForm.flightDate}T12:00`,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error ?? "Quote could not be created");
+      setQuotes((current) => [data.quote, ...current]);
+      setResult({ ok: true, mode: "live", status: res.status, message: `Contract quote ${data.quote.id} created with status ${data.quote.status}` });
+    } catch (err) {
+      setResult({ error: (err as Error).message });
+    } finally {
+      setRunning(false);
+    }
+  }
+
+  async function createBookingFromQuote(quote: MandateQuote) {
+    setRunning(true);
+    setResult(null);
+    try {
+      const res = await fetch("/api/bookings", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          quoteId: quote.id,
+          flightNumber: bookingForm.flight,
+          flightDate: quote.flightDate,
+          awbNumber: bookingForm.awbNo,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error ?? "Booking could not be created");
+      setBookings((current) => [data.booking, ...current.filter((booking) => booking.id !== data.booking.id)]);
+      setBookingForm((current) => ({ ...current, awbNo: data.booking.awbNumber, origin: quote.origin, destination: quote.destination, customerName: quote.customer, grossWeight: String(quote.weightKg), pieces: String(quote.pieces) }));
+      setResult({ ok: true, mode: "live", status: res.status, message: `Booking ${data.booking.awbNumber} created from quote ${quote.id}` });
+    } catch (err) {
+      setResult({ error: (err as Error).message });
+    } finally {
+      setRunning(false);
+    }
+  }
+
   function trackFromBooking(awb: string) {
     setTrackForm({ awbNo: awb, awbNos: "" });
     setTab("tracking");
@@ -150,10 +261,10 @@ export function CargoWorkspaceClient({ operations }: { operations: EcargowareOpe
     <div className="space-y-5">
       {/* Daily stats */}
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <StatCard icon={<Plane className="h-4 w-4" />} label="Bookings today" value="6" accent="success" />
-        <StatCard icon={<Package className="h-4 w-4" />} label="Open AWBs" value="14" accent="brand" />
-        <StatCard icon={<BarChart3 className="h-4 w-4" />} label="Rate queries" value="9" accent="brand" />
-        <StatCard icon={<Zap className="h-4 w-4" />} label="Pending confirm" value="2" accent="warning" />
+        <StatCard icon={<Plane className="h-4 w-4" />} label="Contract bookings" value={String(bookings.length)} accent="success" />
+        <StatCard icon={<Package className="h-4 w-4" />} label="Assigned routes" value={String(contracts.reduce((sum, contract) => sum + contract.contractRoutes.filter((route) => route.status === "assigned").length, 0))} accent="brand" />
+        <StatCard icon={<BarChart3 className="h-4 w-4" />} label="Contract quotes" value={String(quotes.length)} accent="brand" />
+        <StatCard icon={<Zap className="h-4 w-4" />} label="Ready to book" value={String(approvedQuotes.length)} accent="warning" />
       </div>
 
       {/* Tab navigation */}
@@ -180,6 +291,69 @@ export function CargoWorkspaceClient({ operations }: { operations: EcargowareOpe
             </button>
           ))}
         </div>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Package className="h-5 w-5 text-brand" />
+            Contract route context
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {contracts.length === 0 ? (
+            <div className="rounded-lg border border-border-ui bg-surface2 p-4 text-sm text-ink-muted">
+              No assigned contract routes are available yet. Airline route assignment is required before operational quotes and bookings can be created here.
+            </div>
+          ) : (
+            <>
+              <div className="grid gap-4 md:grid-cols-3">
+                <Field label="Contract">
+                  <Select value={rateForm.contractId} onChange={(event) => {
+                    const contract = contracts.find((item) => item.id === event.target.value);
+                    const route = contract ? firstAssignedRoute(contract) : null;
+                    setRateForm((current) => ({
+                      ...current,
+                      contractId: event.target.value,
+                      routeId: route?.id ?? "",
+                      origin: route?.origin ?? current.origin,
+                      destination: route?.destination ?? current.destination,
+                    }));
+                  }}>
+                    {contracts.map((contract) => <option key={contract.id} value={contract.id}>{contract.airline} - {contract.market}</option>)}
+                  </Select>
+                </Field>
+                <Field label="Assigned route">
+                  <Select value={rateForm.routeId} onChange={(event) => {
+                    const route = selectedContract?.contractRoutes.find((item) => item.id === event.target.value);
+                    setRateForm((current) => ({ ...current, routeId: event.target.value, origin: route?.origin ?? current.origin, destination: route?.destination ?? current.destination }));
+                  }}>
+                    {(selectedContract?.contractRoutes.filter((route) => route.status === "assigned") ?? []).map((route) => (
+                      <option key={route.id} value={route.id}>{route.origin}-{route.destination}</option>
+                    ))}
+                  </Select>
+                </Field>
+                <Field label="Rate floor">
+                  <Input readOnly value={selectedContract?.controlRules?.rateFloorPerKg ? `EUR ${selectedContract.controlRules.rateFloorPerKg.toFixed(2)}/kg` : "No floor"} />
+                </Field>
+              </div>
+              <div className="grid gap-4 md:grid-cols-4">
+                <Field label="Customer">
+                  <Input value={rateForm.customer} onChange={(event) => setRateForm((current) => ({ ...current, customer: event.target.value }))} placeholder="DHL Global Forwarding" />
+                </Field>
+                <Field label="Contact name">
+                  <Input value={rateForm.contactName} onChange={(event) => setRateForm((current) => ({ ...current, contactName: event.target.value }))} placeholder="Ops contact" />
+                </Field>
+                <Field label="Contact email">
+                  <Input type="email" value={rateForm.contactEmail} onChange={(event) => setRateForm((current) => ({ ...current, contactEmail: event.target.value }))} placeholder="ops@customer.com" />
+                </Field>
+                <Field label="Requested EUR/kg">
+                  <Input type="number" step="0.01" value={rateForm.requestedRatePerKg} onChange={(event) => setRateForm((current) => ({ ...current, requestedRatePerKg: event.target.value }))} />
+                </Field>
+              </div>
+            </>
+          )}
+        </CardContent>
       </Card>
 
       {/* ─── RATES & ROUTES ─────────────────────────────────────── */}
@@ -235,6 +409,10 @@ export function CargoWorkspaceClient({ operations }: { operations: EcargowareOpe
                   <Plane className="h-4 w-4" />
                   Find Routes
                 </Button>
+                <Button variant="outline" onClick={() => createContractQuote()} disabled={running || !selectedRoute || !rateForm.customer || !rateForm.grossWeight || !rateForm.requestedRatePerKg}>
+                  <Package className="h-4 w-4" />
+                  Create contract quote
+                </Button>
               </div>
             </CardContent>
           </Card>
@@ -258,6 +436,9 @@ export function CargoWorkspaceClient({ operations }: { operations: EcargowareOpe
                         </div>
                         <div className="flex items-center gap-2">
                           <span className="font-mono text-base font-bold text-ink">EUR {r.rate.toFixed(2)}/kg</span>
+                          <button type="button" onClick={() => createContractQuote(r.rate)} disabled={!selectedRoute || !rateForm.customer || !rateForm.grossWeight} className="rounded-md border border-brand/25 px-2 py-1 text-[11px] font-bold text-brand hover:bg-brand-light disabled:opacity-50">
+                            Quote
+                          </button>
                           <button type="button" onClick={bookFromRate} className="rounded-md bg-brand px-2 py-1 text-[11px] font-bold text-white hover:bg-brand-dark">
                             Book
                           </button>
@@ -462,6 +643,30 @@ export function CargoWorkspaceClient({ operations }: { operations: EcargowareOpe
           {/* Booking result */}
           <div className="space-y-4">
             <ApiResult result={result} running={running} label={bookingView === "search" ? "Search results" : bookingView === "create" ? "Booking confirmation" : bookingView === "update" ? "Update status" : "Cancellation status"} successLabel={bookingView === "create" ? "Booking created" : bookingView === "update" ? "Booking updated" : bookingView === "cancel" ? "Booking cancelled" : "Results found"} />
+            <Card>
+              <CardContent className="p-4">
+                <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-ink-muted">Approved contract quotes</p>
+                {approvedQuotes.length === 0 ? (
+                  <p className="text-sm text-ink-muted">No approved quotes waiting for booking.</p>
+                ) : (
+                  <div className="space-y-2">
+                    {approvedQuotes.slice(0, 5).map((quote) => (
+                      <div key={quote.id} className="rounded-lg border border-border-ui bg-surface2 p-3">
+                        <div className="flex items-start justify-between gap-3">
+                          <div>
+                            <p className="text-sm font-semibold text-ink">{quote.customer}</p>
+                            <p className="text-xs text-ink-muted">{quote.origin}-{quote.destination} - EUR {quote.requestedRatePerKg.toFixed(2)}/kg - {quote.weightKg.toLocaleString()} kg</p>
+                          </div>
+                          <Button size="sm" disabled={running} onClick={() => createBookingFromQuote(quote)}>
+                            Book
+                          </Button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
             {result?.ok && bookingView === "create" && (
               <Card>
                 <CardContent className="p-4">
@@ -665,4 +870,8 @@ function Row({ label, value, mono }: { label: string; value: string; mono?: bool
       <span className={`text-xs font-semibold text-ink ${mono ? "font-mono" : ""}`}>{value}</span>
     </div>
   );
+}
+
+function firstAssignedRoute(contract: LivePartnerContract) {
+  return contract.contractRoutes.find((route) => route.status === "assigned") ?? null;
 }

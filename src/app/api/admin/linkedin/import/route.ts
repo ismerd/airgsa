@@ -1,14 +1,13 @@
 import { NextResponse } from "next/server";
 import { ApifyClient } from "apify-client";
-import { createSupabaseAdminClient } from "@/lib/supabase/client";
 import {
   buildLinkedinImportBatches,
   extractLinkedinPostsFromResponse,
   isPostInsideLookback,
   normalizeLinkedinPost,
   type RawLinkedinPost,
-  toNewsPostUpsert,
 } from "@/lib/services/linkedin";
+import { upsertImportedLinkedinPosts } from "@/lib/services/intelligence-store";
 import type { LinkedinImportPostedLimit } from "@/lib/types";
 
 export const runtime = "nodejs";
@@ -78,33 +77,12 @@ export async function POST(request: Request) {
       return true;
     });
 
-  let savedCount = 0;
-  const canSaveToSupabase = Boolean(process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.SUPABASE_SERVICE_ROLE_KEY);
-
-  if (canSaveToSupabase && filteredPosts.length > 0) {
-    const supabase = createSupabaseAdminClient();
-    const { error } = await supabase
-      .from("news_posts")
-      .upsert(filteredPosts.map(toNewsPostUpsert), { onConflict: "external_id" });
-
-    if (error) {
-      return NextResponse.json(
-        {
-          error: "Posts were imported, but saving to Supabase failed.",
-          details: error.message,
-          imported: filteredPosts.map(normalizeLinkedinPost),
-        },
-        { status: 500 },
-      );
-    }
-
-    savedCount = filteredPosts.length;
-  }
+  const storage = await upsertImportedLinkedinPosts(filteredPosts);
 
   return NextResponse.json({
     importedCount: filteredPosts.length,
-    savedCount,
-    stored: canSaveToSupabase,
+    savedCount: storage.savedCount,
+    stored: storage.stored,
     posts: filteredPosts.map(normalizeLinkedinPost),
   });
 }

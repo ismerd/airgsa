@@ -16,21 +16,8 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
 import { Topbar } from "@/components/dashboard/topbar";
-import { realGsaPartners } from "@/lib/real-gsa-data";
 import type { Registration } from "@/lib/registrations";
 
-// Static approved accounts (would come from DB in production)
-const APPROVED_ACCOUNTS = [
-  { id: "acc-001", name: "Ahmed Al-Rashid", company: "Saudia Cargo", role: "airline" as const, email: "saudia@airgsa.demo", status: "active" as const },
-  ...realGsaPartners.map((partner, index) => ({
-    id: `acc-${String(index + 7).padStart(3, "0")}`,
-    name: partner.contactName,
-    company: partner.name,
-    role: "gsa" as const,
-    email: partner.email,
-    status: "active" as const,
-  })),
-];
 function RoleBadge({ role }: { role: "airline" | "gsa" }) {
   return role === "airline" ? (
     <span className="inline-flex items-center gap-1 rounded-full border border-brand/30 bg-brand-light px-2.5 py-1 text-xs font-semibold text-brand">
@@ -87,6 +74,7 @@ export default function AccountsPage() {
 
   const pending = registrations.filter((r) => r.status === "pending");
   const reviewed = registrations.filter((r) => r.status !== "pending");
+  const approved = registrations.filter((r) => r.status === "approved");
 
   return (
     <>
@@ -245,37 +233,44 @@ export default function AccountsPage() {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm">
-                  <thead>
-                    <tr className="border-b border-border-ui text-[11px] font-semibold uppercase tracking-wider text-ink-muted">
-                      <th className="pb-3 text-left">User</th>
-                      <th className="pb-3 text-left">Company</th>
-                      <th className="pb-3 text-left">Role</th>
-                      <th className="pb-3 text-left">Status</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-border-ui">
-                    {APPROVED_ACCOUNTS.map((acc) => (
-                      <tr key={acc.id}>
-                        <td className="py-3">
-                          <div>
-                            <p className="font-medium text-ink">{acc.name}</p>
-                            <p className="text-xs text-ink-muted">{acc.email}</p>
-                          </div>
-                        </td>
-                        <td className="py-3 text-ink-muted">{acc.company}</td>
-                        <td className="py-3"><RoleBadge role={acc.role} /></td>
-                        <td className="py-3">
-                          <Badge variant={acc.status === "active" ? "success" : "danger"}>
-                            {acc.status}
-                          </Badge>
-                        </td>
+              {approved.length === 0 ? (
+                <div className="rounded-xl border border-border-ui bg-surface2 px-5 py-8 text-center">
+                  <Users className="mx-auto h-8 w-8 text-ink-muted/40" />
+                  <p className="mt-3 text-sm text-ink-muted">No approved registrations yet.</p>
+                </div>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="border-b border-border-ui text-[11px] font-semibold uppercase tracking-wider text-ink-muted">
+                        <th className="pb-3 text-left">User</th>
+                        <th className="pb-3 text-left">Company</th>
+                        <th className="pb-3 text-left">Role</th>
+                        <th className="pb-3 text-left">Reviewed</th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+                    </thead>
+                    <tbody className="divide-y divide-border-ui">
+                      {approved.map((acc) => (
+                        <tr key={acc.id}>
+                          <td className="py-3">
+                            <div>
+                              <p className="font-medium text-ink">{acc.name}</p>
+                              <p className="text-xs text-ink-muted">{acc.email}</p>
+                            </div>
+                          </td>
+                          <td className="py-3 text-ink-muted">{acc.company}</td>
+                          <td className="py-3"><RoleBadge role={acc.role} /></td>
+                          <td className="py-3">
+                            <Badge variant="success">
+                              {acc.reviewedAt ? formatDate(acc.reviewedAt) : "approved"}
+                            </Badge>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
             </CardContent>
           </Card>
 

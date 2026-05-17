@@ -4,14 +4,15 @@ import {
   gsaCampaigns,
   gsaProfiles,
   kpiSeries,
-  linkedinSources,
-  linkedinImportDefaults,
-  linkedinPostPreview,
-  newsCategories,
-  newsPosts,
   notifications,
   tenders,
 } from "@/lib/mock-data";
+import {
+  linkedinImportDefaults,
+  listLinkedinSources,
+  listNewsPosts,
+  newsCategories,
+} from "@/lib/services/intelligence-store";
 import { isSupabaseConfigured } from "@/lib/supabase/client";
 
 export {
@@ -20,11 +21,8 @@ export {
   gsaCampaigns,
   gsaProfiles,
   kpiSeries,
-  linkedinSources,
   linkedinImportDefaults,
-  linkedinPostPreview,
   newsCategories,
-  newsPosts,
   notifications,
   tenders,
 };
@@ -44,11 +42,9 @@ export async function getGsaProfileById(id: string) {
 }
 
 export async function getNewsPosts() {
-  if (!isSupabaseConfigured) return newsPosts;
-  return newsPosts;
+  return listNewsPosts();
 }
 
 export async function getLinkedinSources() {
-  if (!isSupabaseConfigured) return linkedinSources;
-  return linkedinSources;
+  return listLinkedinSources();
 }

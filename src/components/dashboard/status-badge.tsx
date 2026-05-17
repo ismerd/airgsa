@@ -8,6 +8,7 @@ const variants: Record<Status, "default" | "success" | "warning" | "danger" | "m
   accepted: "success",
   rejected: "danger",
   active: "success",
+  suspended: "warning",
   pending: "warning",
   closed: "muted",
   expiring: "danger",
@@ -16,4 +17,3 @@ const variants: Record<Status, "default" | "success" | "warning" | "danger" | "m
 export function StatusBadge({ status }: { status: Status }) {
   return <Badge variant={variants[status]}>{status}</Badge>;
 }
-

@@ -1,37 +1,63 @@
 import { AirlinePerformancePeriodPanel } from "@/components/dashboard/airline-performance-period-panel";
-import { TimeRangeFilter } from "@/components/dashboard/time-range-filter";
 import { Topbar } from "@/components/dashboard/topbar";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { getSession } from "@/lib/auth/session";
 import { CurrencyProvider } from "@/lib/currency-context";
-import { PeriodProvider } from "@/lib/period-context";
-import { kpiSeries } from "@/lib/services/platform";
+import { getAirlineOperationalPerformanceDashboard } from "@/lib/services/airline-performance-store";
 
-export default function AirlinePerformancePage() {
+export default async function AirlinePerformancePage() {
+  const session = await getSession();
+  const dashboard = session
+    ? await getAirlineOperationalPerformanceDashboard(session)
+    : {
+        kpiData: [],
+        countries: [],
+        gsas: [],
+        selectedAverage: {
+          period: "monthly" as const,
+          label: "All recorded operations",
+          revenue: 0,
+          yieldPerKg: 0,
+          loadFactor: 0,
+          tonnage: 0,
+          flightCount: 0,
+        },
+        watchlist: [],
+      };
+
   return (
     <CurrencyProvider>
-      <PeriodProvider>
-        <Topbar
-          title="Performance dashboard"
-          subtitle="Commercial KPI monitoring"
-          belowBar={<TimeRangeFilter />}
+      <Topbar
+        title="Performance dashboard"
+        subtitle="Commercial KPI monitoring from active contracts, quotes, bookings, and reports"
+      />
+      <main className="space-y-5 p-5">
+        <AirlinePerformancePeriodPanel
+          kpiData={dashboard.kpiData}
+          countries={dashboard.countries}
+          gsas={dashboard.gsas}
+          selectedAverage={dashboard.selectedAverage}
         />
-        <main className="space-y-5 p-5">
-          <AirlinePerformancePeriodPanel kpiData={kpiSeries} />
 
-          <Card>
-            <CardHeader>
-              <CardTitle>Route-level watchlist</CardTitle>
-            </CardHeader>
-            <CardContent className="grid gap-3 md:grid-cols-3">
-              {["FRA-DXB loadfactor below target", "MUC-SIN pharma yield ahead of plan", "VIE-DOH bookings need GSA push"].map((item) => (
+        <Card>
+          <CardHeader>
+            <CardTitle>Route-level watchlist</CardTitle>
+          </CardHeader>
+          <CardContent className="grid gap-3 md:grid-cols-3">
+            {dashboard.watchlist.length > 0 ? (
+              dashboard.watchlist.map((item) => (
                 <div key={item} className="rounded-xl border border-border-ui bg-surface2 p-4 text-sm text-ink-muted">
                   {item}
                 </div>
-              ))}
-            </CardContent>
-          </Card>
-        </main>
-      </PeriodProvider>
+              ))
+            ) : (
+              <div className="rounded-xl border border-border-ui bg-surface2 p-4 text-sm text-ink-muted">
+                No active route risks from the current operational workflow.
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </main>
     </CurrencyProvider>
   );
 }

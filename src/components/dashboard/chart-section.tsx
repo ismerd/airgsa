@@ -6,11 +6,21 @@ import { useCurrency } from "@/lib/currency-context";
 import { usePeriod } from "@/lib/period-context";
 import type { KpiPoint } from "@/lib/types";
 
-export function ChartSection({ allData }: { allData: KpiPoint[] }) {
+export function ChartSection({ allData, filterByPeriod = true }: { allData: KpiPoint[]; filterByPeriod?: boolean }) {
   const { currency } = useCurrency();
   const { kpiPeriod, kpiCustomStart, kpiCustomEnd } = usePeriod();
 
   const filteredData = useMemo(() => {
+    if (!filterByPeriod) {
+      return currency.rate === 1
+        ? allData
+        : allData.map((p) => ({
+            ...p,
+            revenue: Math.round(p.revenue * currency.rate),
+            yield: Math.round(p.yield * currency.rate * 100) / 100,
+          }));
+    }
+
     let data: KpiPoint[];
     if (kpiPeriod === "ytd") {
       data = allData.filter((p) => p.date >= "2026-01");
@@ -26,7 +36,7 @@ export function ChartSection({ allData }: { allData: KpiPoint[] }) {
       revenue: Math.round(p.revenue * currency.rate),
       yield: Math.round(p.yield * currency.rate * 100) / 100,
     }));
-  }, [allData, kpiPeriod, currency, kpiCustomStart, kpiCustomEnd]);
+  }, [allData, filterByPeriod, kpiPeriod, currency, kpiCustomStart, kpiCustomEnd]);
 
   return (
     <div className="grid gap-5 xl:grid-cols-2">

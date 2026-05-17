@@ -16,7 +16,7 @@ export async function PATCH(
     return NextResponse.json({ error: "action must be 'approve' or 'reject'" }, { status: 400 });
   }
 
-  const current = getAllRegistrations().find((registration) => registration.id === id);
+  const current = (await getAllRegistrations()).find((registration) => registration.id === id);
   if (!current) {
     return NextResponse.json({ error: "Registration not found" }, { status: 404 });
   }
@@ -37,7 +37,7 @@ export async function PATCH(
     }
   }
 
-  const updated = updateRegistrationStatus(
+  const updated = await updateRegistrationStatus(
     id,
     action === "approve" ? "approved" : "rejected",
     [note, provisioningNote].filter(Boolean).join("\n")

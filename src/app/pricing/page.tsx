@@ -38,7 +38,7 @@ export default function PricingPage() {
           <p className="text-sm font-semibold uppercase tracking-[0.24em] text-brand">Pricing</p>
           <h1 className="mt-4 max-w-3xl text-4xl font-semibold text-ink md:text-6xl">Commercial cargo workflows without procurement drag.</h1>
           <p className="mt-5 max-w-2xl text-lg leading-8 text-ink-muted">
-            Mock pricing for the MVP prototype. Plans map to the core airline, GSA, and admin workspaces.
+            Plans map to the core airline, GSA, and admin workspaces for controlled mandate execution.
           </p>
           <div className="mt-10 grid gap-5 lg:grid-cols-3">
             {plans.map((plan) => (

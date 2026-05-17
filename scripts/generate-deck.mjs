@@ -73,6 +73,8 @@ function featureCard(s, x, y, w, title, bullets, color) {
   return h;
 }
 
+void featureCard;
+
 function badge(s, text, x, y, color) {
   s.addShape(pptx.ShapeType.rect, {
     x, y, w: 1.5, h: 0.28,

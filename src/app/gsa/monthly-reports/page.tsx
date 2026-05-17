@@ -12,6 +12,8 @@ import { Textarea } from "@/components/ui/textarea";
 import type { ContractPerformanceSnapshot, MonthlyContractReport } from "@/lib/services/mandate-execution-store";
 import type { LivePartnerContract } from "@/lib/services/tender-workflow-store";
 
+const REPORT_ATTACHMENT_MAX_BYTES = 5 * 1024 * 1024;
+
 type ReportForm = {
   contractId: string;
   period: string;
@@ -24,6 +26,11 @@ type ReportForm = {
   risks: string;
   supportNeeded: string;
   attachmentName: string;
+  attachmentDataUrl: string;
+  attachmentMimeType: string;
+  attachmentSize: number;
+  ownerName: string;
+  ownerEmail: string;
 };
 
 const emptyForm: ReportForm = {
@@ -38,6 +45,11 @@ const emptyForm: ReportForm = {
   risks: "",
   supportNeeded: "",
   attachmentName: "",
+  attachmentDataUrl: "",
+  attachmentMimeType: "",
+  attachmentSize: 0,
+  ownerName: "",
+  ownerEmail: "",
 };
 
 export default function GsaMonthlyReportsPage() {
@@ -63,6 +75,7 @@ export default function GsaMonthlyReportsPage() {
   const selectedContract = contracts.find((contract) => contract.id === form.contractId) ?? null;
   const selectedPerformance = performance.find((item) => item.contractId === form.contractId) ?? null;
   const currentReport = reports.find((report) => report.contractId === form.contractId && report.period === form.period);
+  const reportLocked = currentReport ? ["submitted", "accepted", "rejected"].includes(currentReport.status) : false;
   const totals = useMemo(() => ({
     submitted: reports.filter((report) => report.status === "submitted").length,
     accepted: reports.filter((report) => report.status === "accepted").length,
@@ -103,6 +116,11 @@ export default function GsaMonthlyReportsPage() {
       risks: report.risks ?? "",
       supportNeeded: report.supportNeeded ?? "",
       attachmentName: report.attachmentName ?? "",
+      attachmentDataUrl: "",
+      attachmentMimeType: report.attachmentMimeType ?? "",
+      attachmentSize: report.attachmentSize ?? 0,
+      ownerName: report.ownerName ?? "",
+      ownerEmail: report.ownerEmail ?? "",
     });
   }
 
@@ -175,10 +193,27 @@ export default function GsaMonthlyReportsPage() {
                           type="file"
                           accept=".xlsx,.xls,.csv,.pdf"
                           className="sr-only"
-                          onChange={(event) => update("attachmentName", event.target.files?.[0]?.name ?? "")}
+                          onChange={async (event) => {
+                            const file = event.target.files?.[0];
+                            if (!file) return;
+                            if (file.size > REPORT_ATTACHMENT_MAX_BYTES) {
+                              setError("Attachment must be 5 MB or smaller");
+                              event.target.value = "";
+                              return;
+                            }
+                            update("attachmentName", file.name);
+                            update("attachmentMimeType", file.type);
+                            update("attachmentSize", file.size);
+                            update("attachmentDataUrl", await readFileAsDataUrl(file));
+                          }}
                         />
                       </label>
                     </Field>
+                  </div>
+
+                  <div className="grid gap-3 md:grid-cols-2">
+                    <Field label="Report owner"><Input value={form.ownerName} onChange={(event) => update("ownerName", event.target.value)} /></Field>
+                    <Field label="Owner email"><Input type="email" value={form.ownerEmail} onChange={(event) => update("ownerEmail", event.target.value)} /></Field>
                   </div>
 
                   <div className="grid gap-3 md:grid-cols-4">
@@ -197,14 +232,21 @@ export default function GsaMonthlyReportsPage() {
 
                   {currentReport?.airlineReviewNote && (
                     <div className="rounded-lg border border-warning/25 bg-warning-bg p-3 text-sm text-warning">
-                      Airline review: {currentReport.airlineReviewNote}
+                      Airline review v{currentReport.version ?? 1}: {currentReport.airlineReviewNote}
+                    </div>
+                  )}
+
+                  {currentReport && (
+                    <div className="rounded-lg border border-border-ui bg-surface2 p-3 text-sm text-ink-muted">
+                      Current version v{currentReport.version ?? 1} · {currentReport.status}
+                      {currentReport.changeRequestCount ? ` · ${currentReport.changeRequestCount} change request${currentReport.changeRequestCount === 1 ? "" : "s"}` : ""}
                     </div>
                   )}
 
                   <div className="flex flex-wrap gap-2">
                     <Button variant="outline" onClick={loadActuals} disabled={!selectedPerformance}>Use live actuals</Button>
-                    <Button variant="outline" onClick={() => saveReport(false)} disabled={saving || !selectedContract || !form.summary}>Save draft</Button>
-                    <Button onClick={() => saveReport(true)} disabled={saving || !selectedContract || !form.summary}>
+                    <Button variant="outline" onClick={() => saveReport(false)} disabled={saving || reportLocked || !selectedContract || !form.summary}>Save draft</Button>
+                    <Button onClick={() => saveReport(true)} disabled={saving || reportLocked || !selectedContract || !form.summary}>
                       <Send className="h-4 w-4" />
                       Submit to airline
                     </Button>
@@ -235,24 +277,34 @@ export default function GsaMonthlyReportsPage() {
             <table className="w-full min-w-[760px] text-sm">
               <thead className="border-b border-border-ui bg-surface2 text-xs uppercase tracking-wider text-ink-muted">
                 <tr>
-                  {["Period", "Airline", "Market", "Revenue", "Tonnage", "Status", "Action"].map((header) => <th key={header} className="px-4 py-3 text-left">{header}</th>)}
+                  {["Period", "Version", "Airline", "Market", "Revenue", "Tonnage", "Status", "Attachment", "Action"].map((header) => <th key={header} className="px-4 py-3 text-left">{header}</th>)}
                 </tr>
               </thead>
               <tbody className="divide-y divide-border-ui">
                 {reports.map((report) => (
                   <tr key={report.id}>
                     <td className="px-4 py-3 font-semibold text-ink">{report.period}</td>
+                    <td className="px-4 py-3 text-ink-muted">v{report.version ?? 1}</td>
                     <td className="px-4 py-3 text-ink-muted">{report.airline}</td>
                     <td className="px-4 py-3 text-ink-muted">{report.market}</td>
                     <td className="px-4 py-3 text-ink">{formatMoney(report.reportedRevenue)}</td>
                     <td className="px-4 py-3 text-ink-muted">{Math.round(report.reportedTonnageKg).toLocaleString()} kg</td>
                     <td className="px-4 py-3"><Badge variant={statusVariant(report.status)}>{report.status}</Badge></td>
                     <td className="px-4 py-3">
+                      {report.attachmentUrl ? (
+                        <a className="text-xs font-semibold text-brand underline" href={report.attachmentUrl} target="_blank" rel="noreferrer">
+                          Open
+                        </a>
+                      ) : (
+                        <span className="text-xs text-ink-muted">None</span>
+                      )}
+                    </td>
+                    <td className="px-4 py-3">
                       <Button size="sm" variant="outline" onClick={() => loadExisting(report)}>Load</Button>
                     </td>
                   </tr>
                 ))}
-                {reports.length === 0 && <tr><td colSpan={7} className="px-4 py-8 text-center text-ink-muted">No monthly reports yet.</td></tr>}
+                {reports.length === 0 && <tr><td colSpan={9} className="px-4 py-8 text-center text-ink-muted">No monthly reports yet.</td></tr>}
               </tbody>
             </table>
           </CardContent>
@@ -298,4 +350,13 @@ function statusVariant(status: MonthlyContractReport["status"]): "default" | "su
 
 function formatMoney(value: number) {
   return `EUR ${value.toLocaleString("en-GB", { maximumFractionDigits: 0 })}`;
+}
+
+function readFileAsDataUrl(file: File) {
+  return new Promise<string>((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result));
+    reader.onerror = () => reject(reader.error);
+    reader.readAsDataURL(file);
+  });
 }

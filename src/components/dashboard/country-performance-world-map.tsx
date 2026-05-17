@@ -2,11 +2,9 @@
 
 import dynamic from "next/dynamic";
 import { MapPinned } from "lucide-react";
-import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import type { CountryPerformance } from "@/lib/airline-performance-data";
 import { useCurrency } from "@/lib/currency-context";
-import { formatCurrency } from "@/lib/utils";
 
 const CountryPerformanceWorldLeaflet = dynamic(
   () =>

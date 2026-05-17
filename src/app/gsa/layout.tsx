@@ -1,4 +1,4 @@
-import { BarChart3, Building2, CalendarDays, FileSpreadsheet, Inbox, Megaphone, Newspaper, Package, PackageSearch, PanelLeft, Users, UserRound } from "lucide-react";
+import { BarChart3, BellRing, Building2, CalendarDays, CheckSquare2, FileSpreadsheet, Inbox, Megaphone, Newspaper, Package, PackageSearch, PanelLeft, Users, UserRound } from "lucide-react";
 import { Sidebar, type NavGroup } from "@/components/dashboard/sidebar";
 import { getSession } from "@/lib/auth/session";
 import { canViewApplication, canViewTender } from "@/lib/auth/permissions";
@@ -13,7 +13,9 @@ function getNav(notificationCount: number, accessRole?: string): NavGroup[] {
       {
         heading: "Workspace",
         items: [
+          { label: "My Tasks", href: "/gsa/tasks", icon: CheckSquare2 },
           { label: "Quote Inbox", href: "/gsa/quotes", icon: Inbox, badgeCount: PENDING_QUOTES },
+          { label: "Capacity Alerts", href: "/gsa/capacity-alerts", icon: BellRing },
           { label: "Cargo Workspace", href: "/gsa/cargo-workspace", icon: PackageSearch },
         ],
       },
@@ -44,7 +46,9 @@ function getNav(notificationCount: number, accessRole?: string): NavGroup[] {
     {
       heading: "Operations",
       items: [
+        { label: "My Tasks", href: "/gsa/tasks", icon: CheckSquare2 },
         { label: "Quote Inbox", href: "/gsa/quotes", icon: Inbox, badgeCount: PENDING_QUOTES },
+        { label: "Capacity Alerts", href: "/gsa/capacity-alerts", icon: BellRing },
         { label: "Cargo Workspace", href: "/gsa/cargo-workspace", icon: PackageSearch },
       ],
     },

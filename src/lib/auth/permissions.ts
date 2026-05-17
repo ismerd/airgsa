@@ -47,7 +47,12 @@ export function canViewContract(session: SessionPayload, contract: LivePartnerCo
 export function canEditContract(session: SessionPayload, contract: LivePartnerContract) {
   if (session.role === "admin") return true;
   if (session.role !== "airline") return false;
+  if (session.accessRole === "operator" || session.accessRole === "viewer") return false;
   return isContractOwnedByAirline(session, contract);
+}
+
+export function canManageWorkflow(session: SessionPayload) {
+  return session.role === "admin" || session.accessRole === undefined || ["owner", "admin", "manager"].includes(session.accessRole);
 }
 
 export function isTenderOwnedByAirline(session: SessionPayload, tender: LiveTender) {

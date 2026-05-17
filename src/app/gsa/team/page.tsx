@@ -5,7 +5,7 @@ import { TeamAccessClient } from "./team-access-client";
 
 export default async function GsaTeamPage() {
   const session = await getSession();
-  const accounts = session ? await listTeamAccounts(session.company, "gsa") : [];
+  const accounts = session ? await listTeamAccounts(session.company, "gsa", session.companyId) : [];
 
   return (
     <main className="min-h-screen bg-page">

@@ -1,9 +1,10 @@
 "use client";
 
 import { useState } from "react";
-import type { ContractControlAction } from "@/lib/services/mandate-execution-store";
+import type { ContractControlAction, ControlActionComment } from "@/lib/services/mandate-execution-store";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 
 export function GsaControlActionsClient({ actions }: { actions: ContractControlAction[] }) {
@@ -11,6 +12,11 @@ export function GsaControlActionsClient({ actions }: { actions: ContractControlA
   const [responses, setResponses] = useState<Record<string, string>>(
     Object.fromEntries(actions.map((action) => [action.id, action.gsaResponse ?? ""])),
   );
+  const [commentBody, setCommentBody] = useState<Record<string, string>>({});
+  const [attachmentName, setAttachmentName] = useState<Record<string, string>>({});
+  const [attachmentDataUrl, setAttachmentDataUrl] = useState<Record<string, string>>({});
+  const [attachmentMimeType, setAttachmentMimeType] = useState<Record<string, string>>({});
+  const [attachmentSize, setAttachmentSize] = useState<Record<string, number>>({});
   const [savingId, setSavingId] = useState<string | null>(null);
   const openActions = items.filter((action) => action.status !== "completed" && action.status !== "cancelled");
 
@@ -28,6 +34,38 @@ export function GsaControlActionsClient({ actions }: { actions: ContractControlA
       const data = await res.json();
       if (res.ok) {
         setItems((current) => current.map((item) => (item.id === data.controlAction.id ? data.controlAction : item)));
+      }
+    } finally {
+      setSavingId(null);
+    }
+  }
+
+  async function addComment(action: ContractControlAction) {
+    setSavingId(action.id);
+    try {
+      const res = await fetch(`/api/control-actions/${action.id}/comments`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          body: commentBody[action.id] ?? "",
+          attachmentName: attachmentName[action.id] ?? "",
+          attachmentDataUrl: attachmentDataUrl[action.id],
+          attachmentMimeType: attachmentMimeType[action.id],
+          attachmentSize: attachmentSize[action.id],
+        }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setItems((current) => current.map((item) => (
+          item.id === action.id
+            ? { ...item, status: item.status === "open" ? "in-progress" : item.status, comments: [...(item.comments ?? []), data.comment as ControlActionComment] }
+            : item
+        )));
+        setCommentBody((current) => ({ ...current, [action.id]: "" }));
+        setAttachmentName((current) => ({ ...current, [action.id]: "" }));
+        setAttachmentDataUrl((current) => ({ ...current, [action.id]: "" }));
+        setAttachmentMimeType((current) => ({ ...current, [action.id]: "" }));
+        setAttachmentSize((current) => ({ ...current, [action.id]: 0 }));
       }
     } finally {
       setSavingId(null);
@@ -58,12 +96,59 @@ export function GsaControlActionsClient({ actions }: { actions: ContractControlA
               {action.sourceRiskReasons.map((reason) => <Badge key={reason} variant="warning">{reason}</Badge>)}
             </div>
           )}
+          {(action.comments ?? []).length > 0 && (
+            <div className="mt-3 space-y-2 border-t border-border-ui pt-3">
+              {(action.comments ?? []).map((comment) => (
+                <div key={comment.id} className="rounded-lg border border-border-ui bg-surface p-3 text-sm">
+                  <p className="font-semibold text-ink">{comment.createdByName} <span className="font-normal text-ink-muted">({comment.createdByRole})</span></p>
+                  {comment.body && <p className="mt-1 text-ink-muted">{comment.body}</p>}
+                  {comment.attachmentName && <p className="mt-1 text-xs font-semibold text-brand">Proof: {comment.attachmentName}</p>}
+                  {(comment.attachmentUrl || comment.attachmentDataUrl) && (
+                    <a className="mt-1 block text-xs font-semibold text-brand underline" href={comment.attachmentUrl ?? comment.attachmentDataUrl} target="_blank" rel="noreferrer">
+                      Open proof
+                    </a>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
           <Textarea
             className="mt-3"
             value={responses[action.id] ?? ""}
             onChange={(event) => setResponses((current) => ({ ...current, [action.id]: event.target.value }))}
             placeholder="Add recovery plan, update or completion note..."
           />
+          <div className="mt-3 grid gap-2 md:grid-cols-[1fr_220px_auto]">
+            <Input
+              value={commentBody[action.id] ?? ""}
+              onChange={(event) => setCommentBody((current) => ({ ...current, [action.id]: event.target.value }))}
+              placeholder="Add timeline comment..."
+            />
+            <label className="flex h-10 cursor-pointer items-center rounded-lg border border-border-ui bg-surface px-3 text-sm text-ink-muted">
+              {attachmentName[action.id] || "Attach proof"}
+              <Input
+                type="file"
+                className="sr-only"
+                onChange={async (event) => {
+                  const file = event.target.files?.[0];
+                  if (!file) return;
+                  const dataUrl = await readFileAsDataUrl(file);
+                  setAttachmentName((current) => ({ ...current, [action.id]: file.name }));
+                  setAttachmentDataUrl((current) => ({ ...current, [action.id]: dataUrl }));
+                  setAttachmentMimeType((current) => ({ ...current, [action.id]: file.type }));
+                  setAttachmentSize((current) => ({ ...current, [action.id]: file.size }));
+                }}
+              />
+            </label>
+            <Button
+              size="sm"
+              variant="outline"
+              disabled={savingId === action.id || (!(commentBody[action.id] ?? "").trim() && !(attachmentName[action.id] ?? "").trim())}
+              onClick={() => addComment(action)}
+            >
+              Add proof
+            </Button>
+          </div>
           <div className="mt-3 flex gap-2">
             <Button size="sm" variant="outline" disabled={savingId === action.id} onClick={() => updateAction(action, "in-progress")}>
               In progress
@@ -89,4 +174,13 @@ function statusVariant(status: ContractControlAction["status"]): "default" | "su
   if (status === "in-progress") return "warning";
   if (status === "cancelled") return "muted";
   return "default";
+}
+
+function readFileAsDataUrl(file: File) {
+  return new Promise<string>((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result));
+    reader.onerror = () => reject(reader.error);
+    reader.readAsDataURL(file);
+  });
 }

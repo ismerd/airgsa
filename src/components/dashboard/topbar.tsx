@@ -20,6 +20,15 @@ type NotificationItem = {
   title: string;
   body: string;
   href: string;
+  workflowId?: string;
+};
+
+type WorkflowNotification = {
+  id: string;
+  title: string;
+  body: string;
+  href: string;
+  readAt?: string;
 };
 
 export function Topbar({
@@ -55,6 +64,21 @@ export function Topbar({
   }, [pathname]);
 
   useEffect(() => {
+    async function loadWorkflowNotifications(): Promise<NotificationItem[]> {
+      const res = await fetch("/api/notifications", { cache: "no-store" });
+      if (!res.ok) return [];
+      const data = await res.json();
+      return ((data.notifications ?? []) as WorkflowNotification[])
+        .filter((item) => !item.readAt)
+        .map((item) => ({
+          id: `workflow-${item.id}`,
+          workflowId: item.id,
+          title: item.title,
+          body: item.body,
+          href: item.href,
+        }));
+    }
+
     if (isAirline) {
       function loadAirlineNotifications() {
         if (pathname.startsWith("/airline/applications")) {
@@ -63,18 +87,20 @@ export function Topbar({
           return;
         }
 
-        fetch("/api/applications")
-          .then((res) => (res.ok ? res.json() : null))
-          .then((data) => {
-            if (!data) return;
-            const items = ((data.applications ?? []) as LiveTenderApplication[])
+        Promise.all([
+          loadWorkflowNotifications(),
+          fetch("/api/applications").then((res) => (res.ok ? res.json() : null)),
+        ])
+          .then(([workflowItems, data]) => {
+            const applicationItems = data ? ((data.applications ?? []) as LiveTenderApplication[])
               .filter(isUnreadAirlineApplication)
               .map((item) => ({
                 id: item.id,
                 title: `New application from ${item.gsaName}`,
                 body: item.proposedCommission || "Review the submitted proposal.",
                 href: `/airline/applications/${item.id}`,
-              }));
+              })) : [];
+            const items = [...workflowItems, ...applicationItems];
             setNotifications(items);
             setNotificationCount(items.length);
           })
@@ -86,15 +112,20 @@ export function Topbar({
     }
 
     Promise.all([
+      loadWorkflowNotifications(),
       fetch("/api/tenders").then((res) => (res.ok ? res.json() : null)),
       fetch("/api/applications").then((res) => (res.ok ? res.json() : null)),
     ])
-      .then(([tenderData, applicationData]) => {
-        if (!tenderData || !applicationData) return;
+      .then(([workflowItems, tenderData, applicationData]) => {
+        if (!tenderData || !applicationData) {
+          setNotifications(workflowItems);
+          setNotificationCount(workflowItems.length);
+          return;
+        }
         const appliedTenderIds = new Set(
           ((applicationData.applications ?? []) as LiveTenderApplication[]).map((application) => application.tenderId),
         );
-        const items = (tenderData.tenders ?? [])
+        const tenderItems = (tenderData.tenders ?? [])
           .filter((tender: { id: string }) => !appliedTenderIds.has(tender.id))
           .map((tender: { id: string; title: string; airline: string; countryScope?: string }) => ({
             id: tender.id,
@@ -102,6 +133,7 @@ export function Topbar({
             body: `${tender.airline} tender${tender.countryScope ? ` - ${tender.countryScope}` : ""}`,
             href: `/gsa/tenders/${tender.id}`,
           }));
+        const items = [...workflowItems, ...tenderItems];
         setNotifications(items);
         setNotificationCount(items.length);
       })
@@ -150,7 +182,10 @@ export function Topbar({
                       <Link
                         key={item.id}
                         href={item.href}
-                        onClick={() => setOpen(false)}
+                        onClick={() => {
+                          if (item.workflowId) fetch(`/api/notifications/${item.workflowId}`, { method: "PATCH" }).catch(() => undefined);
+                          setOpen(false);
+                        }}
                         className="block border-b border-border-ui px-4 py-3 transition-colors last:border-b-0 hover:bg-surface2"
                       >
                         <p className="text-sm font-semibold text-ink">{item.title}</p>

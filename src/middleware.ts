@@ -70,6 +70,7 @@ export async function middleware(req: NextRequest) {
       pathname.startsWith("/gsa/cargo-workspace") ||
       pathname.startsWith("/gsa/performance") ||
       pathname.startsWith("/gsa/notifications") ||
+      pathname.startsWith("/gsa/capacity-alerts") ||
       pathname.startsWith("/gsa/quotes") ||
       pathname.startsWith("/gsa/customers") ||
       pathname.startsWith("/gsa/shipments") ||

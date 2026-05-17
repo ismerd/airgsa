@@ -93,6 +93,7 @@ export function TeamAccessClient({
   }
 
   async function copyCredentials(account: TeamAccount) {
+    if (!account.password) return;
     await navigator.clipboard.writeText(`${account.email} / ${account.password}`);
   }
 
@@ -107,7 +108,7 @@ export function TeamAccessClient({
                 <h2 className="mt-2 text-2xl font-bold tracking-tight text-ink">Every employee gets a focused workspace.</h2>
                 <p className="mt-3 max-w-3xl text-sm leading-6 text-ink-muted">
                   Operators should work, not navigate through admin tools. Invite an employee, choose the access profile,
-                  then hand over the generated demo credentials.
+                  then hand over the generated credentials.
                 </p>
               </div>
               <Button type="button" onClick={() => setInviteOpen((current) => !current)}>
@@ -122,10 +123,10 @@ export function TeamAccessClient({
             </div>
           </div>
           <div className="bg-surface2 p-6">
-            <h3 className="text-sm font-bold text-ink">Ready-to-login demo accounts</h3>
+            <h3 className="text-sm font-bold text-ink">Ready-to-login employee accounts</h3>
             <p className="mt-2 text-sm leading-6 text-ink-muted">
-              Email delivery is not connected yet, so AirGSA creates usable credentials immediately.
-              The generated employee can log in with the shown email and password.
+              Team access is scoped to your company. Development accounts can receive an immediate password; production
+              invites stay pending until real authentication delivery is connected.
             </p>
             <div className="mt-5 rounded-xl border border-border-ui bg-surface p-4">
               <p className="text-xs font-bold uppercase tracking-[0.14em] text-ink-muted">Company</p>
@@ -168,12 +169,14 @@ export function TeamAccessClient({
                   <CheckCircle2 className="h-4 w-4" />
                   Employee account created
                 </p>
-                <p className="mt-1 font-mono text-sm text-ink">{created.email} / {created.password}</p>
+                <p className="mt-1 font-mono text-sm text-ink">{created.email}{created.password ? ` / ${created.password}` : " / invitation pending"}</p>
               </div>
-              <Button type="button" variant="outline" onClick={() => copyCredentials(created)}>
-                <Copy className="h-4 w-4" />
-                Copy credentials
-              </Button>
+              {created.password && (
+                <Button type="button" variant="outline" onClick={() => copyCredentials(created)}>
+                  <Copy className="h-4 w-4" />
+                  Copy credentials
+                </Button>
+              )}
             </div>
           )}
         </Card>
@@ -214,9 +217,13 @@ export function TeamAccessClient({
                 <p className="text-sm font-bold text-ink">{member.quotes}</p>
                 <p className="text-sm font-bold text-ink">{member.bookings}</p>
                 <p className="text-sm font-bold text-ink">{member.responseTime}</p>
-                <button type="button" onClick={() => copyCredentials(member)} className="text-left text-xs font-semibold text-brand hover:underline">
-                  Copy
-                </button>
+                {member.password ? (
+                  <button type="button" onClick={() => copyCredentials(member)} className="text-left text-xs font-semibold text-brand hover:underline">
+                    Copy
+                  </button>
+                ) : (
+                  <span className="text-xs font-semibold text-ink-muted">Pending</span>
+                )}
               </div>
             ))}
           </div>

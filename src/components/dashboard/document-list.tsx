@@ -103,15 +103,16 @@ export function DocumentList({ documents }: { documents: TenderWorkflowDocument[
 }
 
 function getDocumentSource(file: TenderWorkflowDocument): DocumentSource {
-  if (file.dataUrl) {
+  const href = file.documentUrl ?? file.dataUrl;
+  if (href) {
     return {
       available: true,
-      href: file.dataUrl,
+      href,
       downloadName: file.name,
       preview: {
         name: file.name,
         mimeType: file.mimeType,
-        src: file.dataUrl,
+        src: href,
         isImage: file.mimeType.startsWith("image/"),
       },
     };

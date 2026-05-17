@@ -331,10 +331,19 @@ function getSortValue(aircraft: FleetAircraftListItem, key: SortKey) {
 
 function compareValues(left: string | number, right: string | number) {
   if (typeof left === "number" && typeof right === "number") return left - right;
-  return String(left).localeCompare(String(right), undefined, { numeric: true, sensitivity: "base" });
+  return String(left).localeCompare(String(right), "en", { numeric: true, sensitivity: "base" });
 }
 
 function formatDateTime(value: string | undefined) {
   if (!value) return "-";
-  return new Date(value).toLocaleString();
+  return new Intl.DateTimeFormat("en-GB", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+    hour12: false,
+    timeZone: "UTC",
+  }).format(new Date(value));
 }

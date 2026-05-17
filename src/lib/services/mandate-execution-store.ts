@@ -2,7 +2,8 @@ import { mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 import type { SessionPayload } from "@/lib/auth/session";
 import { canViewContract } from "@/lib/auth/permissions";
-import { rowData, withPostgres } from "@/lib/services/postgres-store";
+import { saveWorkflowAttachment } from "@/lib/services/attachment-store";
+import { assertFileStoreFallbackAllowed, rowData, withPostgres } from "@/lib/services/postgres-store";
 import { listLivePartnerContracts, type LiveContractRoute, type LivePartnerContract } from "@/lib/services/tender-workflow-store";
 
 const STORE_PATH = path.join(process.cwd(), "data", "mandate-execution.json");
@@ -15,12 +16,25 @@ export type MandateQuoteStatus =
   | "airline-approved"
   | "airline-rejected"
   | "countered"
-  | "declined";
+  | "declined"
+  | "expired";
 
 export type MandateBookingStatus = "booked" | "flown" | "cancelled";
+export type RevenueReconciliationStatus = "pending" | "reconciled" | "disputed";
 export type ControlActionStatus = "open" | "in-progress" | "completed" | "cancelled";
 export type ControlActionSeverity = "info" | "warning" | "critical";
 export type MonthlyReportStatus = "draft" | "submitted" | "accepted" | "changes-requested" | "rejected";
+export type NotificationType = "control-action" | "monthly-report" | "quote" | "booking" | "system";
+
+const MONTHLY_REPORT_ATTACHMENT_MAX_BYTES = 5 * 1024 * 1024;
+const MONTHLY_REPORT_ALLOWED_EXTENSIONS = new Set(["pdf", "csv", "xls", "xlsx"]);
+const MONTHLY_REPORT_ALLOWED_MIME_TYPES = new Set([
+  "application/pdf",
+  "text/csv",
+  "application/csv",
+  "application/vnd.ms-excel",
+  "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+]);
 
 export type MandateQuote = {
   id: string;
@@ -96,14 +110,24 @@ export type MandateBooking = {
   contactEmail: string;
   cargoType: string;
   weightKg: number;
+  bookedWeightKg?: number;
+  flownWeightKg?: number;
   pieces: number;
   ratePerKg: number;
   revenueAmount: number;
+  bookedRevenueAmount?: number;
+  finalRevenueAmount?: number;
   currency: "EUR";
   awbNumber: string;
   flightNumber?: string;
   flightDate: string;
   status: MandateBookingStatus;
+  reconciliationStatus?: RevenueReconciliationStatus;
+  reconciliationNote?: string;
+  cancelledAt?: string;
+  cancelledBy?: string;
+  cancellationReason?: string;
+  flownAt?: string;
   createdAt: string;
   updatedAt: string;
   createdBy: string;
@@ -116,6 +140,17 @@ export type BookingCreateInput = {
   flightDate?: string;
   flownWeightKg?: number;
   finalRatePerKg?: number;
+};
+
+export type BookingUpdateInput = {
+  status?: MandateBookingStatus;
+  flownWeightKg?: number;
+  finalRatePerKg?: number;
+  flightNumber?: string;
+  flightDate?: string;
+  reconciliationStatus?: RevenueReconciliationStatus;
+  reconciliationNote?: string;
+  cancellationReason?: string;
 };
 
 export type ContractRoutePerformance = {
@@ -177,6 +212,8 @@ export type ContractControlAction = {
   severity: ControlActionSeverity;
   status: ControlActionStatus;
   dueDate?: string;
+  assigneeName?: string;
+  assigneeEmail?: string;
   sourceRiskReasons: string[];
   gsaResponse?: string;
   createdAt: string;
@@ -184,6 +221,48 @@ export type ContractControlAction = {
   createdBy: string;
   lastUpdatedBy?: string;
   closedAt?: string;
+  comments?: ControlActionComment[];
+};
+
+export type ControlActionComment = {
+  id: string;
+  actionId: string;
+  contractId: string;
+  body: string;
+  attachmentName?: string;
+  attachmentDataUrl?: string;
+  attachmentUrl?: string;
+  attachmentStoragePath?: string;
+  attachmentMimeType?: string;
+  attachmentSize?: number;
+  createdAt: string;
+  createdBy: string;
+  createdByName: string;
+  createdByRole: SessionPayload["role"];
+};
+
+export type ControlActionCommentInput = {
+  body: string;
+  attachmentName?: string;
+  attachmentDataUrl?: string;
+  attachmentUrl?: string;
+  attachmentStoragePath?: string;
+  attachmentMimeType?: string;
+  attachmentSize?: number;
+};
+
+export type WorkflowNotification = {
+  id: string;
+  recipientRole: "airline" | "gsa" | "admin";
+  recipientCompanyId?: string;
+  recipientEmail?: string;
+  title: string;
+  body: string;
+  href: string;
+  type: NotificationType;
+  entityId: string;
+  readAt?: string;
+  createdAt: string;
 };
 
 export type ControlActionCreateInput = {
@@ -192,6 +271,8 @@ export type ControlActionCreateInput = {
   description?: string;
   severity?: ControlActionSeverity;
   dueDate?: string;
+  assigneeName?: string;
+  assigneeEmail?: string;
   sourceRiskReasons?: string[];
 };
 
@@ -200,6 +281,8 @@ export type ControlActionUpdateInput = {
   description?: string;
   severity?: ControlActionSeverity;
   dueDate?: string;
+  assigneeName?: string;
+  assigneeEmail?: string;
   gsaResponse?: string;
 };
 
@@ -214,6 +297,9 @@ export type MonthlyContractReport = {
   gsaCompanyId?: string;
   market: string;
   period: string;
+  version: number;
+  revisions: MonthlyReportRevision[];
+  changeRequestCount?: number;
   status: MonthlyReportStatus;
   reportedRevenue: number;
   reportedTonnageKg: number;
@@ -224,6 +310,13 @@ export type MonthlyContractReport = {
   risks?: string;
   supportNeeded?: string;
   attachmentName?: string;
+  attachmentDataUrl?: string;
+  attachmentUrl?: string;
+  attachmentStoragePath?: string;
+  attachmentMimeType?: string;
+  attachmentSize?: number;
+  ownerName?: string;
+  ownerEmail?: string;
   airlineReviewNote?: string;
   submittedAt?: string;
   reviewedAt?: string;
@@ -232,6 +325,27 @@ export type MonthlyContractReport = {
   updatedAt: string;
   createdBy: string;
   lastUpdatedBy?: string;
+};
+
+export type MonthlyReportRevision = {
+  version: number;
+  status: MonthlyReportStatus;
+  reportedRevenue: number;
+  reportedTonnageKg: number;
+  reportedQuotes: number;
+  reportedBookings: number;
+  summary: string;
+  pipelineNotes?: string;
+  risks?: string;
+  supportNeeded?: string;
+  attachmentName?: string;
+  attachmentUrl?: string;
+  attachmentStoragePath?: string;
+  ownerName?: string;
+  ownerEmail?: string;
+  airlineReviewNote?: string;
+  createdAt: string;
+  createdBy: string;
 };
 
 export type MonthlyReportInput = {
@@ -246,6 +360,11 @@ export type MonthlyReportInput = {
   risks?: string;
   supportNeeded?: string;
   attachmentName?: string;
+  attachmentDataUrl?: string;
+  attachmentMimeType?: string;
+  attachmentSize?: number;
+  ownerName?: string;
+  ownerEmail?: string;
   submit?: boolean;
 };
 
@@ -283,6 +402,8 @@ type MandateExecutionStore = {
   quotes: MandateQuote[];
   bookings: MandateBooking[];
   controlActions: ContractControlAction[];
+  controlActionComments: ControlActionComment[];
+  notifications: WorkflowNotification[];
   monthlyReports: MonthlyContractReport[];
   auditEvents: MandateAuditEvent[];
 };
@@ -292,6 +413,7 @@ export async function listMandateQuotes(session: SessionPayload) {
   const visibleContractIds = new Set(contracts.filter((contract) => canViewContract(session, contract)).map((contract) => contract.id));
   return store.quotes
     .filter((quote) => visibleContractIds.has(quote.contractId))
+    .map(withRuntimeQuoteStatus)
     .sort((left, right) => right.createdAt.localeCompare(left.createdAt));
 }
 
@@ -319,11 +441,50 @@ export async function listControlActions(session: SessionPayload) {
   const visibleContractIds = new Set(contracts.filter((contract) => canViewContract(session, contract)).map((contract) => contract.id));
   return store.controlActions
     .filter((action) => visibleContractIds.has(action.contractId))
+    .map((action) => ({
+      ...action,
+      comments: store.controlActionComments
+        .filter((comment) => comment.actionId === action.id)
+        .sort((left, right) => left.createdAt.localeCompare(right.createdAt)),
+    }))
     .sort((left, right) => {
       const statusScore = statusOrder(left.status) - statusOrder(right.status);
       if (statusScore !== 0) return statusScore;
       return right.createdAt.localeCompare(left.createdAt);
     });
+}
+
+export async function listWorkflowNotifications(session: SessionPayload) {
+  const store = await readStore();
+  return store.notifications
+    .filter((notification) => isNotificationForSession(notification, session))
+    .sort((left, right) => right.createdAt.localeCompare(left.createdAt));
+}
+
+export async function markWorkflowNotificationRead(session: SessionPayload, id: string) {
+  const store = await readStore();
+  const index = store.notifications.findIndex((notification) => notification.id === id);
+  if (index < 0) return null;
+  if (!isNotificationForSession(store.notifications[index], session)) throw new Error("Notification not found");
+  store.notifications[index] = {
+    ...store.notifications[index],
+    readAt: store.notifications[index].readAt ?? new Date().toISOString(),
+  };
+  await writeStore(store);
+  return store.notifications[index];
+}
+
+export async function markAllWorkflowNotificationsRead(session: SessionPayload) {
+  const store = await readStore();
+  const now = new Date().toISOString();
+  let changed = false;
+  store.notifications = store.notifications.map((notification) => {
+    if (notification.readAt || !isNotificationForSession(notification, session)) return notification;
+    changed = true;
+    return { ...notification, readAt: now };
+  });
+  if (changed) await writeStore(store);
+  return store.notifications.filter((notification) => isNotificationForSession(notification, session));
 }
 
 export async function listMonthlyReports(session: SessionPayload) {
@@ -340,6 +501,8 @@ export async function createMandateQuote(session: SessionPayload, input: QuoteCr
   if (!contract || !canViewContract(session, contract) || session.role !== "gsa") {
     throw new Error("Contract not found");
   }
+  ensureContractAllowsGsaOperations(contract);
+  validateQuoteInput(contract, input);
 
   const floorRate = contract.controlRules?.rateFloorPerKg;
   const status = getInitialQuoteStatus(input.requestedRatePerKg, floorRate, contract);
@@ -393,13 +556,31 @@ export async function updateMandateQuoteStatus(session: SessionPayload, quoteId:
   if (!contract || !canViewContract(session, contract)) throw new Error("Quote not found");
 
   const now = new Date().toISOString();
-  const quote = store.quotes[index];
-  const nextStatus = getNextQuoteStatus(session, input.action);
+  const quote = withRuntimeQuoteStatus(store.quotes[index]);
+  if (quote.status === "expired") {
+    store.quotes[index] = {
+      ...store.quotes[index],
+      status: "expired",
+      decisionReason: store.quotes[index].decisionReason ?? "Customer deadline expired before quote decision.",
+      updatedAt: now,
+    };
+    store.auditEvents.unshift(buildAuditEvent(session, {
+      entityType: "quote",
+      entityId: quote.id,
+      action: "quote.expired",
+      summary: `Quote ${quote.id} expired before decision`,
+      metadata: { contractId: quote.contractId, deadline: quote.deadline },
+    }));
+    await writeStore(store);
+    throw new Error("Quote deadline has expired");
+  }
+
+  const nextStatus = getNextQuoteStatus(session, quote, input);
   const nextQuote: MandateQuote = {
     ...quote,
     status: nextStatus,
     decisionReason: input.reason ?? quote.decisionReason,
-    counterRatePerKg: input.action === "counter" ? input.counterRatePerKg : quote.counterRatePerKg,
+    counterRatePerKg: input.action === "counter" ? requirePositiveCounterRate(input.counterRatePerKg) : quote.counterRatePerKg,
     updatedAt: now,
     decidedAt: now,
     decidedBy: session.email,
@@ -432,17 +613,22 @@ export async function createMandateBooking(session: SessionPayload, input: Booki
   const contracts = await listLivePartnerContracts();
   const contract = contracts.find((item) => item.id === quote.contractId);
   if (!contract || !canViewContract(session, contract)) throw new Error("Quote not found");
+  ensureContractAllowsGsaOperations(contract);
   if (session.role === "gsa" && quote.gsaCompanyId && quote.gsaCompanyId !== session.companyId) throw new Error("Quote not found");
   if (quote.status !== "auto-approved" && quote.status !== "airline-approved") {
     throw new Error("Only approved quotes can be converted into bookings");
   }
 
+  const awbNumber = normalizeAwbNumber(input.awbNumber) ?? generateAwbNumber();
+  if (store.bookings.some((booking) => booking.awbNumber === awbNumber)) throw new Error("AWB number already exists");
   const existing = store.bookings.find((booking) => booking.quoteId === quote.id);
   if (existing) return existing;
 
   const now = new Date().toISOString();
   const ratePerKg = positiveNumber(input.finalRatePerKg) ?? quote.counterRatePerKg ?? quote.requestedRatePerKg;
   const weightKg = positiveNumber(input.flownWeightKg) ?? quote.weightKg;
+  const bookedRevenueAmount = roundMoney(quote.weightKg * ratePerKg);
+  const revenueAmount = roundMoney(weightKg * ratePerKg);
   const booking: MandateBooking = {
     id: `bkg-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`,
     quoteId: quote.id,
@@ -462,14 +648,19 @@ export async function createMandateBooking(session: SessionPayload, input: Booki
     contactEmail: quote.contactEmail,
     cargoType: quote.cargoType,
     weightKg,
+    bookedWeightKg: quote.weightKg,
+    flownWeightKg: input.flownWeightKg ? weightKg : undefined,
     pieces: quote.pieces,
     ratePerKg,
-    revenueAmount: Math.round(weightKg * ratePerKg * 100) / 100,
+    revenueAmount,
+    bookedRevenueAmount,
+    finalRevenueAmount: input.flownWeightKg ? revenueAmount : undefined,
     currency: "EUR",
-    awbNumber: input.awbNumber?.trim() || generateAwbNumber(),
+    awbNumber,
     flightNumber: input.flightNumber?.trim() || undefined,
     flightDate: input.flightDate || quote.flightDate,
     status: "booked",
+    reconciliationStatus: "pending",
     createdAt: now,
     updatedAt: now,
     createdBy: session.email,
@@ -506,13 +697,90 @@ export async function createMandateBooking(session: SessionPayload, input: Booki
   return booking;
 }
 
+export async function updateMandateBooking(session: SessionPayload, id: string, input: BookingUpdateInput) {
+  const store = await readStore();
+  const index = store.bookings.findIndex((booking) => booking.id === id || booking.awbNumber === normalizeAwbNumber(id));
+  if (index < 0) return null;
+
+  const contracts = await listLivePartnerContracts();
+  const contract = contracts.find((item) => item.id === store.bookings[index].contractId);
+  if (!contract || !canViewContract(session, contract)) throw new Error("Booking not found");
+  if (session.role === "gsa" && store.bookings[index].gsaCompanyId && store.bookings[index].gsaCompanyId !== session.companyId) {
+    throw new Error("Booking not found");
+  }
+  if (session.role === "gsa" && input.status && input.status !== "cancelled") throw new Error("Only airline can mark flown or reconcile bookings");
+  if ((session.role === "airline" || session.role === "admin") && !canManageWorkflow(session)) throw new Error("Manager access required");
+
+  const current = store.bookings[index];
+  const nextStatus = input.status ?? current.status;
+  if (!canTransitionBookingStatus(current.status, nextStatus)) {
+    throw new Error(`Invalid booking status transition from ${current.status} to ${nextStatus}`);
+  }
+
+  const now = new Date().toISOString();
+  const ratePerKg = positiveNumber(input.finalRatePerKg) ?? current.ratePerKg;
+  const flownWeightKg = positiveNumber(input.flownWeightKg) ?? current.flownWeightKg ?? current.weightKg;
+  const finalRevenueAmount = roundMoney(flownWeightKg * ratePerKg);
+  const cancelled = nextStatus === "cancelled";
+  const flown = nextStatus === "flown";
+  const booking: MandateBooking = {
+    ...current,
+    status: nextStatus,
+    flightNumber: input.flightNumber !== undefined ? input.flightNumber.trim() || undefined : current.flightNumber,
+    flightDate: input.flightDate || current.flightDate,
+    ratePerKg,
+    weightKg: cancelled ? 0 : flown ? flownWeightKg : current.weightKg,
+    flownWeightKg: flown ? flownWeightKg : current.flownWeightKg,
+    revenueAmount: cancelled ? 0 : flown ? finalRevenueAmount : current.revenueAmount,
+    finalRevenueAmount: flown ? finalRevenueAmount : current.finalRevenueAmount,
+    reconciliationStatus: input.reconciliationStatus ?? (flown ? "reconciled" : cancelled ? "reconciled" : current.reconciliationStatus ?? "pending"),
+    reconciliationNote: input.reconciliationNote?.trim() || current.reconciliationNote,
+    cancelledAt: cancelled ? current.cancelledAt ?? now : current.cancelledAt,
+    cancelledBy: cancelled ? current.cancelledBy ?? session.email : current.cancelledBy,
+    cancellationReason: cancelled ? input.cancellationReason?.trim() || current.cancellationReason || "Cancelled by user" : current.cancellationReason,
+    flownAt: flown ? current.flownAt ?? now : current.flownAt,
+    updatedAt: now,
+  };
+
+  store.bookings[index] = booking;
+  store.auditEvents.unshift(buildAuditEvent(session, {
+    entityType: "booking",
+    entityId: booking.id,
+    action: `booking.${nextStatus}`,
+    summary: `${session.company} updated booking ${booking.awbNumber} to ${nextStatus}`,
+    metadata: {
+      contractId: booking.contractId,
+      awbNumber: booking.awbNumber,
+      revenueAmount: booking.revenueAmount,
+      reconciliationStatus: booking.reconciliationStatus,
+    },
+  }));
+  store.auditEvents.unshift(buildAuditEvent(session, {
+    entityType: "revenue",
+    entityId: booking.id,
+    action: "revenue.reconciled",
+    summary: `Revenue for ${booking.awbNumber} is now EUR ${booking.revenueAmount.toLocaleString("en-GB", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
+    metadata: {
+      contractId: booking.contractId,
+      awbNumber: booking.awbNumber,
+      status: booking.status,
+      bookedRevenueAmount: booking.bookedRevenueAmount,
+      finalRevenueAmount: booking.finalRevenueAmount,
+    },
+  }));
+  await writeStore(store);
+  return booking;
+}
+
 export async function createControlAction(session: SessionPayload, input: ControlActionCreateInput) {
   if (session.role !== "airline" && session.role !== "admin") throw new Error("Airline login required");
+  if (!canManageWorkflow(session)) throw new Error("Manager access required");
   if (!input.contractId || !input.title?.trim()) throw new Error("Control action needs contract and title");
 
   const contracts = await listLivePartnerContracts();
   const contract = contracts.find((item) => item.id === input.contractId);
   if (!contract || !canViewContract(session, contract)) throw new Error("Contract not found");
+  if (contract.status === "closed") throw new Error("Closed contracts cannot receive control actions");
 
   const store = await readStore();
   const title = input.title.trim();
@@ -541,6 +809,8 @@ export async function createControlAction(session: SessionPayload, input: Contro
     severity: input.severity ?? "warning",
     status: "open",
     dueDate: input.dueDate,
+    assigneeName: input.assigneeName?.trim() || contract.contactName || contract.gsaName,
+    assigneeEmail: input.assigneeEmail?.trim() || contract.email,
     sourceRiskReasons: input.sourceRiskReasons ?? [],
     createdAt: now,
     updatedAt: now,
@@ -555,6 +825,7 @@ export async function createControlAction(session: SessionPayload, input: Contro
     summary: `${session.company} opened control action for ${action.gsaName}: ${action.title}`,
     metadata: { contractId: action.contractId, status: action.status, severity: action.severity },
   }));
+  store.notifications.unshift(buildControlActionCreatedNotification(action));
   await writeStore(store);
   return action;
 }
@@ -573,6 +844,7 @@ export async function updateControlAction(session: SessionPayload, id: string, i
   const airlineCanEdit = session.role === "airline" || session.role === "admin";
   const gsaCanRespond = session.role === "gsa";
   if (!airlineCanEdit && !gsaCanRespond) throw new Error("Not allowed");
+  if (airlineCanEdit && !canManageWorkflow(session)) throw new Error("Manager access required");
 
   const nextStatus = input.status ?? current.status;
   if (gsaCanRespond && (nextStatus === "cancelled")) throw new Error("Only airline can cancel control actions");
@@ -583,10 +855,13 @@ export async function updateControlAction(session: SessionPayload, id: string, i
     description: airlineCanEdit && input.description !== undefined ? input.description : current.description,
     severity: airlineCanEdit && input.severity ? input.severity : current.severity,
     dueDate: airlineCanEdit && input.dueDate !== undefined ? input.dueDate : current.dueDate,
+    assigneeName: airlineCanEdit && input.assigneeName !== undefined ? input.assigneeName : current.assigneeName,
+    assigneeEmail: airlineCanEdit && input.assigneeEmail !== undefined ? input.assigneeEmail : current.assigneeEmail,
     gsaResponse: input.gsaResponse !== undefined ? input.gsaResponse : current.gsaResponse,
     updatedAt: now,
     lastUpdatedBy: session.email,
     closedAt: nextStatus === "completed" || nextStatus === "cancelled" ? current.closedAt ?? now : undefined,
+    comments: undefined,
   };
 
   store.controlActions[index] = action;
@@ -597,25 +872,107 @@ export async function updateControlAction(session: SessionPayload, id: string, i
     summary: `${session.company} updated control action ${action.title} to ${action.status}`,
     metadata: { contractId: action.contractId, status: action.status, severity: action.severity },
   }));
+  store.notifications.unshift(...buildControlActionUpdateNotifications(session, action));
   await writeStore(store);
   return action;
 }
 
+export async function listControlActionComments(session: SessionPayload, actionId: string) {
+  const [store, contracts] = await Promise.all([readStore(), listLivePartnerContracts()]);
+  const action = store.controlActions.find((item) => item.id === actionId);
+  if (!action) throw new Error("Control action not found");
+  const contract = contracts.find((item) => item.id === action.contractId);
+  if (!contract || !canViewContract(session, contract)) throw new Error("Control action not found");
+  return store.controlActionComments
+    .filter((comment) => comment.actionId === actionId)
+    .sort((left, right) => left.createdAt.localeCompare(right.createdAt));
+}
+
+export async function addControlActionComment(session: SessionPayload, actionId: string, input: ControlActionCommentInput) {
+  if (!input.body?.trim() && !input.attachmentName?.trim()) throw new Error("Comment or attachment required");
+
+  const store = await readStore();
+  const actionIndex = store.controlActions.findIndex((item) => item.id === actionId);
+  if (actionIndex < 0) throw new Error("Control action not found");
+  const action = store.controlActions[actionIndex];
+
+  const contracts = await listLivePartnerContracts();
+  const contract = contracts.find((item) => item.id === action.contractId);
+  if (!contract || !canViewContract(session, contract)) throw new Error("Control action not found");
+
+  const now = new Date().toISOString();
+  const storedAttachment = await saveWorkflowAttachment({
+    contractId: action.contractId,
+    entityType: "control-action-comment",
+    fileName: input.attachmentName,
+    mimeType: input.attachmentMimeType,
+    size: input.attachmentSize,
+    dataUrl: input.attachmentDataUrl,
+  });
+  const comment: ControlActionComment = {
+    id: `actc-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`,
+    actionId: action.id,
+    contractId: action.contractId,
+    body: input.body?.trim() || "",
+    attachmentName: input.attachmentName?.trim() || undefined,
+    attachmentDataUrl: undefined,
+    attachmentUrl: storedAttachment?.attachmentUrl,
+    attachmentStoragePath: storedAttachment?.attachmentStoragePath,
+    attachmentMimeType: input.attachmentMimeType,
+    attachmentSize: input.attachmentSize,
+    createdAt: now,
+    createdBy: session.email,
+    createdByName: session.name,
+    createdByRole: session.role,
+  };
+
+  store.controlActionComments.unshift(comment);
+  store.controlActions[actionIndex] = {
+    ...action,
+    updatedAt: now,
+    lastUpdatedBy: session.email,
+    status: session.role === "gsa" && action.status === "open" ? "in-progress" : action.status,
+    comments: undefined,
+  };
+  store.auditEvents.unshift(buildAuditEvent(session, {
+    entityType: "control-action",
+    entityId: action.id,
+    action: "control_action.comment",
+    summary: `${session.company} commented on control action ${action.title}`,
+    metadata: { contractId: action.contractId, attachmentName: comment.attachmentName },
+  }));
+  store.notifications.unshift(...buildControlActionCommentNotifications(session, store.controlActions[actionIndex], comment));
+  await writeStore(store);
+  return comment;
+}
+
 export async function createMonthlyReport(session: SessionPayload, input: MonthlyReportInput) {
   if (session.role !== "gsa" && session.role !== "admin") throw new Error("GSA login required");
-  if (!input.contractId || !input.period || !input.summary?.trim()) throw new Error("Monthly report needs contract, period and summary");
+  if (!input.contractId) throw new Error("Monthly report needs a contract");
 
   const contracts = await listLivePartnerContracts();
   const contract = contracts.find((item) => item.id === input.contractId);
   if (!contract || !canViewContract(session, contract)) throw new Error("Contract not found");
+  ensureContractAllowsGsaOperations(contract);
 
   const store = await readStore();
   const existingIndex = store.monthlyReports.findIndex((report) => report.contractId === contract.id && report.period === input.period);
   const now = new Date().toISOString();
   const baseReport = existingIndex >= 0 ? store.monthlyReports[existingIndex] : null;
-  if (baseReport && baseReport.status === "accepted") throw new Error("Accepted reports cannot be overwritten");
+  validateMonthlyReportInput(session, input, Boolean(input.submit));
+  assertGsaMonthlyReportWriteAllowed(baseReport, Boolean(input.submit));
+  const storedAttachment = await saveWorkflowAttachment({
+    contractId: contract.id,
+    entityType: "monthly-report",
+    fileName: input.attachmentName,
+    mimeType: input.attachmentMimeType,
+    size: input.attachmentSize,
+    dataUrl: input.attachmentDataUrl,
+  });
 
-  const status: MonthlyReportStatus = input.submit ? "submitted" : baseReport?.status === "changes-requested" ? "submitted" : "draft";
+  const status: MonthlyReportStatus = input.submit ? "submitted" : baseReport?.status === "changes-requested" ? "changes-requested" : "draft";
+  const version = getNextMonthlyReportVersion(baseReport, status);
+  const revisions = baseReport ? appendMonthlyReportRevision(baseReport, session) : [];
   const report: MonthlyContractReport = {
     ...(baseReport ?? {}),
     id: baseReport?.id ?? `mrep-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`,
@@ -628,6 +985,9 @@ export async function createMonthlyReport(session: SessionPayload, input: Monthl
     gsaCompanyId: contract.gsaCompanyId,
     market: contract.market,
     period: input.period,
+    version,
+    revisions,
+    changeRequestCount: baseReport?.changeRequestCount ?? 0,
     status,
     reportedRevenue: Number(input.reportedRevenue ?? 0),
     reportedTonnageKg: Number(input.reportedTonnageKg ?? 0),
@@ -638,6 +998,13 @@ export async function createMonthlyReport(session: SessionPayload, input: Monthl
     risks: input.risks?.trim() || undefined,
     supportNeeded: input.supportNeeded?.trim() || undefined,
     attachmentName: input.attachmentName?.trim() || undefined,
+    attachmentDataUrl: undefined,
+    attachmentUrl: storedAttachment?.attachmentUrl ?? baseReport?.attachmentUrl,
+    attachmentStoragePath: storedAttachment?.attachmentStoragePath ?? baseReport?.attachmentStoragePath,
+    attachmentMimeType: input.attachmentMimeType,
+    attachmentSize: input.attachmentSize,
+    ownerName: normalizeOwnerName(session, input.ownerName),
+    ownerEmail: normalizeOwnerEmail(session, input.ownerEmail),
     airlineReviewNote: status === "submitted" ? undefined : baseReport?.airlineReviewNote,
     submittedAt: status === "submitted" ? now : baseReport?.submittedAt,
     reviewedAt: status === "submitted" ? undefined : baseReport?.reviewedAt,
@@ -656,8 +1023,9 @@ export async function createMonthlyReport(session: SessionPayload, input: Monthl
     entityId: report.id,
     action: status === "submitted" ? "monthly_report.submitted" : "monthly_report.saved",
     summary: `${report.gsaName} ${status === "submitted" ? "submitted" : "saved"} monthly report ${report.period}`,
-    metadata: { contractId: report.contractId, period: report.period, status: report.status },
+    metadata: { contractId: report.contractId, period: report.period, status: report.status, version: report.version },
   }));
+  if (status === "submitted") store.notifications.unshift(buildMonthlyReportSubmittedNotification(report));
   await writeStore(store);
   return report;
 }
@@ -672,19 +1040,32 @@ export async function updateMonthlyReport(session: SessionPayload, id: string, i
   if (!contract || !canViewContract(session, contract)) throw new Error("Monthly report not found");
 
   const current = store.monthlyReports[index];
-  const airlineCanReview = session.role === "airline" || session.role === "admin";
-  const gsaCanEdit = session.role === "gsa" || session.role === "admin";
+  const wantsAirlineReview = Boolean(input.status && ["accepted", "changes-requested", "rejected"].includes(input.status));
+  const airlineCanReview = session.role === "airline" || (session.role === "admin" && wantsAirlineReview);
+  const gsaCanEdit = session.role === "gsa" || (session.role === "admin" && !wantsAirlineReview);
   if (!airlineCanReview && !gsaCanEdit) throw new Error("Not allowed");
+  if (airlineCanReview && !canManageWorkflow(session)) throw new Error("Manager access required");
 
   const now = new Date().toISOString();
   let status = current.status;
   if (input.status) {
-    if (airlineCanReview && ["accepted", "changes-requested", "rejected"].includes(input.status)) status = input.status;
-    else if (gsaCanEdit && ["draft", "submitted"].includes(input.status)) status = input.status;
-    else throw new Error("Invalid report status transition");
+    status = getNextMonthlyReportStatus(session, current.status, input.status, airlineCanReview, gsaCanEdit);
   }
 
-  if (current.status === "accepted" && !airlineCanReview) throw new Error("Accepted reports cannot be edited by GSA");
+  if (gsaCanEdit) {
+    assertGsaMonthlyReportWriteAllowed(current, status === "submitted");
+    validateMonthlyReportInput(session, { ...current, ...input, contractId: current.contractId, summary: input.summary ?? current.summary }, status === "submitted");
+  }
+  const storedAttachment = gsaCanEdit
+    ? await saveWorkflowAttachment({
+        contractId: current.contractId,
+        entityType: "monthly-report",
+        fileName: input.attachmentName,
+        mimeType: input.attachmentMimeType,
+        size: input.attachmentSize,
+        dataUrl: input.attachmentDataUrl,
+      })
+    : null;
 
   const report: MonthlyContractReport = {
     ...current,
@@ -699,7 +1080,19 @@ export async function updateMonthlyReport(session: SessionPayload, id: string, i
     risks: gsaCanEdit && input.risks !== undefined ? input.risks : current.risks,
     supportNeeded: gsaCanEdit && input.supportNeeded !== undefined ? input.supportNeeded : current.supportNeeded,
     attachmentName: gsaCanEdit && input.attachmentName !== undefined ? input.attachmentName : current.attachmentName,
-    airlineReviewNote: airlineCanReview && input.airlineReviewNote !== undefined ? input.airlineReviewNote : current.airlineReviewNote,
+    attachmentDataUrl: undefined,
+    attachmentUrl: storedAttachment?.attachmentUrl ?? current.attachmentUrl,
+    attachmentStoragePath: storedAttachment?.attachmentStoragePath ?? current.attachmentStoragePath,
+    attachmentMimeType: gsaCanEdit && input.attachmentMimeType !== undefined ? input.attachmentMimeType : current.attachmentMimeType,
+    attachmentSize: gsaCanEdit && input.attachmentSize !== undefined ? input.attachmentSize : current.attachmentSize,
+    ownerName: gsaCanEdit && input.ownerName !== undefined ? input.ownerName : current.ownerName,
+    ownerEmail: gsaCanEdit && input.ownerEmail !== undefined ? input.ownerEmail : current.ownerEmail,
+    version: gsaCanEdit ? getNextMonthlyReportVersion(current, status) : current.version,
+    revisions: gsaCanEdit ? appendMonthlyReportRevision(current, session) : current.revisions ?? [],
+    changeRequestCount: airlineCanReview && status === "changes-requested" && current.status !== "changes-requested"
+      ? (current.changeRequestCount ?? 0) + 1
+      : current.changeRequestCount,
+    airlineReviewNote: airlineCanReview && input.airlineReviewNote !== undefined ? input.airlineReviewNote?.trim() : current.airlineReviewNote,
     submittedAt: status === "submitted" && current.status !== "submitted" ? now : current.submittedAt,
     reviewedAt: airlineCanReview && ["accepted", "changes-requested", "rejected"].includes(status) ? now : current.reviewedAt,
     reviewedBy: airlineCanReview && ["accepted", "changes-requested", "rejected"].includes(status) ? session.email : current.reviewedBy,
@@ -713,8 +1106,11 @@ export async function updateMonthlyReport(session: SessionPayload, id: string, i
     entityId: report.id,
     action: "monthly_report.updated",
     summary: `${session.company} updated monthly report ${report.period} to ${report.status}`,
-    metadata: { contractId: report.contractId, period: report.period, status: report.status },
+    metadata: { contractId: report.contractId, period: report.period, status: report.status, version: report.version },
   }));
+  if (airlineCanReview && ["accepted", "changes-requested", "rejected"].includes(status)) {
+    store.notifications.unshift(buildMonthlyReportReviewedNotification(report));
+  }
   await writeStore(store);
   return report;
 }
@@ -769,6 +1165,15 @@ export async function listContractTimeline(session: SessionPayload, contractId: 
       status: action.status,
       metadata: { controlActionId: action.id, severity: action.severity },
     })),
+    ...store.controlActionComments.filter((comment) => actionIds.has(comment.actionId)).map((comment): ContractTimelineEvent => ({
+      id: comment.id,
+      type: "control-action",
+      title: "Control action comment",
+      summary: comment.attachmentName ? `${comment.body || "Attachment added"} (${comment.attachmentName})` : comment.body,
+      createdAt: comment.createdAt,
+      actor: comment.createdByName,
+      metadata: { controlActionId: comment.actionId, attachmentName: comment.attachmentName },
+    })),
     ...store.monthlyReports.filter((report) => report.contractId === contractId).map((report): ContractTimelineEvent => ({
       id: report.id,
       type: "monthly-report",
@@ -798,6 +1203,71 @@ export async function listContractTimeline(session: SessionPayload, contractId: 
   ];
 
   return events.sort((left, right) => right.createdAt.localeCompare(left.createdAt));
+}
+
+export async function createRecommendedControlActions(session: SessionPayload) {
+  if (session.role !== "airline" && session.role !== "admin") throw new Error("Airline login required");
+  if (!canManageWorkflow(session)) throw new Error("Manager access required");
+
+  const snapshots = await listContractPerformance(session);
+  const store = await readStore();
+  const contracts = await listLivePartnerContracts();
+  const visibleContracts = contracts.filter((contract) => canViewContract(session, contract));
+  const created: ContractControlAction[] = [];
+
+  for (const snapshot of snapshots) {
+    if (snapshot.riskLevel === "green") continue;
+    const contract = visibleContracts.find((item) => item.id === snapshot.contractId);
+    if (!contract) continue;
+
+    for (const title of snapshot.recommendedActions) {
+      const exists = store.controlActions.some((action) =>
+        action.contractId === snapshot.contractId &&
+        action.title.toLowerCase() === title.toLowerCase() &&
+        action.status !== "completed" &&
+        action.status !== "cancelled",
+      );
+      if (exists) continue;
+
+      const now = new Date().toISOString();
+      const dueDate = new Date(Date.now() + (snapshot.riskLevel === "red" ? 3 : 7) * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+      const action: ContractControlAction = {
+        id: `act-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`,
+        contractId: contract.id,
+        tenderId: contract.tenderId,
+        airline: contract.airline,
+        airlineEmail: contract.airlineEmail,
+        airlineCompanyId: contract.airlineCompanyId,
+        gsaName: contract.gsaName,
+        gsaCompanyId: contract.gsaCompanyId,
+        market: contract.market,
+        title,
+        description: snapshot.riskReasons.join("; ") || "Automatically generated from KPI risk scoring.",
+        severity: snapshot.riskLevel === "red" ? "critical" : "warning",
+        status: "open",
+        dueDate,
+        assigneeName: contract.contactName || contract.gsaName,
+        assigneeEmail: contract.email,
+        sourceRiskReasons: snapshot.riskReasons,
+        createdAt: now,
+        updatedAt: now,
+        createdBy: session.email,
+      };
+      store.controlActions.unshift(action);
+      store.notifications.unshift(buildControlActionCreatedNotification(action));
+      store.auditEvents.unshift(buildAuditEvent(session, {
+        entityType: "control-action",
+        entityId: action.id,
+        action: "control_action.auto_created",
+        summary: `Auto-created control action for ${action.gsaName}: ${action.title}`,
+        metadata: { contractId: action.contractId, status: action.status, severity: action.severity },
+      }));
+      created.push(action);
+    }
+  }
+
+  if (created.length > 0) await writeStore(store);
+  return created;
 }
 
 export async function listMandateAuditEvents(session: SessionPayload) {
@@ -834,17 +1304,183 @@ function getInitialQuoteStatus(rate: number, floor: number | undefined, contract
   return contract.controlRules?.requireAirlineApprovalBelowFloor === false ? "draft" : "airline-approval-required";
 }
 
-function getNextQuoteStatus(session: SessionPayload, action: QuoteActionInput["action"]): MandateQuoteStatus {
-  if (action === "approve") {
+function getNextQuoteStatus(session: SessionPayload, quote: MandateQuote, input: QuoteActionInput): MandateQuoteStatus {
+  if (isTerminalQuoteStatus(quote.status)) throw new Error(`Quote is already ${quote.status}`);
+
+  if (input.action === "approve") {
     if (session.role !== "airline" && session.role !== "admin") throw new Error("Airline approval required");
+    if (quote.status !== "airline-approval-required") throw new Error("Only quotes waiting for airline approval can be approved");
     return "airline-approved";
   }
-  if (action === "reject") {
+  if (input.action === "reject") {
     if (session.role !== "airline" && session.role !== "admin") throw new Error("Airline approval required");
+    if (quote.status !== "airline-approval-required") throw new Error("Only quotes waiting for airline approval can be rejected");
     return "airline-rejected";
   }
-  if (action === "counter") return "countered";
+  if (session.role !== "gsa" && session.role !== "admin") throw new Error("GSA login required");
+  if (input.action === "counter") {
+    requirePositiveCounterRate(input.counterRatePerKg);
+    return "countered";
+  }
   return "declined";
+}
+
+function validateQuoteInput(contract: LivePartnerContract, input: QuoteCreateInput) {
+  if (!input.customer?.trim()) throw new Error("Customer is required");
+  if (!input.origin?.trim() || !input.destination?.trim()) throw new Error("Route origin and destination are required");
+  if (!Number.isFinite(input.weightKg) || input.weightKg <= 0) throw new Error("Quote weight must be greater than zero");
+  if (!Number.isFinite(input.pieces) || input.pieces <= 0) throw new Error("Quote pieces must be greater than zero");
+  if (!Number.isFinite(input.requestedRatePerKg) || input.requestedRatePerKg <= 0) throw new Error("Quote rate must be greater than zero");
+  if (!input.flightDate || Number.isNaN(new Date(input.flightDate).getTime())) throw new Error("Valid flight date is required");
+  if (!input.deadline || Number.isNaN(new Date(input.deadline).getTime())) throw new Error("Valid customer deadline is required");
+  if (new Date(input.deadline).getTime() <= Date.now()) throw new Error("Customer deadline must be in the future");
+
+  const assignedRoutes = contract.contractRoutes.filter((route) => route.status === "assigned");
+  if (assignedRoutes.length === 0) throw new Error("Contract has no assigned routes");
+  if (input.routeId) {
+    const route = assignedRoutes.find((item) => item.id === input.routeId);
+    if (!route) throw new Error("Quote route is not assigned to this GSA contract");
+    if (route.origin !== input.origin || route.destination !== input.destination) {
+      throw new Error("Quote route does not match the assigned contract route");
+    }
+  }
+}
+
+function validateMonthlyReportInput(session: SessionPayload, input: MonthlyReportInput, submitting: boolean) {
+  if (!/^\d{4}-\d{2}$/.test(input.period)) throw new Error("Monthly report period must use YYYY-MM");
+  if (!input.summary?.trim()) throw new Error("Monthly report summary is required");
+  if (submitting && input.summary.trim().length < 20) throw new Error("Submitted monthly report summary must be at least 20 characters");
+
+  const numericFields = [
+    ["reported revenue", input.reportedRevenue ?? 0],
+    ["reported tonnage", input.reportedTonnageKg ?? 0],
+    ["reported quotes", input.reportedQuotes ?? 0],
+    ["reported bookings", input.reportedBookings ?? 0],
+  ] as const;
+  for (const [label, value] of numericFields) {
+    if (!Number.isFinite(Number(value)) || Number(value) < 0) throw new Error(`Monthly report ${label} must be zero or greater`);
+  }
+
+  const ownerEmail = normalizeOwnerEmail(session, input.ownerEmail);
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(ownerEmail)) throw new Error("Monthly report owner email is invalid");
+  if (submitting && !normalizeOwnerName(session, input.ownerName)) throw new Error("Monthly report owner is required");
+  validateMonthlyReportAttachment(input);
+}
+
+function validateMonthlyReportAttachment(input: Pick<MonthlyReportInput, "attachmentName" | "attachmentDataUrl" | "attachmentMimeType" | "attachmentSize">) {
+  if (!input.attachmentName && !input.attachmentDataUrl) return;
+  const fileName = input.attachmentName?.trim();
+  if (!fileName) throw new Error("Monthly report attachment needs a file name");
+  const extension = fileName.includes(".") ? fileName.split(".").pop()?.toLowerCase() : undefined;
+  if (!extension || !MONTHLY_REPORT_ALLOWED_EXTENSIONS.has(extension)) {
+    throw new Error("Monthly report attachment must be PDF, CSV, XLS or XLSX");
+  }
+  if (input.attachmentMimeType && !MONTHLY_REPORT_ALLOWED_MIME_TYPES.has(input.attachmentMimeType) && input.attachmentMimeType !== "application/octet-stream") {
+    throw new Error("Monthly report attachment type is not allowed");
+  }
+  if (input.attachmentSize !== undefined && input.attachmentSize > MONTHLY_REPORT_ATTACHMENT_MAX_BYTES) {
+    throw new Error("Monthly report attachment must be 5 MB or smaller");
+  }
+}
+
+function assertGsaMonthlyReportWriteAllowed(report: MonthlyContractReport | null, submitting: boolean) {
+  if (!report) return;
+  if (report.status === "accepted") throw new Error("Accepted reports cannot be overwritten");
+  if (report.status === "rejected") throw new Error("Rejected reports are closed");
+  if (report.status === "submitted") throw new Error("Submitted reports are locked until airline review");
+  if (report.status === "changes-requested" && !submitting) return;
+}
+
+function getNextMonthlyReportStatus(
+  session: SessionPayload,
+  current: MonthlyReportStatus,
+  next: MonthlyReportStatus,
+  airlineCanReview: boolean,
+  gsaCanEdit: boolean,
+) {
+  if (next === current) return next;
+  if (airlineCanReview) {
+    if (current !== "submitted") throw new Error("Only submitted reports can be reviewed");
+    if (next === "accepted" || next === "changes-requested" || next === "rejected") return next;
+  }
+  if (gsaCanEdit) {
+    if (current === "draft" && (next === "draft" || next === "submitted")) return next;
+    if (current === "changes-requested" && next === "submitted") return next;
+  }
+  throw new Error(`Invalid monthly report status transition for ${session.role}`);
+}
+
+function getNextMonthlyReportVersion(report: MonthlyContractReport | null, nextStatus: MonthlyReportStatus) {
+  const currentVersion = report?.version ?? 1;
+  if (!report) return 1;
+  if (report.status === "changes-requested" && nextStatus === "submitted") return currentVersion + 1;
+  return currentVersion;
+}
+
+function appendMonthlyReportRevision(report: MonthlyContractReport, session: SessionPayload): MonthlyReportRevision[] {
+  const revisions = report.revisions ?? [];
+  const lastRevision = revisions[revisions.length - 1];
+  if (lastRevision?.version === report.version && lastRevision.status === report.status && lastRevision.createdAt === report.updatedAt) {
+    return revisions;
+  }
+  return [
+    ...revisions,
+    {
+      version: report.version ?? 1,
+      status: report.status,
+      reportedRevenue: report.reportedRevenue,
+      reportedTonnageKg: report.reportedTonnageKg,
+      reportedQuotes: report.reportedQuotes,
+      reportedBookings: report.reportedBookings,
+      summary: report.summary,
+      pipelineNotes: report.pipelineNotes,
+      risks: report.risks,
+      supportNeeded: report.supportNeeded,
+      attachmentName: report.attachmentName,
+      attachmentUrl: report.attachmentUrl,
+      attachmentStoragePath: report.attachmentStoragePath,
+      ownerName: report.ownerName,
+      ownerEmail: report.ownerEmail,
+      airlineReviewNote: report.airlineReviewNote,
+      createdAt: report.updatedAt,
+      createdBy: session.email,
+    },
+  ];
+}
+
+function normalizeOwnerName(session: SessionPayload, value: string | undefined) {
+  return value?.trim() || session.name;
+}
+
+function normalizeOwnerEmail(session: SessionPayload, value: string | undefined) {
+  return value?.trim().toLowerCase() || session.email.toLowerCase();
+}
+
+function withRuntimeQuoteStatus(quote: MandateQuote): MandateQuote {
+  if (!isOpenQuoteStatus(quote.status) || !isQuotePastDeadline(quote)) return quote;
+  return {
+    ...quote,
+    status: "expired",
+    decisionReason: quote.decisionReason ?? "Customer deadline expired before quote decision.",
+  };
+}
+
+function isOpenQuoteStatus(status: MandateQuoteStatus) {
+  return status === "draft" || status === "airline-approval-required" || status === "countered";
+}
+
+function isTerminalQuoteStatus(status: MandateQuoteStatus) {
+  return status === "airline-approved" || status === "airline-rejected" || status === "declined" || status === "expired";
+}
+
+function isQuotePastDeadline(quote: Pick<MandateQuote, "deadline">) {
+  const deadline = new Date(quote.deadline).getTime();
+  return Number.isFinite(deadline) && deadline <= Date.now();
+}
+
+function requirePositiveCounterRate(value: number | undefined) {
+  if (!Number.isFinite(value) || value === undefined || value <= 0) throw new Error("Counter rate must be greater than zero");
+  return value;
 }
 
 function buildAuditEvent(
@@ -867,13 +1503,44 @@ function positiveNumber(value: number | undefined) {
   return value;
 }
 
+function normalizeAwbNumber(value: string | undefined) {
+  if (!value?.trim()) return undefined;
+  const digits = value.replace(/\D/g, "");
+  if (!/^\d{11}$/.test(digits)) throw new Error("AWB must contain 11 digits including 3 digit prefix");
+  const serial = digits.slice(3);
+  if (!isValidAwbCheckDigit(serial)) throw new Error("AWB check digit is invalid");
+  return `${digits.slice(0, 3)}-${serial}`;
+}
+
+function isValidAwbCheckDigit(serialWithCheckDigit: string) {
+  if (!/^\d{8}$/.test(serialWithCheckDigit)) return false;
+  const serial = serialWithCheckDigit.slice(0, 7);
+  const checkDigit = Number(serialWithCheckDigit[7]);
+  return Number(serial) % 7 === checkDigit;
+}
+
+function canTransitionBookingStatus(current: MandateBookingStatus, next: MandateBookingStatus) {
+  if (current === next) return true;
+  if (current === "booked") return next === "flown" || next === "cancelled";
+  return false;
+}
+
+function ensureContractAllowsGsaOperations(contract: Pick<LivePartnerContract, "status">) {
+  if (contract.status === "active") return;
+  if (contract.status === "pending") throw new Error("Contract is not active yet");
+  if (contract.status === "suspended") throw new Error("Contract is suspended");
+  throw new Error("Contract is closed");
+}
+
 function generateAwbNumber() {
   return `160-${Date.now().toString().slice(-8)}`;
 }
 
 function buildContractPerformance(contract: LivePartnerContract, store: MandateExecutionStore): ContractPerformanceSnapshot {
   const { periodStart, periodEnd } = currentMonthWindow();
-  const quotes = store.quotes.filter((quote) => quote.contractId === contract.id && isInWindow(quote.createdAt, periodStart, periodEnd));
+  const quotes = store.quotes
+    .map(withRuntimeQuoteStatus)
+    .filter((quote) => quote.contractId === contract.id && isInWindow(quote.createdAt, periodStart, periodEnd));
   const bookings = store.bookings.filter((booking) => booking.contractId === contract.id && isInWindow(booking.createdAt, periodStart, periodEnd));
   const quoteCount = quotes.length;
   const bookingCount = bookings.length;
@@ -885,7 +1552,7 @@ function buildContractPerformance(contract: LivePartnerContract, store: MandateE
   const winRateTargetPct = contract.controlRules?.quoteWinRateTargetPct ?? 0;
   const winRatePct = quoteCount > 0 ? Math.round((bookingCount / quoteCount) * 100) : 0;
   const pendingApprovalCount = quotes.filter((quote) => quote.status === "airline-approval-required").length;
-  const rejectedQuoteCount = quotes.filter((quote) => quote.status === "airline-rejected" || quote.status === "declined").length;
+  const rejectedQuoteCount = quotes.filter((quote) => quote.status === "airline-rejected" || quote.status === "declined" || quote.status === "expired").length;
   const slaBreachCount = countSlaBreaches(quotes, contract.controlRules?.quoteResponseSlaHours);
   const revenueAttainmentPct = percent(revenueAmount, revenueTarget);
   const tonnageAttainmentPct = percent(tonnageKg, tonnageTargetKg);
@@ -1006,6 +1673,7 @@ function buildRecommendedActions(reasons: string[], pendingApprovalCount: number
 function countSlaBreaches(quotes: MandateQuote[], slaHours = 4) {
   const now = Date.now();
   return quotes.filter((quote) => {
+    if (quote.status === "expired") return true;
     if (quote.status !== "airline-approval-required" && quote.status !== "draft") return false;
     const createdDeadline = new Date(quote.createdAt).getTime() + slaHours * 60 * 60 * 1000;
     const customerDeadline = quote.deadline ? new Date(quote.deadline).getTime() : Number.POSITIVE_INFINITY;
@@ -1037,6 +1705,117 @@ function formatTimelineMoney(value: number) {
   return `EUR ${value.toLocaleString("en-GB", { maximumFractionDigits: 0 })}`;
 }
 
+function buildWorkflowNotification(input: Omit<WorkflowNotification, "id" | "createdAt">): WorkflowNotification {
+  return {
+    ...input,
+    id: `ntf-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`,
+    createdAt: new Date().toISOString(),
+  };
+}
+
+function buildControlActionCreatedNotification(action: ContractControlAction) {
+  return buildWorkflowNotification({
+    recipientRole: "gsa",
+    recipientCompanyId: action.gsaCompanyId,
+    title: `New airline control action: ${action.title}`,
+    body: `${action.airline} opened a ${action.severity} action for ${action.market}.`,
+    href: "/gsa/performance",
+    type: "control-action",
+    entityId: action.id,
+  });
+}
+
+function buildControlActionUpdateNotifications(session: SessionPayload, action: ContractControlAction) {
+  if (session.role === "gsa") {
+    return [buildWorkflowNotification({
+      recipientRole: "airline",
+      recipientCompanyId: action.airlineCompanyId,
+      recipientEmail: action.airlineEmail,
+      title: `${action.gsaName} updated a control action`,
+      body: `${action.title} is now ${action.status}.`,
+      href: "/airline/contracts",
+      type: "control-action",
+      entityId: action.id,
+    })];
+  }
+  if (session.role === "airline") {
+    return [buildWorkflowNotification({
+      recipientRole: "gsa",
+      recipientCompanyId: action.gsaCompanyId,
+      title: `Airline updated action: ${action.title}`,
+      body: `${action.airline} changed the action status to ${action.status}.`,
+      href: "/gsa/performance",
+      type: "control-action",
+      entityId: action.id,
+    })];
+  }
+  return [];
+}
+
+function buildControlActionCommentNotifications(session: SessionPayload, action: ContractControlAction, comment: ControlActionComment) {
+  if (session.role === "gsa") {
+    return [buildWorkflowNotification({
+      recipientRole: "airline",
+      recipientCompanyId: action.airlineCompanyId,
+      recipientEmail: action.airlineEmail,
+      title: `${action.gsaName} commented on a control action`,
+      body: comment.attachmentName ? `${comment.body || "Attachment added"} (${comment.attachmentName})` : comment.body,
+      href: "/airline/contracts",
+      type: "control-action",
+      entityId: action.id,
+    })];
+  }
+  if (session.role === "airline") {
+    return [buildWorkflowNotification({
+      recipientRole: "gsa",
+      recipientCompanyId: action.gsaCompanyId,
+      title: `${action.airline} commented on an action`,
+      body: comment.attachmentName ? `${comment.body || "Attachment added"} (${comment.attachmentName})` : comment.body,
+      href: "/gsa/performance",
+      type: "control-action",
+      entityId: action.id,
+    })];
+  }
+  return [];
+}
+
+function buildMonthlyReportSubmittedNotification(report: MonthlyContractReport) {
+  return buildWorkflowNotification({
+    recipientRole: "airline",
+    recipientCompanyId: report.airlineCompanyId,
+    recipientEmail: report.airlineEmail,
+    title: `${report.gsaName} submitted monthly report ${report.period}`,
+    body: `${formatTimelineMoney(report.reportedRevenue)}, ${Math.round(report.reportedTonnageKg).toLocaleString()} kg reported.`,
+    href: "/airline/contracts",
+    type: "monthly-report",
+    entityId: report.id,
+  });
+}
+
+function buildMonthlyReportReviewedNotification(report: MonthlyContractReport) {
+  return buildWorkflowNotification({
+    recipientRole: "gsa",
+    recipientCompanyId: report.gsaCompanyId,
+    title: `${report.airline} reviewed monthly report ${report.period}`,
+    body: `Report status: ${report.status}${report.airlineReviewNote ? ` - ${report.airlineReviewNote}` : ""}`,
+    href: "/gsa/monthly-reports",
+    type: "monthly-report",
+    entityId: report.id,
+  });
+}
+
+function isNotificationForSession(notification: WorkflowNotification, session: SessionPayload) {
+  if (session.role === "admin") return true;
+  if (notification.recipientRole !== session.role) return false;
+  if (notification.recipientCompanyId && session.companyId) return notification.recipientCompanyId === session.companyId;
+  if (notification.recipientEmail) return notification.recipientEmail.toLowerCase() === session.email.toLowerCase();
+  return true;
+}
+
+function canManageWorkflow(session: SessionPayload) {
+  return session.role === "admin" || session.accessRole === undefined || ["owner", "admin", "manager"].includes(session.accessRole);
+}
+
 function statusOrder(status: ControlActionStatus) {
   if (status === "open") return 0;
   if (status === "in-progress") return 1;
@@ -1052,11 +1831,12 @@ async function readStore(): Promise<MandateExecutionStore> {
   });
   if (dbStore) return dbStore;
 
+  assertFileStoreFallbackAllowed("Mandate execution store");
   try {
     const raw = await readFile(STORE_PATH, "utf-8");
     return normalizeStore(JSON.parse(raw) as Partial<MandateExecutionStore>);
   } catch {
-    return { quotes: [], bookings: [], controlActions: [], monthlyReports: [], auditEvents: [] };
+    return { quotes: [], bookings: [], controlActions: [], controlActionComments: [], notifications: [], monthlyReports: [], auditEvents: [] };
   }
 }
 
@@ -1074,6 +1854,7 @@ async function writeStore(store: MandateExecutionStore) {
   });
   if (saved) return;
 
+  assertFileStoreFallbackAllowed("Mandate execution store");
   await mkdir(path.dirname(STORE_PATH), { recursive: true });
   await writeFile(STORE_PATH, `${JSON.stringify(store, null, 2)}\n`, "utf-8");
 }
@@ -1083,6 +1864,8 @@ function normalizeStore(store: Partial<MandateExecutionStore>): MandateExecution
     quotes: store.quotes ?? [],
     bookings: store.bookings ?? [],
     controlActions: store.controlActions ?? [],
+    controlActionComments: store.controlActionComments ?? [],
+    notifications: store.notifications ?? [],
     monthlyReports: store.monthlyReports ?? [],
     auditEvents: store.auditEvents ?? [],
   };

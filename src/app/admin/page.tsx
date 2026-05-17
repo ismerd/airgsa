@@ -1,32 +1,58 @@
 import Link from "next/link";
-import { ArrowRight, Database, Newspaper, ShieldCheck, Users } from "lucide-react";
+import { ArrowRight, ClipboardList, Database, ShieldCheck, Users } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Topbar } from "@/components/dashboard/topbar";
-import { realGsaPartners } from "@/lib/real-gsa-data";
-import { getPendingRegistrations } from "@/lib/registrations";
+import { getSession } from "@/lib/auth/session";
+import { getAllRegistrations, getPendingRegistrations } from "@/lib/registrations";
+import { listControlActions, listMandateAuditEvents, listMandateBookings, listMonthlyReports } from "@/lib/services/mandate-execution-store";
+import { listLiveApplications, listLivePartnerContracts, listLiveTenders } from "@/lib/services/tender-workflow-store";
+import { DemoSeedButton } from "./demo-seed-button";
 
 export const revalidate = 30;
 
 export default async function AdminPage() {
-  const pending = getPendingRegistrations();
+  const session = await getSession();
+  const [pending, registrations, tenders, applications, contracts] = await Promise.all([
+    getPendingRegistrations(),
+    getAllRegistrations(),
+    listLiveTenders(),
+    listLiveApplications(),
+    listLivePartnerContracts(),
+  ]);
+  const [bookings, actions, reports, auditEvents] = session
+    ? await Promise.all([
+        listMandateBookings(session),
+        listControlActions(session),
+        listMonthlyReports(session),
+        listMandateAuditEvents(session),
+      ])
+    : [[], [], [], []];
   const pendingCount = pending.length;
+  const openTenders = tenders.filter((tender) => tender.status === "open").length;
+  const activeContracts = contracts.filter((contract) => contract.status === "active").length;
+  const pendingWorkflowItems = applications.filter((application) => application.status === "pending").length +
+    actions.filter((action) => action.status === "open" || action.status === "in-progress").length +
+    reports.filter((report) => report.status === "submitted" || report.status === "changes-requested").length +
+    pendingCount;
 
   const stats = [
-    { label: "Active accounts", value: "21", icon: Users },
-    { label: "Pending approvals", value: String(pendingCount), icon: ShieldCheck, alert: pendingCount > 0 },
-    { label: "Imported posts", value: "124", icon: Newspaper },
-    { label: "API integrations", value: "2", icon: Database },
+    { label: "Approved accounts", value: String(registrations.filter((registration) => registration.status === "approved").length), icon: Users },
+    { label: "Pending work", value: String(pendingWorkflowItems), icon: ShieldCheck, alert: pendingWorkflowItems > 0 },
+    { label: "Active contracts", value: String(activeContracts), icon: ClipboardList },
+    { label: "Bookings logged", value: String(bookings.length), icon: Database },
   ];
 
   const recentActivity = [
     ...pending.slice(0, 3).map((r) => ({
       text: `${r.name} (${r.company}) — access request pending`,
-      time: new Date(r.submittedAt).toLocaleString("en-GB", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }),
+      time: formatDateTime(r.submittedAt),
       dot: "bg-amber-400",
     })),
-    { text: `${realGsaPartners[0].name} account activated`, time: "1 hr ago", dot: "bg-emerald-400" },
-    { text: "LinkedIn import completed — 12 new posts", time: "3 hr ago", dot: "bg-brand" },
-    { text: "Saudia Cargo registered as demo airline", time: "May 6, 2026", dot: "bg-emerald-400" },
+    ...auditEvents.slice(0, 5).map((event) => ({
+      text: event.summary,
+      time: formatDateTime(event.createdAt),
+      dot: "bg-brand",
+    })),
   ].slice(0, 6);
 
   return (
@@ -72,21 +98,35 @@ export default async function AdminPage() {
             </Card>
           )}
 
+          {process.env.NODE_ENV !== "production" && (
+            <Card>
+              <CardContent className="p-5">
+                <DemoSeedButton />
+              </CardContent>
+            </Card>
+          )}
+
           {/* Recent activity */}
           <Card>
             <CardContent className="p-6">
               <p className="text-sm font-semibold text-ink">Recent activity</p>
-              <ul className="mt-4 space-y-4">
-                {recentActivity.map((item, i) => (
-                  <li key={i} className="flex items-start gap-3">
-                    <span className={`mt-1.5 h-2 w-2 shrink-0 rounded-full ${item.dot}`} />
-                    <div>
-                      <p className="text-sm text-ink-muted">{item.text}</p>
-                      <p className="text-xs text-ink-muted/60">{item.time}</p>
-                    </div>
-                  </li>
-                ))}
-              </ul>
+              {recentActivity.length === 0 ? (
+                <p className="mt-4 text-sm text-ink-muted">
+                  No workflow activity has been recorded yet.
+                </p>
+              ) : (
+                <ul className="mt-4 space-y-4">
+                  {recentActivity.map((item, i) => (
+                    <li key={i} className="flex items-start gap-3">
+                      <span className={`mt-1.5 h-2 w-2 shrink-0 rounded-full ${item.dot}`} />
+                      <div>
+                        <p className="text-sm text-ink-muted">{item.text}</p>
+                        <p className="text-xs text-ink-muted/60">{item.time}</p>
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              )}
             </CardContent>
           </Card>
 
@@ -95,7 +135,7 @@ export default async function AdminPage() {
             {[
               { label: "Manage accounts", href: "/admin/accounts", desc: "Review registrations, approve or reject access requests" },
               { label: "LinkedIn sources", href: "/admin/sources", desc: "Configure LinkedIn pages for cargo intelligence import" },
-              { label: "Test FR24 API", href: "/admin/fr24", desc: "Verify Flightradar24 API connectivity and inspect live data" },
+              { label: "Open tenders", href: "/airline/tenders", desc: `${openTenders} live tender${openTenders === 1 ? "" : "s"} currently visible in the workflow` },
             ].map((link) => (
               <Link
                 key={link.href}
@@ -112,4 +152,16 @@ export default async function AdminPage() {
       </main>
     </>
   );
+}
+
+function formatDateTime(value: string) {
+  return new Intl.DateTimeFormat("en-GB", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+    timeZone: "UTC",
+  }).format(new Date(value));
 }

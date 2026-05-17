@@ -8,7 +8,7 @@ import {
 } from "@/lib/services/tender-workflow-store";
 import { appendMandateAuditEvent } from "@/lib/services/mandate-execution-store";
 
-const STATUS_VALUES = new Set(["pending", "active", "closed"]);
+const STATUS_VALUES = new Set(["pending", "active", "suspended", "closed"]);
 
 export async function GET(_: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const session = await getSession();
@@ -36,6 +36,9 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   const body = (await req.json()) as ContractTermsUpdateInput;
   if (body.status && !STATUS_VALUES.has(body.status)) {
     return NextResponse.json({ error: "Invalid contract status" }, { status: 400 });
+  }
+  if (body.status && !canTransitionContractStatus(existing.status, body.status)) {
+    return NextResponse.json({ error: `Invalid contract status transition from ${existing.status} to ${body.status}` }, { status: 409 });
   }
 
   const input: ContractTermsUpdateInput = {
@@ -70,4 +73,12 @@ function normalizeNumber(value: unknown) {
 
 function stripUndefined<T extends Record<string, unknown>>(value: T) {
   return Object.fromEntries(Object.entries(value).filter(([, item]) => item !== undefined)) as T;
+}
+
+function canTransitionContractStatus(current: string, next: string) {
+  if (current === next) return true;
+  if (current === "pending") return next === "active" || next === "closed";
+  if (current === "active") return next === "suspended" || next === "closed";
+  if (current === "suspended") return next === "active" || next === "closed";
+  return false;
 }

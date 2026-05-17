@@ -7,10 +7,10 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { linkedinImportDefaults, linkedinPostPreview } from "@/lib/services/platform";
 import {
   getPostedLimitLabel,
   getScheduleLabel,
+  linkedinImportDefaults,
   POSTED_LIMIT_OPTIONS,
 } from "@/lib/services/linkedin";
 import type { LinkedinImportPostedLimit, LinkedinImportScheduleUnit } from "@/lib/types";
@@ -63,21 +63,33 @@ export function AdminLinkedinImport() {
 
   useEffect(() => {
     const saved = window.localStorage.getItem(SETTINGS_STORAGE_KEY);
-    if (!saved) return;
-
-    try {
-      const settings = JSON.parse(saved) as SavedImportSettings;
-      setToken(settings.token ?? "");
-      setTargetUrls(settings.targetUrls);
-      setPostedLimit(settings.postedLimit ?? "24h");
-      setScheduleEnabled(settings.scheduleEnabled);
-      setScheduleValue(settings.scheduleValue);
-      setScheduleUnit(settings.scheduleUnit);
-      setIncludeReposts(settings.includeReposts);
-      setIncludeQuotePosts(settings.includeQuotePosts);
-    } catch {
-      window.localStorage.removeItem(SETTINGS_STORAGE_KEY);
+    if (saved) {
+      try {
+        const settings = JSON.parse(saved) as SavedImportSettings;
+        setToken(settings.token ?? "");
+        setTargetUrls(settings.targetUrls);
+        setPostedLimit(settings.postedLimit ?? "24h");
+        setScheduleEnabled(settings.scheduleEnabled);
+        setScheduleValue(settings.scheduleValue);
+        setScheduleUnit(settings.scheduleUnit);
+        setIncludeReposts(settings.includeReposts);
+        setIncludeQuotePosts(settings.includeQuotePosts);
+        return;
+      } catch {
+        window.localStorage.removeItem(SETTINGS_STORAGE_KEY);
+      }
     }
+
+    void fetch("/api/linkedin-sources", { cache: "no-store" })
+      .then((response) => response.ok ? response.json() : null)
+      .then((payload) => {
+        const urls = (payload?.sources ?? [])
+          .filter((source: { status: string }) => source.status === "active")
+          .map((source: { url: string }) => source.url)
+          .join("\n");
+        if (urls) setTargetUrls(urls);
+      })
+      .catch(() => undefined);
   }, []);
 
   function saveSettings() {
@@ -334,11 +346,11 @@ export function AdminLinkedinImport() {
 
         <Card>
           <CardHeader>
-            <CardTitle>{importResult ? "Latest imported posts" : "Imported post preview"}</CardTitle>
+            <CardTitle>Latest imported posts</CardTitle>
             <p className="text-sm text-ink-muted">Only the post text and media are kept. Comments and reactions are ignored.</p>
           </CardHeader>
           <CardContent className="space-y-4">
-            {(importResult?.posts.length ? importResult.posts.slice(0, 5) : [linkedinPostPreview]).map((post) => (
+            {importResult?.posts.length ? importResult.posts.slice(0, 5).map((post) => (
               <div key={post.id} className="space-y-3 rounded-md border border-border-ui bg-surface2 p-3">
                 <div className="rounded-md bg-white p-4 text-slate-950">
                   <p className="text-xs font-semibold uppercase tracking-[0.18em] text-cyan-700">{post.authorName}</p>
@@ -357,7 +369,11 @@ export function AdminLinkedinImport() {
                   ))}
                 </div>
               </div>
-            ))}
+            )) : (
+              <div className="rounded-md border border-border-ui bg-surface2 p-4 text-sm text-ink-muted">
+                No import has been run in this session yet.
+              </div>
+            )}
           </CardContent>
         </Card>
       </div>

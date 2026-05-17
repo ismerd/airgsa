@@ -89,6 +89,7 @@ export async function authenticateCredentials(email: string, password: string): 
         accessRole: teamAccount.accessRole,
         name: teamAccount.name,
         company: teamAccount.company,
+        companyId: teamAccount.companyId,
       };
     }
   }

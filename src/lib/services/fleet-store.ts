@@ -1,7 +1,7 @@
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 import type { Pool } from "pg";
-import { rowData, withPostgres } from "@/lib/services/postgres-store";
+import { assertFileStoreFallbackAllowed, rowData, withPostgres } from "@/lib/services/postgres-store";
 import { createSupabaseAdminClient } from "@/lib/supabase/client";
 
 const STORE_PATH = path.join(process.cwd(), "data", "airline-fleet-aircraft.json");
@@ -94,10 +94,12 @@ export async function syncFleetSightings(sightings: FleetAircraftSighting[]) {
       await syncFleetSightingsToSupabase(normalized);
       return;
     } catch (err) {
+      if (process.env.NODE_ENV === "production") throw err;
       console.warn("[fleet] Supabase persistence unavailable, using file store:", (err as Error).message);
     }
   }
 
+  assertFileStoreFallbackAllowed("Fleet store");
   await syncFleetSightingsToFile(normalized);
 }
 
@@ -135,6 +137,7 @@ export async function getStoredFleetAircraft(airlineIcao = "SVA"): Promise<Store
     }
   }
 
+  assertFileStoreFallbackAllowed("Fleet store");
   const records = await readFileStore();
   return records
     .filter((record) => record.airline_icao === airlineIcao)
@@ -358,6 +361,7 @@ async function readFileStore(): Promise<StoredFleetAircraft[]> {
 }
 
 async function writeFileStore(records: StoredFleetAircraft[]) {
+  assertFileStoreFallbackAllowed("Fleet store");
   await mkdir(path.dirname(STORE_PATH), { recursive: true });
   await writeFile(STORE_PATH, `${JSON.stringify(records, null, 2)}\n`, "utf-8");
 }

@@ -47,6 +47,7 @@ const statusConfig: Record<MandateQuoteStatus, { label: string; variant: "defaul
   "airline-rejected": { label: "Rejected by airline", variant: "danger" },
   countered: { label: "Countered", variant: "default" },
   declined: { label: "Declined", variant: "muted" },
+  expired: { label: "Expired", variant: "danger" },
 };
 
 export default function QuotesPage() {
@@ -72,6 +73,7 @@ export default function QuotesPage() {
   const selectedContract = contracts.find((contract) => contract.id === form.contractId) ?? null;
   const selectedRoute = selectedContract?.contractRoutes.find((route) => route.id === form.routeId) ?? null;
   const pendingApprovalCount = quotes.filter((quote) => quote.status === "airline-approval-required").length;
+  const expiredCount = quotes.filter((quote) => quote.status === "expired").length;
   const approvedCount = quotes.filter((quote) => quote.status === "auto-approved" || quote.status === "airline-approved").length;
   const bookedRevenue = bookings.reduce((sum, booking) => sum + booking.revenueAmount, 0);
   const bookingByQuoteId = new Map(bookings.map((booking) => [booking.quoteId, booking]));
@@ -158,16 +160,41 @@ export default function QuotesPage() {
     }
   }
 
+  async function updateBooking(booking: MandateBooking, status: "flown" | "cancelled") {
+    setSaving(true);
+    setError(null);
+    try {
+      const res = await fetch(`/api/bookings/${booking.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          status,
+          flownWeightKg: status === "flown" ? booking.weightKg : undefined,
+          finalRatePerKg: status === "flown" ? booking.ratePerKg : undefined,
+          cancellationReason: status === "cancelled" ? "Cancelled by GSA operations" : undefined,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error ?? "Booking could not be updated");
+      setBookings((current) => current.map((item) => (item.id === data.booking.id ? data.booking : item)));
+    } catch (err) {
+      setError((err as Error).message);
+    } finally {
+      setSaving(false);
+    }
+  }
+
   return (
     <>
       <Topbar title="Quote Inbox" subtitle="Contract-bound rate requests" />
       <main className="space-y-5 p-5">
         {error && <div className="rounded-lg border border-danger/25 bg-danger-bg p-3 text-sm text-danger">{error}</div>}
 
-        <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
           <StatCard icon={<Inbox className="h-4 w-4" />} label="Total quotes" value={String(quotes.length)} />
           <StatCard icon={<ShieldCheck className="h-4 w-4" />} label="Airline approvals" value={String(pendingApprovalCount)} />
           <StatCard icon={<CheckCircle2 className="h-4 w-4" />} label="Approved" value={String(approvedCount)} />
+          <StatCard icon={<AlertTriangle className="h-4 w-4" />} label="Expired" value={String(expiredCount)} />
           <StatCard icon={<PackageCheck className="h-4 w-4" />} label="Booked revenue" value={formatMoney(bookedRevenue)} />
         </section>
 
@@ -253,6 +280,8 @@ export default function QuotesPage() {
               booking={bookingByQuoteId.get(quote.id)}
               saving={saving}
               onBook={() => createBooking(quote)}
+              onMarkFlown={(booking) => updateBooking(booking, "flown")}
+              onCancel={(booking) => updateBooking(booking, "cancelled")}
               onCounter={() => actionQuote(quote, "counter")}
               onDecline={() => actionQuote(quote, "decline")}
             />
@@ -276,6 +305,8 @@ function QuoteCard({
   booking,
   saving,
   onBook,
+  onMarkFlown,
+  onCancel,
   onCounter,
   onDecline,
 }: {
@@ -283,12 +314,15 @@ function QuoteCard({
   booking?: MandateBooking;
   saving: boolean;
   onBook: () => void;
+  onMarkFlown: (booking: MandateBooking) => void;
+  onCancel: (booking: MandateBooking) => void;
   onCounter: () => void;
   onDecline: () => void;
 }) {
   const config = statusConfig[quote.status];
   const belowFloor = quote.floorRatePerKg ? quote.requestedRatePerKg < quote.floorRatePerKg : false;
   const canBook = quote.status === "auto-approved" || quote.status === "airline-approved";
+  const deadlinePassed = quote.status === "expired";
 
   return (
     <Card>
@@ -301,6 +335,9 @@ function QuoteCard({
               {belowFloor && <Badge variant="warning">below floor</Badge>}
             </div>
             <p className="mt-1 text-sm text-ink-muted">{quote.origin}-{quote.destination} - {quote.cargoType} - {quote.weightKg.toLocaleString()} kg</p>
+            <p className={`mt-1 text-xs ${deadlinePassed ? "text-danger" : "text-ink-muted"}`}>
+              Customer deadline: {formatDateTime(quote.deadline)}
+            </p>
           </div>
           <div className="text-right">
             <p className="text-lg font-bold text-ink">EUR {quote.requestedRatePerKg.toFixed(2)}/kg</p>
@@ -317,7 +354,7 @@ function QuoteCard({
             <Info label="AWB" value={booking.awbNumber} />
             <Info label="Revenue" value={formatMoney(booking.revenueAmount)} />
             <Info label="Rate" value={`EUR ${booking.ratePerKg.toFixed(2)}/kg`} />
-            <Info label="Status" value={booking.status} />
+            <Info label="Status" value={`${booking.status} / ${booking.reconciliationStatus ?? "pending"}`} />
           </div>
         )}
 
@@ -330,10 +367,20 @@ function QuoteCard({
                 Create booking
               </Button>
             )}
-            <Button size="sm" variant="outline" onClick={onCounter} disabled={quote.status === "declined"}>
+            {booking?.status === "booked" && (
+              <>
+                <Button size="sm" variant="outline" onClick={() => onMarkFlown(booking)} disabled={saving}>
+                  Mark flown
+                </Button>
+                <Button size="sm" variant="ghost" onClick={() => onCancel(booking)} disabled={saving}>
+                  Cancel booking
+                </Button>
+              </>
+            )}
+            <Button size="sm" variant="outline" onClick={onCounter} disabled={quote.status === "declined" || quote.status === "expired"}>
               Counter
             </Button>
-            <Button size="sm" variant="ghost" onClick={onDecline} disabled={quote.status === "declined"}>
+            <Button size="sm" variant="ghost" onClick={onDecline} disabled={quote.status === "declined" || quote.status === "expired"}>
               <X className="h-3.5 w-3.5" />
               Decline
             </Button>
@@ -355,6 +402,18 @@ function Info({ label, value }: { label: string; value: string }) {
 
 function formatMoney(value: number) {
   return `EUR ${value.toLocaleString("en-GB", { maximumFractionDigits: 0 })}`;
+}
+
+function formatDateTime(value: string) {
+  return new Intl.DateTimeFormat("en-GB", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+    timeZone: "UTC",
+  }).format(new Date(value));
 }
 
 function StatCard({ icon, label, value }: { icon: React.ReactNode; label: string; value: string }) {

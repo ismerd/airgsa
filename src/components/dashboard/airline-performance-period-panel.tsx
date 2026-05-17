@@ -7,13 +7,24 @@ import { ChartSection } from "@/components/dashboard/chart-section";
 import { CountryPerformanceWorldMap } from "@/components/dashboard/country-performance-world-map";
 import { DataTable, type Column } from "@/components/dashboard/data-table";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { type CountryPerformance, type GsaPerformance } from "@/lib/airline-performance-data";
+import { type CountryPerformance, type GsaPerformance, type PeriodAveragePerformance } from "@/lib/airline-performance-data";
 import { formatMoney, useCurrency } from "@/lib/currency-context";
-import { usePeriod } from "@/lib/period-context";
 import type { KpiPoint } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
-export function AirlinePerformancePeriodPanel({ kpiData }: { kpiData: KpiPoint[] }) {
+type AirlinePerformancePeriodPanelProps = {
+  kpiData: KpiPoint[];
+  countries: CountryPerformance[];
+  gsas: GsaPerformance[];
+  selectedAverage: PeriodAveragePerformance;
+};
+
+export function AirlinePerformancePeriodPanel({
+  kpiData,
+  countries,
+  gsas,
+  selectedAverage,
+}: AirlinePerformancePeriodPanelProps) {
   const { currency } = useCurrency();
   const { symbol, rate } = currency;
   const fmt = (v: number) => formatMoney(v, symbol, rate);
@@ -35,7 +46,6 @@ export function AirlinePerformancePeriodPanel({ kpiData }: { kpiData: KpiPoint[]
     { header: "Flights", cell: (row) => row.flightCount },
   ];
 
-  const { countries, gsas, selectedAverage } = usePeriod();
   const [selectedCountry, setSelectedCountry] = useState<string>();
   const countryTotals = useMemo(() => getCountryTotals(countries), [countries]);
 
@@ -50,7 +60,7 @@ export function AirlinePerformancePeriodPanel({ kpiData }: { kpiData: KpiPoint[]
 
       <Card>
         <CardHeader>
-          <CardTitle>Commercial performance — {selectedAverage.label}</CardTitle>
+          <CardTitle>Commercial performance - {selectedAverage.label}</CardTitle>
         </CardHeader>
         <CardContent className="grid gap-4 md:grid-cols-3 xl:grid-cols-5">
           <Metric label="Revenue" value={fmt(selectedAverage.revenue)} />
@@ -61,7 +71,7 @@ export function AirlinePerformancePeriodPanel({ kpiData }: { kpiData: KpiPoint[]
         </CardContent>
       </Card>
 
-      <ChartSection allData={kpiData} />
+      <ChartSection allData={kpiData} filterByPeriod={false} />
 
       <div className="grid gap-5 xl:grid-cols-2">
         <CountryPerformanceChart data={countries} />
@@ -102,7 +112,7 @@ function getCountryTotals(rows: CountryPerformance[]) {
   const revenue = rows.reduce((sum, row) => sum + row.revenue, 0);
   const totalTonnage = rows.reduce((sum, row) => sum + row.tonnage, 0);
   const averageYield = totalTonnage === 0 ? 0 : revenue / (totalTonnage * 1000);
-  const averageLoadFactor = Math.round(rows.reduce((sum, row) => sum + row.loadFactor, 0) / rows.length);
+  const averageLoadFactor = rows.length > 0 ? Math.round(rows.reduce((sum, row) => sum + row.loadFactor, 0) / rows.length) : 0;
 
   return { revenue, averageYield, averageLoadFactor };
 }
@@ -221,7 +231,7 @@ function CountryExpandableTable({
                           </td>
                           <td className="px-4 py-3 align-middle text-xs font-semibold text-ink">
                             {fmt(airport.revenue)}
-                            <p className="font-normal text-ink-muted">{Math.round(airport.revenue / country.revenue * 100)}% of country</p>
+                            <p className="font-normal text-ink-muted">{country.revenue > 0 ? Math.round((airport.revenue / country.revenue) * 100) : 0}% of country</p>
                           </td>
                           <td className="px-4 py-3 align-middle text-xs">{symbol}{(airport.yieldPerKg * rate).toFixed(2)}</td>
                           <td className="px-4 py-3 align-middle text-xs">{airport.loadFactor}%</td>
@@ -244,7 +254,7 @@ function CountryExpandableTable({
                             </td>
                             <td className="px-4 py-2.5 align-middle text-xs font-semibold text-ink">
                               {fmt(route.revenue)}
-                              <p className="font-normal text-ink-muted">{Math.round(route.revenue / airport.revenue * 100)}% of city</p>
+                              <p className="font-normal text-ink-muted">{airport.revenue > 0 ? Math.round((route.revenue / airport.revenue) * 100) : 0}% of city</p>
                             </td>
                             <td className="px-4 py-2.5 align-middle text-xs">{symbol}{(route.yieldPerKg * rate).toFixed(2)}</td>
                             <td className="px-4 py-2.5 align-middle text-xs">{route.loadFactor}%</td>

@@ -258,6 +258,7 @@ function CountryFlag({ code }: { code: string }) {
   }
 
   return (
+    // eslint-disable-next-line @next/next/no-img-element
     <img
       src={`https://flagcdn.com/20x15/${code.toLowerCase()}.png`}
       width={16}

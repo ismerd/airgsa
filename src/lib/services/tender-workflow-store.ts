@@ -1,7 +1,9 @@
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
+import type { QueryResultRow } from "pg";
 import { realGsaPartners } from "@/lib/real-gsa-data";
-import { rowData, withPostgres } from "@/lib/services/postgres-store";
+import { saveWorkflowAttachment, type StoredAttachment } from "@/lib/services/attachment-store";
+import { assertFileStoreFallbackAllowed, rowData, withPostgres, withPostgresTransaction } from "@/lib/services/postgres-store";
 import type { Status } from "@/lib/types";
 import type { SessionPayload } from "@/lib/auth/session";
 
@@ -23,6 +25,8 @@ export type TenderWorkflowDocument = {
   size: number;
   mimeType: string;
   dataUrl?: string;
+  documentUrl?: string;
+  storagePath?: string;
 };
 
 export type LiveTender = {
@@ -103,7 +107,7 @@ export type LivePartnerContract = {
   market: string;
   startDate: string;
   endDate?: string;
-  status: Extract<Status, "pending" | "active" | "closed">;
+  status: Extract<Status, "pending" | "active" | "suspended" | "closed">;
   commercialTerms?: string;
   targetLoadFactor?: number;
   monthlyTonnageTargetKg?: number;
@@ -195,9 +199,17 @@ export async function getLiveTender(id: string) {
 export async function createLiveTender(input: TenderCreateInput) {
   const store = await readStore();
   const now = new Date().toISOString();
+  const id = `tnd-${Date.now().toString(36)}`;
   const tender: LiveTender = {
     ...input,
-    id: `tnd-${Date.now().toString(36)}`,
+    id,
+    attachments: await persistWorkflowDocuments(input.attachments, {
+      entityType: "tender-document",
+      entityId: id,
+      airlineCompanyId: input.airlineCompanyId,
+      airlineEmail: input.airlineEmail,
+      visibility: "tender-public",
+    }),
     createdAt: now,
     updatedAt: now,
   };
@@ -219,6 +231,15 @@ export async function updateLiveTender(id: string, input: TenderUpdateInput) {
     airline: store.tenders[index].airline,
     airlineEmail: store.tenders[index].airlineEmail,
     createdAt: store.tenders[index].createdAt,
+    attachments: input.attachments
+      ? await persistWorkflowDocuments(input.attachments, {
+          entityType: "tender-document",
+          entityId: id,
+          airlineCompanyId: store.tenders[index].airlineCompanyId,
+          airlineEmail: store.tenders[index].airlineEmail,
+          visibility: "tender-public",
+        })
+      : store.tenders[index].attachments,
     updatedAt: new Date().toISOString(),
   };
 
@@ -271,7 +292,7 @@ export async function getContractByGsaAndAirline(gsaCompanyIdOrId: string, airli
 }
 
 export async function updateContractTerms(id: string, input: ContractTermsUpdateInput) {
-  const store = await readStore();
+  return mutateStore((store) => {
   const index = store.contracts.findIndex((contract) => contract.id === id);
   if (index < 0) return null;
 
@@ -294,14 +315,15 @@ export async function updateContractTerms(id: string, input: ContractTermsUpdate
   };
 
   store.contracts[index] = contract;
-  await writeStore(store);
   return contract;
+  });
 }
 
 export async function assignRoutesToContract(id: string, routeIds: string[], assignedBy?: string) {
-  const store = await readStore();
+  return mutateStore((store) => {
   const contract = store.contracts.find((item) => item.id === id);
   if (!contract) return null;
+  if (contract.status === "closed") throw new Error("Closed contracts cannot receive route assignments");
 
   const routeIdSet = new Set(routeIds);
   const assignableRouteIds = new Set(contract.contractRoutes.map((route) => route.id));
@@ -339,14 +361,15 @@ export async function assignRoutesToContract(id: string, routeIds: string[], ass
     };
   });
 
-  await writeStore(store);
   return store.contracts.find((item) => item.id === id) ?? null;
+  });
 }
 
 export async function unassignRouteFromContract(id: string, routeId: string) {
-  const store = await readStore();
+  return mutateStore((store) => {
   const index = store.contracts.findIndex((contract) => contract.id === id);
   if (index < 0) return null;
+  if (store.contracts[index].status === "closed") throw new Error("Closed contracts cannot change route assignments");
 
   const now = new Date().toISOString();
   store.contracts[index] = {
@@ -364,8 +387,8 @@ export async function unassignRouteFromContract(id: string, routeId: string) {
     updatedAt: now,
   };
 
-  await writeStore(store);
   return store.contracts[index];
+  });
 }
 
 export async function listRoutesForGsa(session: Pick<SessionPayload, "companyId" | "company" | "email">) {
@@ -414,8 +437,9 @@ export async function createLiveApplication(
   if (existingApplication && !canEditApplication(existingApplication)) {
     throw new Error("Application edit window has expired");
   }
+  const applicationId = existingApplication?.id ?? `app-${Date.now().toString(36)}`;
   const application: LiveTenderApplication = {
-    id: existingApplication?.id ?? `app-${Date.now().toString(36)}`,
+    id: applicationId,
     tenderId,
     gsaId,
     gsaCompanyId: applicant.companyId,
@@ -432,6 +456,15 @@ export async function createLiveApplication(
     complianceScore: partner?.complianceScore ?? 50,
     winRate: partner?.winRate ?? 0,
     ...input,
+    documents: await persistWorkflowDocuments(input.documents, {
+      entityType: "application-document",
+      entityId: applicationId,
+      airlineCompanyId: tender.airlineCompanyId,
+      airlineEmail: tender.airlineEmail,
+      gsaCompanyId: applicant.companyId,
+      gsaEmail: applicant.email,
+      visibility: "application",
+    }),
     status: existingApplication?.status ?? "pending",
     submittedAt: existingApplication?.submittedAt ?? now,
     updatedAt: now,
@@ -442,6 +475,44 @@ export async function createLiveApplication(
 
   await writeStore(store);
   return application;
+}
+
+async function persistWorkflowDocuments(
+  documents: TenderWorkflowDocument[] = [],
+  options: {
+    entityType: StoredAttachment["entityType"];
+    entityId: string;
+    airlineCompanyId?: string;
+    airlineEmail?: string;
+    gsaCompanyId?: string;
+    gsaEmail?: string;
+    visibility?: StoredAttachment["visibility"];
+  },
+) {
+  return Promise.all(
+    documents.map(async (document) => {
+      if (!document.dataUrl || document.documentUrl) return document;
+      const stored = await saveWorkflowAttachment({
+        entityId: options.entityId,
+        entityType: options.entityType,
+        airlineCompanyId: options.airlineCompanyId,
+        airlineEmail: options.airlineEmail,
+        gsaCompanyId: options.gsaCompanyId,
+        gsaEmail: options.gsaEmail,
+        visibility: options.visibility,
+        fileName: document.name,
+        mimeType: document.mimeType,
+        size: document.size,
+        dataUrl: document.dataUrl,
+      });
+      return {
+        ...document,
+        dataUrl: undefined,
+        documentUrl: stored?.attachmentUrl,
+        storagePath: stored?.attachmentStoragePath,
+      };
+    }),
+  );
 }
 
 function slugId(value: string) {
@@ -460,7 +531,7 @@ export async function updateLiveApplicationStatus(
   applicationId: string,
   status: Extract<Status, "pending" | "shortlisted" | "accepted" | "rejected">,
 ) {
-  const store = await readStore();
+  return mutateStore((store) => {
   const index = store.applications.findIndex((application) => application.id === applicationId);
   if (index < 0) return null;
 
@@ -515,8 +586,8 @@ export async function updateLiveApplicationStatus(
     store.contracts = store.contracts.filter((contract) => contract.sourceApplicationId !== applicationId);
   }
 
-  await writeStore(store);
   return store.applications[index];
+  });
 }
 
 function upsertContractFromAward(
@@ -686,6 +757,7 @@ async function readStore(): Promise<TenderWorkflowStore> {
     return dbStore;
   }
 
+  assertFileStoreFallbackAllowed("Tender workflow store");
   return readFileStore();
 }
 
@@ -772,6 +844,97 @@ async function writeStore(store: TenderWorkflowStore) {
   });
   if (saved) return;
 
+  assertFileStoreFallbackAllowed("Tender workflow store");
   await mkdir(path.dirname(STORE_PATH), { recursive: true });
   await writeFile(STORE_PATH, `${JSON.stringify(store, null, 2)}\n`, "utf-8");
+}
+
+async function mutateStore<T>(operation: (store: TenderWorkflowStore) => T): Promise<T> {
+  const dbResult = await withPostgresTransaction(async (client) => {
+    const store = await readStoreFromPostgresClient(client);
+    const result = operation(store);
+    await writeStoreToPostgresClient(client, store);
+    return { result };
+  });
+  if (dbResult) return dbResult.result;
+
+  assertFileStoreFallbackAllowed("Tender workflow store");
+  const store = await readFileStore();
+  const result = operation(store);
+  await mkdir(path.dirname(STORE_PATH), { recursive: true });
+  await writeFile(STORE_PATH, `${JSON.stringify(store, null, 2)}\n`, "utf-8");
+  return result;
+}
+
+type PgQueryable = {
+  query: (text: string, values?: unknown[]) => Promise<{ rows: QueryResultRow[] }>;
+};
+
+async function readStoreFromPostgresClient(client: PgQueryable): Promise<TenderWorkflowStore> {
+  const [tendersResult, applicationsResult, contractsResult] = await Promise.all([
+    client.query("select data from live_tenders order by created_at desc for update"),
+    client.query("select data from live_applications order by submitted_at desc for update"),
+    client.query("select data from live_partner_contracts order by created_at desc for update"),
+  ]);
+
+  return normalizeWorkflowStore({
+    tenders: tendersResult.rows.map((row) => rowData<LiveTender>(row)),
+    applications: applicationsResult.rows.map((row) => rowData<LiveTenderApplication>(row)),
+    contracts: contractsResult.rows.map((row) => rowData<LivePartnerContract>(row)),
+  });
+}
+
+async function writeStoreToPostgresClient(client: PgQueryable, store: TenderWorkflowStore) {
+  await client.query("delete from live_tenders");
+  await client.query("delete from live_applications");
+  await client.query("delete from live_partner_contracts");
+
+  for (const tender of store.tenders) {
+    await client.query(
+      `
+        insert into live_tenders (id, status, created_at, updated_at, data)
+        values ($1, $2, $3, $4, $5::jsonb)
+      `,
+      [tender.id, tender.status, tender.createdAt, tender.updatedAt, JSON.stringify(tender)],
+    );
+  }
+
+  for (const application of store.applications) {
+    await client.query(
+      `
+        insert into live_applications (id, tender_id, gsa_id, gsa_name, status, submitted_at, updated_at, data)
+        values ($1, $2, $3, $4, $5, $6, $7, $8::jsonb)
+      `,
+      [
+        application.id,
+        application.tenderId,
+        application.gsaId,
+        application.gsaName,
+        application.status,
+        application.submittedAt,
+        application.updatedAt,
+        JSON.stringify(application),
+      ],
+    );
+  }
+
+  for (const contract of store.contracts) {
+    await client.query(
+      `
+        insert into live_partner_contracts (id, tender_id, application_id, airline_email, gsa_id, status, created_at, updated_at, data)
+        values ($1, $2, $3, $4, $5, $6, $7, $8, $9::jsonb)
+      `,
+      [
+        contract.id,
+        contract.tenderId,
+        contract.sourceApplicationId,
+        contract.airlineEmail,
+        contract.gsaId,
+        contract.status,
+        contract.createdAt,
+        contract.updatedAt,
+        JSON.stringify(contract),
+      ],
+    );
+  }
 }

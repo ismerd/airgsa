@@ -14,6 +14,7 @@ const statusConfig: Record<CampaignStatus, { label: string; variant: "success" |
   published: { label: "Published", variant: "success" },
   scheduled: { label: "Scheduled", variant: "warning" },
   draft: { label: "Draft", variant: "muted" },
+  archived: { label: "Archived", variant: "muted" },
 };
 
 const channelConfig: Record<CampaignChannel, { label: string; available: boolean }> = {

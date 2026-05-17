@@ -7,6 +7,9 @@ const STATUSES = new Set(["draft", "submitted", "accepted", "changes-requested",
 export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const session = await getSession();
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  if ((session.role === "airline" || session.role === "admin") && (session.accessRole === "operator" || session.accessRole === "viewer")) {
+    return NextResponse.json({ error: "Manager access required" }, { status: 403 });
+  }
 
   const input = (await req.json()) as MonthlyReportUpdateInput;
   if (input.status && !STATUSES.has(input.status)) {
@@ -24,6 +27,8 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     if (!report) return NextResponse.json({ error: "Monthly report not found" }, { status: 404 });
     return NextResponse.json({ monthlyReport: report });
   } catch (error) {
-    return NextResponse.json({ error: (error as Error).message }, { status: 403 });
+    const message = (error as Error).message;
+    const status = message.includes("access") || message.includes("allowed") || message.includes("required") || message.includes("not found") ? 403 : 409;
+    return NextResponse.json({ error: message }, { status });
   }
 }

@@ -16,6 +16,9 @@ export async function DELETE(
   if (!existing || !canEditContract(session, existing)) {
     return NextResponse.json({ error: "Contract not found" }, { status: 404 });
   }
+  if (existing.status === "closed") {
+    return NextResponse.json({ error: "Closed contracts cannot change route assignments" }, { status: 409 });
+  }
 
   const contract = await unassignRouteFromContract(id, routeId);
   if (!contract) return NextResponse.json({ error: "Contract not found" }, { status: 404 });

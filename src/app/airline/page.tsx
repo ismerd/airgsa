@@ -5,15 +5,25 @@ import { FlightWorldMap } from "@/components/dashboard/flight-world-map";
 import { KpiCard } from "@/components/dashboard/kpi-card";
 import { Topbar } from "@/components/dashboard/topbar";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { getSession } from "@/lib/auth/session";
+import { getAirlineOperationalPerformanceDashboard } from "@/lib/services/airline-performance-store";
 import { getSaudiaFlights } from "@/lib/services/fr24";
-import { kpiSeries } from "@/lib/services/platform";
 import { formatCurrency } from "@/lib/utils";
 
 export const dynamic = "force-dynamic"; // always server-render; live flight fetch has its own 5-min cache
 
 export default async function AirlineDashboardPage() {
-  const latest = kpiSeries.at(-1)!;
-  const { flights: trackedFlights } = await getSaudiaFlights();
+  const session = await getSession();
+  const [{ flights: trackedFlights }, performance] = await Promise.all([
+    getSaudiaFlights(),
+    session ? getAirlineOperationalPerformanceDashboard(session) : null,
+  ]);
+  const latest = performance?.selectedAverage ?? {
+    revenue: 0,
+    loadFactor: 0,
+    yieldPerKg: 0,
+    flightCount: 0,
+  };
 
   // Sales channel split
   const totalRevenue = trackedFlights.reduce((s, f) => s + f.revenue, 0);
@@ -74,9 +84,9 @@ export default async function AirlineDashboardPage() {
 
         {/* KPIs */}
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-          <KpiCard label="Revenue MTD" value={formatCurrency(latest.revenue)} change="+14.6% vs prior month" icon={DollarSign} />
-          <KpiCard label="Load factor" value={`${latest.loadfactor}%`} change="+3 pts on focus lanes" icon={PackageCheck} />
-          <KpiCard label="Avg yield" value={`$${latest.yield.toFixed(2)}/kg`} change="+6.1% blended yield" icon={Gauge} />
+          <KpiCard label="Revenue MTD" value={formatCurrency(latest.revenue)} change="From contract bookings" icon={DollarSign} />
+          <KpiCard label="Load factor" value={`${latest.loadFactor}%`} change={`${latest.flightCount} recorded bookings`} icon={PackageCheck} />
+          <KpiCard label="Avg yield" value={`$${latest.yieldPerKg.toFixed(2)}/kg`} change="From booked and flown shipments" icon={Gauge} />
           <KpiCard label="Active GSAs" value={String(gsaRows.length)} change={`${trackedFlights.length} flights tracked`} icon={Handshake} />
         </div>
 

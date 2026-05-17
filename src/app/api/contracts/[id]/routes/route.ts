@@ -13,6 +13,9 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
   if (!existing || !canEditContract(session, existing)) {
     return NextResponse.json({ error: "Contract not found" }, { status: 404 });
   }
+  if (existing.status === "closed") {
+    return NextResponse.json({ error: "Closed contracts cannot receive route assignments" }, { status: 409 });
+  }
 
   const body = (await req.json()) as { routeId?: string; routeIds?: string[] };
   const routeIds = Array.isArray(body.routeIds) ? body.routeIds : body.routeId ? [body.routeId] : [];

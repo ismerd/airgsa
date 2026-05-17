@@ -20,6 +20,9 @@ export async function POST(req: NextRequest) {
   if (!session || (session.role !== "airline" && session.role !== "admin")) {
     return NextResponse.json({ error: "Airline login required" }, { status: 403 });
   }
+  if (session.accessRole === "operator" || session.accessRole === "viewer") {
+    return NextResponse.json({ error: "Manager access required" }, { status: 403 });
+  }
 
   const input = (await req.json()) as ControlActionCreateInput;
   if (!input.contractId || !input.title) {

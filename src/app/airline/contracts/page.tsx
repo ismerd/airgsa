@@ -48,15 +48,18 @@ export default function ContractsPage() {
 
   const selectedContract = contracts.find((contract) => contract.id === selectedContractId) ?? null;
   const pendingApprovals = quotes.filter((quote) => quote.status === "airline-approval-required");
+  const expiredQuotes = quotes.filter((quote) => quote.status === "expired");
   const belowFloorQuotes = quotes.filter((quote) => quote.floorRatePerKg && quote.requestedRatePerKg < quote.floorRatePerKg);
   const activeRoutes = contracts.reduce((sum, contract) => sum + contract.contractRoutes.filter((route) => route.status === "assigned").length, 0);
   const attributedRevenue = bookings.reduce((sum, booking) => sum + booking.revenueAmount, 0);
   const selectedContractRevenue = selectedContract
     ? bookings.filter((booking) => booking.contractId === selectedContract.id).reduce((sum, booking) => sum + booking.revenueAmount, 0)
     : 0;
+  const bookedRevenue = bookings.reduce((sum, booking) => sum + (booking.bookedRevenueAmount ?? booking.revenueAmount), 0);
+  const revenueDelta = attributedRevenue - bookedRevenue;
   const selectedPerformance = performance.find((item) => item.contractId === selectedContractId) ?? null;
   const openControlActions = controlActions.filter((action) => action.status !== "completed" && action.status !== "cancelled");
-  const submittedReports = monthlyReports.filter((report) => report.status === "submitted" || report.status === "changes-requested");
+  const submittedReports = monthlyReports.filter((report) => report.status === "submitted");
   async function refresh() {
     const [contractRes, quoteRes, bookingRes, performanceRes, controlActionRes, reportRes, auditRes] = await Promise.all([
       fetch("/api/contracts", { cache: "no-store" }),
@@ -141,6 +144,7 @@ export default function ContractsPage() {
           description: item.riskReasons.join("; ") || "Airline requested follow-up from KPI control center.",
           severity: item.riskLevel === "red" ? "critical" : "warning",
           dueDate,
+          assigneeName: item.gsaName,
           sourceRiskReasons: item.riskReasons,
         }),
       });
@@ -167,6 +171,22 @@ export default function ContractsPage() {
       if (!res.ok) throw new Error(data.error ?? "Control action could not be updated");
       setControlActions((current) => current.map((item) => (item.id === data.controlAction.id ? data.controlAction : item)));
       await refresh();
+    } catch (err) {
+      setError((err as Error).message);
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function generateAutomaticActions() {
+    setSaving(true);
+    setError(null);
+    try {
+      const res = await fetch("/api/control-actions/auto", { method: "POST" });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error ?? "Automatic actions could not be generated");
+      await refresh();
+      if (data.created === 0) setError("No new KPI breach actions were needed.");
     } catch (err) {
       setError((err as Error).message);
     } finally {
@@ -204,13 +224,15 @@ export default function ContractsPage() {
       <main className="space-y-5 p-5">
         {error && <div className="rounded-lg border border-danger/25 bg-danger-bg p-3 text-sm text-danger">{error}</div>}
 
-        <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-6">
+        <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-7">
           <SummaryCard icon={<FileText className="h-4 w-4" />} label="Live contracts" value={String(contracts.length)} />
           <SummaryCard icon={<SlidersHorizontal className="h-4 w-4" />} label="Assigned routes" value={String(activeRoutes)} />
           <SummaryCard icon={<AlertTriangle className="h-4 w-4" />} label="Pending approvals" value={String(pendingApprovals.length)} tone="warning" />
           <SummaryCard icon={<ShieldCheck className="h-4 w-4" />} label="Open actions" value={String(openControlActions.length)} tone={openControlActions.length ? "warning" : "success"} />
           <SummaryCard icon={<FileSpreadsheet className="h-4 w-4" />} label="Reports to review" value={String(submittedReports.length)} tone={submittedReports.length ? "warning" : "success"} />
+          <SummaryCard icon={<Clock className="h-4 w-4" />} label="Expired quotes" value={String(expiredQuotes.length)} tone={expiredQuotes.length ? "danger" : "success"} />
           <SummaryCard icon={<CircleDollarSign className="h-4 w-4" />} label="Attributed revenue" value={formatMoney(attributedRevenue)} tone="success" />
+          <SummaryCard icon={<Target className="h-4 w-4" />} label="Revenue delta" value={formatMoney(revenueDelta)} tone={revenueDelta < 0 ? "warning" : "success"} />
         </section>
 
         <div className="grid gap-5 xl:grid-cols-[360px_1fr]">
@@ -272,6 +294,7 @@ export default function ContractsPage() {
                     <p className="mt-1 text-sm text-ink-muted">
                       Requested EUR {quote.requestedRatePerKg.toFixed(2)}/kg vs floor EUR {quote.floorRatePerKg?.toFixed(2) ?? "-"} - {quote.weightKg.toLocaleString()} kg
                     </p>
+                    <p className="mt-1 text-xs text-ink-muted">Customer deadline: {formatDateTime(quote.deadline)}</p>
                   </div>
                   <div className="flex gap-2">
                     <Button size="sm" onClick={() => decideQuote(quote, "approve")}>
@@ -324,7 +347,7 @@ export default function ContractsPage() {
               {auditEvents.slice(0, 10).map((event) => (
                 <div key={event.id} className="rounded-lg border border-border-ui bg-surface2 p-3">
                   <p className="text-sm font-semibold text-ink">{event.summary}</p>
-                  <p className="mt-1 text-xs text-ink-muted">{event.actorName} - {new Date(event.createdAt).toLocaleString("en-GB")}</p>
+                  <p className="mt-1 text-xs text-ink-muted">{event.actorName} - {formatDateTime(event.createdAt)}</p>
                 </div>
               ))}
               {auditEvents.length === 0 && <p className="text-sm text-ink-muted">No audit events yet.</p>}
@@ -341,7 +364,7 @@ export default function ContractsPage() {
             <table className="w-full min-w-[900px] text-sm">
               <thead className="border-b border-border-ui bg-surface2 text-xs uppercase tracking-wider text-ink-muted">
                 <tr>
-                  {["AWB", "Customer", "Route", "GSA", "Flight", "Weight", "Rate", "Revenue"].map((header) => <th key={header} className="px-4 py-3 text-left">{header}</th>)}
+                  {["AWB", "Customer", "Route", "GSA", "Status", "Weight", "Rate", "Revenue"].map((header) => <th key={header} className="px-4 py-3 text-left">{header}</th>)}
                 </tr>
               </thead>
               <tbody className="divide-y divide-border-ui">
@@ -351,10 +374,13 @@ export default function ContractsPage() {
                     <td className="px-4 py-3 text-ink">{booking.customer}</td>
                     <td className="px-4 py-3 text-ink-muted">{booking.origin}-{booking.destination}</td>
                     <td className="px-4 py-3 text-ink-muted">{booking.gsaName}</td>
-                    <td className="px-4 py-3 text-ink-muted">{booking.flightNumber ?? "-"} {booking.flightDate}</td>
+                    <td className="px-4 py-3"><Badge variant={booking.status === "cancelled" ? "danger" : booking.status === "flown" ? "success" : "warning"}>{booking.status}</Badge></td>
                     <td className="px-4 py-3 text-ink-muted">{booking.weightKg.toLocaleString()} kg</td>
                     <td className="px-4 py-3 text-ink-muted">EUR {booking.ratePerKg.toFixed(2)}</td>
-                    <td className="px-4 py-3 font-semibold text-ink">{formatMoney(booking.revenueAmount)}</td>
+                    <td className="px-4 py-3">
+                      <p className="font-semibold text-ink">{formatMoney(booking.revenueAmount)}</p>
+                      <p className="text-xs text-ink-muted">{booking.reconciliationStatus ?? "pending"}</p>
+                    </td>
                   </tr>
                 ))}
                 {bookings.length === 0 && <tr><td colSpan={8} className="px-4 py-8 text-center text-ink-muted">No attributed booking revenue yet.</td></tr>}
@@ -376,7 +402,9 @@ export default function ContractsPage() {
                     <div>
                       <div className="flex flex-wrap items-center gap-2">
                         <p className="font-semibold text-ink">{report.gsaName} - {report.period}</p>
+                        <Badge variant="muted">v{report.version ?? 1}</Badge>
                         <Badge variant={reportStatusVariant(report.status)}>{report.status}</Badge>
+                        {report.changeRequestCount ? <Badge variant="warning">{report.changeRequestCount} change request{report.changeRequestCount === 1 ? "" : "s"}</Badge> : null}
                       </div>
                       <p className="mt-1 text-sm text-ink-muted">{report.market} - {formatMoney(report.reportedRevenue)} - {Math.round(report.reportedTonnageKg).toLocaleString()} kg</p>
                       <p className="mt-2 text-sm text-ink">{report.summary}</p>
@@ -416,7 +444,7 @@ export default function ContractsPage() {
                   </div>
                   <p className="mt-2 text-sm font-semibold text-ink">{event.title}</p>
                   <p className="mt-1 text-xs text-ink-muted">{event.summary}</p>
-                  <p className="mt-1 text-[11px] text-ink-muted">{new Date(event.createdAt).toLocaleString("en-GB")} {event.actor ? `- ${event.actor}` : ""}</p>
+                  <p className="mt-1 text-[11px] text-ink-muted">{formatDateTime(event.createdAt)} {event.actor ? `- ${event.actor}` : ""}</p>
                 </div>
               ))}
               {timeline.length === 0 && <p className="text-sm text-ink-muted">No contract timeline yet.</p>}
@@ -434,6 +462,11 @@ export default function ContractsPage() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2"><Target className="h-5 w-5 text-brand" /> KPI control actions</CardTitle>
             <p className="text-sm text-ink-muted">Contract performance against current monthly commitments, with airline actions when risk appears.</p>
+            <div className="pt-2">
+              <Button size="sm" variant="outline" disabled={saving} onClick={generateAutomaticActions}>
+                Generate KPI breach actions
+              </Button>
+            </div>
           </CardHeader>
           <CardContent className="space-y-3">
             {performance.map((item) => (
@@ -505,7 +538,24 @@ export default function ContractsPage() {
                       <Badge variant={statusVariant(action.status)}>{action.status}</Badge>
                     </div>
                     <p className="mt-1 text-sm text-ink-muted">{action.gsaName} - {action.market} - due {action.dueDate ?? "not set"}</p>
+                    {action.assigneeName && <p className="mt-1 text-xs text-ink-muted">Owner: {action.assigneeName}{action.assigneeEmail ? ` - ${action.assigneeEmail}` : ""}</p>}
                     {action.gsaResponse && <p className="mt-2 rounded-lg border border-border-ui bg-surface p-3 text-sm text-ink">{action.gsaResponse}</p>}
+                    {(action.comments ?? []).length > 0 && (
+                      <div className="mt-3 space-y-2">
+                        {(action.comments ?? []).map((comment) => (
+                          <div key={comment.id} className="rounded-lg border border-border-ui bg-surface p-3 text-sm">
+                            <p className="font-semibold text-ink">{comment.createdByName} <span className="font-normal text-ink-muted">({comment.createdByRole})</span></p>
+                            {comment.body && <p className="mt-1 text-ink-muted">{comment.body}</p>}
+                            {comment.attachmentName && <p className="mt-1 text-xs font-semibold text-brand">Proof: {comment.attachmentName}</p>}
+                            {(comment.attachmentUrl || comment.attachmentDataUrl) && (
+                              <a className="mt-1 block text-xs font-semibold text-brand underline" href={comment.attachmentUrl ?? comment.attachmentDataUrl} target="_blank" rel="noreferrer">
+                                Open proof
+                              </a>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    )}
                   </div>
                   <div className="flex gap-2">
                     <Button size="sm" variant="outline" disabled={saving} onClick={() => updateControlAction(action, "completed")}>Complete</Button>
@@ -605,8 +655,8 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
   return <label><span className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-ink-muted">{label}</span>{children}</label>;
 }
 
-function SummaryCard({ icon, label, value, tone = "default" }: { icon: React.ReactNode; label: string; value: string; tone?: "default" | "warning" | "success" }) {
-  const color = tone === "warning" ? "text-warning" : tone === "success" ? "text-success" : "text-brand";
+function SummaryCard({ icon, label, value, tone = "default" }: { icon: React.ReactNode; label: string; value: string; tone?: "default" | "warning" | "success" | "danger" }) {
+  const color = tone === "warning" ? "text-warning" : tone === "success" ? "text-success" : tone === "danger" ? "text-danger" : "text-brand";
   return (
     <Card>
       <CardContent className="flex items-center gap-3 p-4">
@@ -673,6 +723,7 @@ function QuoteStatusBadge({ quote }: { quote: MandateQuote }) {
     "airline-rejected": { label: "Rejected", variant: "danger" },
     countered: { label: "Countered", variant: "default" },
     declined: { label: "Declined", variant: "muted" },
+    expired: { label: "Expired", variant: "danger" },
   };
   const config = map[quote.status];
   return <Badge variant={config.variant}>{config.label}</Badge>;
@@ -680,4 +731,16 @@ function QuoteStatusBadge({ quote }: { quote: MandateQuote }) {
 
 function formatMoney(value: number) {
   return `EUR ${value.toLocaleString("en-GB", { maximumFractionDigits: 0 })}`;
+}
+
+function formatDateTime(value: string) {
+  return new Intl.DateTimeFormat("en-GB", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+    timeZone: "UTC",
+  }).format(new Date(value));
 }

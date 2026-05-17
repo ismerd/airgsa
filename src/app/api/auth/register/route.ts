@@ -28,13 +28,13 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  if (emailAlreadyRegistered(emailLower)) {
+  if (await emailAlreadyRegistered(emailLower)) {
     return NextResponse.json(
       { error: "A registration with this email already exists. Please contact support if you need help." },
       { status: 409 }
     );
   }
 
-  const reg = addRegistration({ name, company, email: emailLower, role, country, phone, message });
+  const reg = await addRegistration({ name, company, email: emailLower, role, country, phone, message });
   return NextResponse.json({ id: reg.id, status: reg.status }, { status: 201 });
 }

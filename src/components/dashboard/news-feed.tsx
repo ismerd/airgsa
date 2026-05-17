@@ -3,15 +3,14 @@
 import { useMemo, useState } from "react";
 import { NewsCard } from "@/components/dashboard/news-card";
 import { Button } from "@/components/ui/button";
-import { newsCategories, newsPosts } from "@/lib/services/platform";
-import type { NewsCategory } from "@/lib/types";
+import type { NewsCategory, NewsPost } from "@/lib/types";
 
-export function NewsFeed() {
+export function NewsFeed({ categories, posts: allPosts }: { categories: NewsCategory[]; posts: NewsPost[] }) {
   const [active, setActive] = useState<NewsCategory | "All">("All");
   const posts = useMemo(() => {
-    if (active === "All") return newsPosts;
-    return newsPosts.filter((post) => post.category === active);
-  }, [active]);
+    if (active === "All") return allPosts;
+    return allPosts.filter((post) => post.category === active);
+  }, [active, allPosts]);
 
   return (
     <div className="space-y-5">
@@ -19,7 +18,7 @@ export function NewsFeed() {
         <Button size="sm" variant={active === "All" ? "default" : "outline"} onClick={() => setActive("All")}>
           All
         </Button>
-        {newsCategories.map((category) => (
+        {categories.map((category) => (
           <Button
             key={category}
             size="sm"
@@ -30,9 +29,15 @@ export function NewsFeed() {
           </Button>
         ))}
       </div>
-      <div className="grid gap-5 xl:grid-cols-2">
-        {posts.map((post) => <NewsCard key={post.id} post={post} />)}
-      </div>
+      {posts.length > 0 ? (
+        <div className="grid gap-5 xl:grid-cols-2">
+          {posts.map((post) => <NewsCard key={post.id} post={post} />)}
+        </div>
+      ) : (
+        <div className="rounded-xl border border-border-ui bg-surface p-6 text-sm text-ink-muted">
+          No imported cargo intelligence posts yet. Add LinkedIn sources and run an import from the admin console.
+        </div>
+      )}
     </div>
   );
 }

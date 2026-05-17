@@ -1,8 +1,13 @@
 import Link from "next/link";
 import { NewsFeed } from "@/components/dashboard/news-feed";
 import { buttonVariants } from "@/components/ui/button";
+import { getNewsPosts, newsCategories } from "@/lib/services/platform";
 
-export default function NewsPage() {
+export const dynamic = "force-dynamic";
+
+export default async function NewsPage() {
+  const posts = await getNewsPosts();
+
   return (
     <main className="min-h-screen bg-page px-5 py-8">
       <div className="mx-auto max-w-7xl">
@@ -19,7 +24,7 @@ export default function NewsPage() {
             Cargo industry signals sourced from airline and GSA LinkedIn activity. Filtered by category, market, and confidence score.
           </p>
         </section>
-        <NewsFeed />
+        <NewsFeed categories={newsCategories} posts={posts} />
       </div>
     </main>
   );

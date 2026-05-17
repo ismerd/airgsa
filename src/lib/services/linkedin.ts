@@ -8,6 +8,20 @@ import type {
 
 export const LINKEDIN_TARGET_URLS_PER_REQUEST = 6;
 
+export const linkedinImportDefaults: LinkedinImportRequest = {
+  includeQuotePosts: false,
+  includeReposts: false,
+  maxComments: 0,
+  maxPosts: 50,
+  maxReactions: 0,
+  postNestedComments: false,
+  postNestedReactions: false,
+  postedLimit: "24h",
+  scrapeComments: false,
+  scrapeReactions: false,
+  targetUrls: [],
+};
+
 export const POSTED_LIMIT_OPTIONS: { value: LinkedinImportPostedLimit; label: string }[] = [
   { value: "1h",      label: "Last 1 hour" },
   { value: "24h",     label: "Last 24 hours" },

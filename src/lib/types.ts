@@ -7,6 +7,7 @@ export type Status =
   | "accepted"
   | "rejected"
   | "active"
+  | "suspended"
   | "pending"
   | "closed"
   | "expiring";
@@ -145,7 +146,7 @@ export type Notification = {
 };
 
 export type CampaignChannel = "platform" | "linkedin" | "instagram";
-export type CampaignStatus = "draft" | "published" | "scheduled";
+export type CampaignStatus = "draft" | "published" | "scheduled" | "archived";
 export type CampaignType =
   | "route_announcement"
   | "capacity_highlight"
@@ -159,6 +160,8 @@ export type Campaign = {
   status: CampaignStatus;
   author: string;
   authorRole: "airline" | "gsa";
+  authorCompanyId?: string;
+  targetCompanyIds?: string[];
   channels: CampaignChannel[];
   audience: string;
   body: string;
@@ -167,6 +170,8 @@ export type Campaign = {
   publishedAt?: string;
   scheduledFor?: string;
   createdAt: string;
+  updatedAt?: string;
+  createdBy?: string;
   reach?: number;
   engagement?: number;
 };

@@ -13,12 +13,18 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   if (!input.action || !ACTIONS.has(input.action)) {
     return NextResponse.json({ error: "Invalid quote action" }, { status: 400 });
   }
+  if (input.action === "counter") {
+    input.counterRatePerKg = Number(input.counterRatePerKg);
+    if (!Number.isFinite(input.counterRatePerKg) || input.counterRatePerKg <= 0) {
+      return NextResponse.json({ error: "Counter rate must be greater than zero" }, { status: 400 });
+    }
+  }
 
   try {
     const quote = await updateMandateQuoteStatus(session, id, input);
     if (!quote) return NextResponse.json({ error: "Quote not found" }, { status: 404 });
     return NextResponse.json({ quote });
   } catch (error) {
-    return NextResponse.json({ error: (error as Error).message }, { status: 403 });
+    return NextResponse.json({ error: (error as Error).message }, { status: 409 });
   }
 }

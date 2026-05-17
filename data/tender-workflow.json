@@ -1,6 +1,62 @@
 {
   "tenders": [
     {
+      "title": "Demo Seed: Saudia DACH Control Flow",
+      "airline": "Saudia Cargo",
+      "airlineEmail": "saudia@airgsa.demo",
+      "airlineCompanyId": "airline-saudia-cargo",
+      "countryScope": "Germany, Austria, Switzerland",
+      "regions": [
+        "DACH",
+        "Middle East"
+      ],
+      "lanes": "FRA/RUH, MUC/JED, VIE/RUH",
+      "annualTonnage": 1800000,
+      "productMix": "General cargo, e-commerce, automotive, pharma",
+      "deadline": "2026-05-31",
+      "expectedStart": "2026-06-21",
+      "status": "closed",
+      "awardMode": "single",
+      "maxAwards": 1,
+      "commercialModel": "hybrid",
+      "requirements": [
+        "Named account coverage for DACH forwarders",
+        "Below-floor rates require airline approval",
+        "Monthly performance reporting with proof attachments"
+      ],
+      "commercialExpectations": "Hybrid commission with minimum quote activity and route-level KPI control.",
+      "routes": [
+        {
+          "id": "seed-fra-ruh",
+          "origin": "FRA",
+          "destination": "RUH",
+          "operatingDays": "Mon, Wed, Fri",
+          "frequencyPerWeek": 3,
+          "aircraft": "B777F"
+        },
+        {
+          "id": "seed-muc-jed",
+          "origin": "MUC",
+          "destination": "JED",
+          "operatingDays": "Tue, Thu",
+          "frequencyPerWeek": 2,
+          "aircraft": "A330F"
+        },
+        {
+          "id": "seed-vie-ruh",
+          "origin": "VIE",
+          "destination": "RUH",
+          "operatingDays": "Sat",
+          "frequencyPerWeek": 1,
+          "aircraft": "B777F"
+        }
+      ],
+      "attachments": [],
+      "id": "tnd-mp9mxpvy",
+      "createdAt": "2026-05-17T10:31:28.846Z",
+      "updatedAt": "2026-05-17T10:32:32.739Z"
+    },
+    {
       "id": "tnd-demo-benelux-2026",
       "title": "Saudi Cargo representation Benelux",
       "countryScope": "Netherlands, Belgium, Luxembourg",
@@ -369,6 +425,45 @@
     }
   ],
   "applications": [
+    {
+      "id": "app-mp9mxpw4",
+      "tenderId": "tnd-mp9mxpvy",
+      "gsaId": "gsa-forto",
+      "gsaCompanyId": "gsa-forto",
+      "gsaName": "Forto Logistics",
+      "contactName": "Christopher Braun",
+      "email": "christopher.braun@forto.com",
+      "headquarters": "Berlin, Germany",
+      "coverage": [
+        "Germany",
+        "Europe",
+        "Asia trade lanes"
+      ],
+      "markets": [
+        "DACH",
+        "Asia"
+      ],
+      "certifications": [
+        "IATA",
+        "CASS",
+        "ISO 9001"
+      ],
+      "cargoFocus": "Digital freight, e-commerce, general cargo",
+      "networkScore": 89,
+      "financialScore": 88,
+      "complianceScore": 87,
+      "winRate": 36,
+      "proposedCommission": "5.5% commission plus controlled minimum rate floor",
+      "launchTimeline": "Ready for launch in 30 days with DACH sales desk coverage.",
+      "namedAccountCoverage": "DHL Global Forwarding, DB Schenker, BMW Logistics, Kuehne+Nagel, Hellmann",
+      "monthlySalesTarget": "EUR 260,000 revenue and 120,000 kg booked weight",
+      "networkPlan": "Daily digital rate distribution, weekly account calls, and airport-led escalation for premium cargo.",
+      "operationalReadiness": "IATA/CASS setup complete, airline approval desk mapped, mobile task handling enabled.",
+      "documents": [],
+      "status": "accepted",
+      "submittedAt": "2026-05-17T10:31:28.852Z",
+      "updatedAt": "2026-05-17T10:32:32.739Z"
+    },
     {
       "id": "app-demo-benelux-aeb",
       "tenderId": "tnd-demo-benelux-2026",
@@ -1733,6 +1828,105 @@
   ],
   "contracts": [
     {
+      "id": "ctr-app-mp9mxpw4",
+      "tenderId": "tnd-mp9mxpvy",
+      "sourceApplicationId": "app-mp9mxpw4",
+      "airline": "Saudia Cargo",
+      "airlineEmail": "saudia@airgsa.demo",
+      "airlineCompanyId": "airline-saudia-cargo",
+      "gsaId": "gsa-forto",
+      "gsaCompanyId": "gsa-forto",
+      "gsaName": "Forto Logistics",
+      "contactName": "Christopher Braun",
+      "email": "christopher.braun@forto.com",
+      "headquarters": "Berlin, Germany",
+      "coverage": [
+        "Germany",
+        "Europe",
+        "Asia trade lanes"
+      ],
+      "markets": [
+        "DACH",
+        "Asia"
+      ],
+      "certifications": [
+        "IATA",
+        "CASS",
+        "ISO 9001"
+      ],
+      "cargoFocus": "Digital freight, e-commerce, general cargo",
+      "networkScore": 89,
+      "financialScore": 88,
+      "complianceScore": 87,
+      "winRate": 36,
+      "market": "Germany, Austria, Switzerland",
+      "startDate": "2026-06-21",
+      "status": "active",
+      "commercialTerms": "Hybrid GSA mandate: 5.5% commission, protected rate floor, monthly KPI review.",
+      "reportingCadence": "monthly",
+      "controlRules": {
+        "rateFloorPerKg": 2.15,
+        "autoApprovalVariancePct": 2,
+        "requireAirlineApprovalBelowFloor": true,
+        "quoteResponseSlaHours": 4,
+        "monthlyRevenueTarget": 260000,
+        "minimumMonthlyQuotes": 18,
+        "quoteWinRateTargetPct": 40,
+        "namedAccounts": [
+          "DHL Global Forwarding",
+          "DB Schenker",
+          "BMW Logistics",
+          "Kuehne+Nagel"
+        ],
+        "productScope": [
+          "General cargo",
+          "e-commerce",
+          "automotive",
+          "pharma"
+        ],
+        "territoryExclusivity": "exclusive",
+        "monthlyReportDueDay": 5,
+        "penaltyClause": "Below-floor customer confirmations need airline approval before booking."
+      },
+      "contractRoutes": [
+        {
+          "id": "seed-fra-ruh",
+          "origin": "FRA",
+          "destination": "RUH",
+          "operatingDays": "Mon, Wed, Fri",
+          "frequencyPerWeek": 3,
+          "aircraft": "B777F",
+          "status": "assigned",
+          "assignedAt": "2026-05-17T10:31:28.861Z",
+          "assignedBy": "saudia@airgsa.demo"
+        },
+        {
+          "id": "seed-muc-jed",
+          "origin": "MUC",
+          "destination": "JED",
+          "operatingDays": "Tue, Thu",
+          "frequencyPerWeek": 2,
+          "aircraft": "A330F",
+          "status": "assigned",
+          "assignedAt": "2026-05-17T10:31:28.861Z",
+          "assignedBy": "saudia@airgsa.demo"
+        },
+        {
+          "id": "seed-vie-ruh",
+          "origin": "VIE",
+          "destination": "RUH",
+          "operatingDays": "Sat",
+          "frequencyPerWeek": 1,
+          "aircraft": "B777F",
+          "status": "available"
+        }
+      ],
+      "createdAt": "2026-05-17T10:31:28.856Z",
+      "updatedAt": "2026-05-17T10:32:32.744Z",
+      "targetLoadFactor": 78,
+      "monthlyTonnageTargetKg": 120000
+    },
+    {
       "id": "ctr-app-demo-nordics-closed-air-menzies",
       "tenderId": "tnd-demo-nordics-closed-2026",
       "sourceApplicationId": "app-demo-nordics-closed-air-menzies",
@@ -1792,7 +1986,26 @@
       "createdAt": "2026-05-16T23:26:19.005Z",
       "updatedAt": "2026-05-16T23:26:42.511Z",
       "targetLoadFactor": 50,
-      "monthlyTonnageTargetKg": 1500000
+      "monthlyTonnageTargetKg": 1500000,
+      "controlRules": {
+        "rateFloorPerKg": 1.85,
+        "autoApprovalVariancePct": 0,
+        "requireAirlineApprovalBelowFloor": true,
+        "quoteResponseSlaHours": 4,
+        "monthlyRevenueTarget": 50000,
+        "minimumMonthlyQuotes": 12,
+        "quoteWinRateTargetPct": 35,
+        "namedAccounts": [],
+        "productScope": [
+          "Pharma",
+          "seafood",
+          "e-commerce",
+          "general cargo"
+        ],
+        "territoryExclusivity": "exclusive",
+        "monthlyReportDueDay": 5,
+        "penaltyClause": "Below-floor quotes require airline approval before customer confirmation."
+      }
     },
     {
       "id": "ctr-app-demo-dach-pharma-aeb",
@@ -1868,7 +2081,26 @@
         }
       ],
       "createdAt": "2026-05-16T23:26:19.005Z",
-      "updatedAt": "2026-05-16T23:26:19.005Z"
+      "updatedAt": "2026-05-16T23:26:19.005Z",
+      "controlRules": {
+        "rateFloorPerKg": 2.05,
+        "autoApprovalVariancePct": 0,
+        "requireAirlineApprovalBelowFloor": true,
+        "quoteResponseSlaHours": 4,
+        "monthlyRevenueTarget": 50000,
+        "minimumMonthlyQuotes": 12,
+        "quoteWinRateTargetPct": 35,
+        "namedAccounts": [],
+        "productScope": [
+          "Pharma",
+          "automotive",
+          "machinery",
+          "express cargo"
+        ],
+        "territoryExclusivity": "shared",
+        "monthlyReportDueDay": 5,
+        "penaltyClause": "Below-floor quotes require airline approval before customer confirmation."
+      }
     },
     {
       "id": "ctr-app-demo-france-cargo-airlines-services",
@@ -1935,7 +2167,26 @@
         }
       ],
       "createdAt": "2026-05-16T23:26:19.005Z",
-      "updatedAt": "2026-05-16T23:26:19.005Z"
+      "updatedAt": "2026-05-16T23:26:19.005Z",
+      "controlRules": {
+        "rateFloorPerKg": 1.85,
+        "autoApprovalVariancePct": 0,
+        "requireAirlineApprovalBelowFloor": true,
+        "quoteResponseSlaHours": 4,
+        "monthlyRevenueTarget": 50000,
+        "minimumMonthlyQuotes": 12,
+        "quoteWinRateTargetPct": 35,
+        "namedAccounts": [],
+        "productScope": [
+          "Pharma",
+          "luxury goods",
+          "perishables",
+          "general cargo"
+        ],
+        "territoryExclusivity": "exclusive",
+        "monthlyReportDueDay": 5,
+        "penaltyClause": "Below-floor quotes require airline approval before customer confirmation."
+      }
     }
   ]
 }
