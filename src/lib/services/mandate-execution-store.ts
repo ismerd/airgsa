@@ -1826,8 +1826,7 @@ function statusOrder(status: ControlActionStatus) {
 async function readStore(): Promise<MandateExecutionStore> {
   const dbStore = await withPostgres(async (client) => {
     const result = await client.query("select value as data from app_settings where key = $1", [STORE_KEY]);
-    if (result.rows.length === 0) return null;
-    return normalizeStore(rowData<Partial<MandateExecutionStore>>(result.rows[0]));
+    return result.rows[0] ? normalizeStore(rowData<Partial<MandateExecutionStore>>(result.rows[0])) : normalizeStore({});
   });
   if (dbStore) return dbStore;
 

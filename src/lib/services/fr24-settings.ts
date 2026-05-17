@@ -15,7 +15,7 @@ function defaultEnabled() {
 
 export async function getFr24Settings(): Promise<Fr24Settings> {
   const dbSettings = await withPostgres(async (client) => {
-    const result = await client.query("select data from app_settings where key = $1", ["fr24_settings"]);
+    const result = await client.query("select value as data from app_settings where key = $1", ["fr24_settings"]);
     if (!result.rows[0]) return null;
     const parsed = rowData<Partial<Fr24Settings>>(result.rows[0]);
     return {
