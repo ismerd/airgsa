@@ -2,6 +2,7 @@ import {
   BarChart3,
   BellRing,
   FileCheck2,
+  Globe,
   Handshake,
   Megaphone,
   Newspaper,
@@ -70,6 +71,7 @@ function getNav(pendingApplications: number, accessRole?: string): NavGroup[] {
     items: [
       { label: "Intelligence", href: "/airline/intelligence", icon: Newspaper },
       { label: "Marketing", href: "/airline/campaigns", icon: Megaphone },
+      { label: "GSA Network", href: "/airline/gsa-network", icon: Globe },
     ],
   },
   {

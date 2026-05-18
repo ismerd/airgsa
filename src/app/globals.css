@@ -1,6 +1,11 @@
 @import "leaflet/dist/leaflet.css";
 @import "tailwindcss";
 
+/* Remove browser focus outline on clickable Leaflet SVG paths */
+path.leaflet-interactive:focus {
+  outline: none;
+}
+
 @keyframes loading-bar {
   0% {
     transform: translateX(-110%);
