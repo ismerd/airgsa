@@ -61,6 +61,24 @@ Railway Postgres is the primary database. Apply all files in `supabase/migration
 npm run db:migrate
 ```
 
+Create the first production admin once after migrations:
+
+```bash
+BOOTSTRAP_ADMIN_EMAIL=founder@example.com \
+BOOTSTRAP_ADMIN_PASSWORD='use-a-long-unique-password' \
+npm run admin:bootstrap
+```
+
+On Windows PowerShell:
+
+```powershell
+$env:BOOTSTRAP_ADMIN_EMAIL="founder@example.com"
+$env:BOOTSTRAP_ADMIN_PASSWORD="use-a-long-unique-password"
+npm run admin:bootstrap
+```
+
+The bootstrap script creates or updates one active `admin` / `owner` account in Railway Postgres. Remove the bootstrap password variable from your shell or Railway variables after use. Do not enable demo accounts in production.
+
 The release gate is:
 
 ```bash

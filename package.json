@@ -9,6 +9,7 @@
     "check:migrations": "node scripts/check-migrations.mjs",
     "check:live-services": "node scripts/check-live-services.mjs",
     "check:saas": "node scripts/check-saas-readiness.mjs",
+    "admin:bootstrap": "node scripts/bootstrap-admin.mjs",
     "db:migrate": "node scripts/apply-migrations.mjs",
     "seed:demo": "node scripts/seed-demo.mjs",
     "test:permissions": "node scripts/check-permissions.mjs",

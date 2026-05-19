@@ -1,7 +1,13 @@
 import { readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { createId } from "@/lib/services/ids";
-import { assertFileStoreFallbackAllowed, rowData, withPostgres, withPostgresTransaction } from "@/lib/services/postgres-store";
+import {
+  assertFileStoreFallbackAllowed,
+  hasPostgres,
+  rowData,
+  withPostgres,
+  withPostgresTransaction,
+} from "@/lib/services/postgres-store";
 
 export type RegistrationStatus = "pending" | "approved" | "rejected";
 
@@ -64,7 +70,7 @@ export async function addRegistration(
     return result.rows[0] ? rowData<Registration>(result.rows[0]) : null;
   });
   if (saved) return normalizeRegistration(saved);
-  if (saved === null && process.env.DATABASE_URL) {
+  if (saved === null && hasPostgres()) {
     throw new Error("A registration with this email already exists.");
   }
 
@@ -103,7 +109,7 @@ export async function updateRegistrationStatus(
     return result.rows[0] ? rowData<Registration>(result.rows[0]) : null;
   });
   if (updated) return normalizeRegistration(updated);
-  if (updated === null && process.env.DATABASE_URL) return null;
+  if (updated === null && hasPostgres()) return null;
 
   const registrations = await readFileRegistrations();
   const index = registrations.findIndex((registration) => registration.id === id);
@@ -155,7 +161,7 @@ async function readLegacyRegistrations(): Promise<Registration[]> {
   });
   if (legacy?.length) return legacy;
 
-  if (!process.env.DATABASE_URL) return readFileRegistrations();
+  if (!hasPostgres()) return readFileRegistrations();
   return [];
 }
 

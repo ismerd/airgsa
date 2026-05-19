@@ -3,8 +3,35 @@ import { Pool, type PoolClient, type QueryResultRow } from "pg";
 let pool: Pool | null = null;
 let schemaReady: Promise<void> | null = null;
 
+function cleanEnvValue(value: string | undefined) {
+  const trimmed = value?.trim();
+  if (!trimmed) return undefined;
+  return trimmed.replace(/^["']|["']$/g, "");
+}
+
+export function getDatabaseUrl() {
+  const explicitUrl =
+    cleanEnvValue(process.env.DATABASE_URL) ??
+    cleanEnvValue(process.env.POSTGRES_URL) ??
+    cleanEnvValue(process.env.DATABASE_PRIVATE_URL) ??
+    cleanEnvValue(process.env.DATABASE_PUBLIC_URL) ??
+    cleanEnvValue(process.env.POSTGRES_PRIVATE_URL) ??
+    cleanEnvValue(process.env.POSTGRES_PUBLIC_URL);
+
+  if (explicitUrl) return explicitUrl;
+
+  const host = cleanEnvValue(process.env.PGHOST);
+  const port = cleanEnvValue(process.env.PGPORT) ?? "5432";
+  const user = cleanEnvValue(process.env.PGUSER);
+  const password = cleanEnvValue(process.env.PGPASSWORD);
+  const database = cleanEnvValue(process.env.PGDATABASE);
+
+  if (!host || !user || !password || !database) return undefined;
+  return `postgresql://${encodeURIComponent(user)}:${encodeURIComponent(password)}@${host}:${port}/${encodeURIComponent(database)}`;
+}
+
 export function hasPostgres() {
-  return Boolean(process.env.DATABASE_URL);
+  return Boolean(getDatabaseUrl());
 }
 
 export function canUseFileStoreFallback() {
@@ -13,16 +40,17 @@ export function canUseFileStoreFallback() {
 
 export function assertFileStoreFallbackAllowed(storeName: string): void {
   if (canUseFileStoreFallback()) return;
-  throw new Error(`${storeName} requires DATABASE_URL in production. File-store fallback is disabled.`);
+  throw new Error(`${storeName} requires Postgres connection variables in production. File-store fallback is disabled.`);
 }
 
 function getPool() {
-  if (!process.env.DATABASE_URL) return null;
+  const databaseUrl = getDatabaseUrl();
+  if (!databaseUrl) return null;
 
   if (!pool) {
-    const useSsl = process.env.DATABASE_SSL === "true" || process.env.DATABASE_URL.includes("sslmode=require");
+    const useSsl = process.env.DATABASE_SSL === "true" || databaseUrl.includes("sslmode=require");
     pool = new Pool({
-      connectionString: process.env.DATABASE_URL,
+      connectionString: databaseUrl,
       ssl: useSsl ? { rejectUnauthorized: false } : undefined,
     });
   }
