@@ -30,6 +30,31 @@ export function getDatabaseUrl() {
   return `postgresql://${encodeURIComponent(user)}:${encodeURIComponent(password)}@${host}:${port}/${encodeURIComponent(database)}`;
 }
 
+export function getPostgresRuntimeDiagnostics() {
+  const candidates = [
+    "DATABASE_URL",
+    "POSTGRES_URL",
+    "DATABASE_PRIVATE_URL",
+    "DATABASE_PUBLIC_URL",
+    "POSTGRES_PRIVATE_URL",
+    "POSTGRES_PUBLIC_URL",
+    "PGHOST",
+    "PGPORT",
+    "PGUSER",
+    "PGPASSWORD",
+    "PGDATABASE",
+  ];
+  const presentVariables = candidates.filter((name) => Boolean(cleanEnvValue(process.env[name])));
+  const databaseUrl = getDatabaseUrl();
+
+  return {
+    hasDatabaseUrl: Boolean(databaseUrl),
+    presentVariables,
+    nodeEnv: process.env.NODE_ENV ?? null,
+    databaseSsl: process.env.DATABASE_SSL ?? null,
+  };
+}
+
 export function hasPostgres() {
   return Boolean(getDatabaseUrl());
 }
