@@ -219,6 +219,89 @@ async function ensureSchema() {
         primary key (session_key, key)
       );
 
+      create table if not exists workflow_mandate_quotes (
+        id text primary key,
+        contract_id text not null,
+        airline_company_id text,
+        gsa_company_id text,
+        status text not null check (status in ('draft', 'auto-approved', 'airline-approval-required', 'airline-approved', 'airline-rejected', 'countered', 'declined', 'expired')),
+        deadline timestamptz,
+        created_at timestamptz not null,
+        updated_at timestamptz not null,
+        data jsonb not null
+      );
+
+      create table if not exists workflow_mandate_bookings (
+        id text primary key,
+        contract_id text not null,
+        quote_id text,
+        airline_company_id text,
+        gsa_company_id text,
+        status text not null check (status in ('booked', 'flown', 'cancelled')),
+        created_at timestamptz not null,
+        updated_at timestamptz not null,
+        data jsonb not null
+      );
+
+      create table if not exists workflow_control_actions (
+        id text primary key,
+        contract_id text not null,
+        airline_company_id text,
+        gsa_company_id text,
+        status text not null check (status in ('open', 'in-progress', 'completed', 'cancelled')),
+        severity text not null check (severity in ('info', 'warning', 'critical')),
+        due_date date,
+        created_at timestamptz not null,
+        updated_at timestamptz not null,
+        data jsonb not null
+      );
+
+      create table if not exists workflow_control_action_comments (
+        id text primary key,
+        action_id text not null,
+        contract_id text not null,
+        airline_company_id text,
+        gsa_company_id text,
+        created_at timestamptz not null,
+        data jsonb not null
+      );
+
+      create table if not exists workflow_monthly_reports (
+        id text primary key,
+        contract_id text not null,
+        airline_company_id text,
+        gsa_company_id text,
+        period text not null,
+        status text not null check (status in ('draft', 'submitted', 'accepted', 'changes-requested', 'rejected')),
+        version integer not null default 1,
+        created_at timestamptz not null,
+        updated_at timestamptz not null,
+        data jsonb not null
+      );
+
+      create table if not exists workflow_audit_events (
+        id text primary key,
+        contract_id text,
+        entity_type text not null,
+        entity_id text not null,
+        actor_email text,
+        actor_role text,
+        created_at timestamptz not null,
+        data jsonb not null
+      );
+
+      create table if not exists workflow_notifications (
+        id text primary key,
+        recipient_role text not null check (recipient_role in ('airline', 'gsa', 'admin')),
+        recipient_company_id text,
+        recipient_email text,
+        type text not null check (type in ('control-action', 'monthly-report', 'quote', 'booking', 'system')),
+        entity_id text not null,
+        read_at timestamptz,
+        created_at timestamptz not null,
+        data jsonb not null
+      );
+
       create table if not exists live_tenders (
         id text primary key,
         status text not null check (status in ('draft', 'open', 'closed')),
@@ -286,6 +369,16 @@ async function ensureSchema() {
       create index if not exists workflow_email_deliveries_recipient_idx on workflow_email_deliveries(recipient_role, recipient_company_id, created_at desc);
       create index if not exists workflow_email_deliveries_status_idx on workflow_email_deliveries(status, updated_at desc);
       create index if not exists workflow_user_state_updated_idx on workflow_user_state(key, updated_at desc);
+      create index if not exists workflow_mandate_quotes_contract_idx on workflow_mandate_quotes(contract_id, created_at desc);
+      create index if not exists workflow_mandate_quotes_status_idx on workflow_mandate_quotes(status, updated_at desc);
+      create index if not exists workflow_mandate_bookings_contract_idx on workflow_mandate_bookings(contract_id, created_at desc);
+      create index if not exists workflow_mandate_bookings_quote_idx on workflow_mandate_bookings(quote_id);
+      create index if not exists workflow_control_actions_contract_idx on workflow_control_actions(contract_id, status, updated_at desc);
+      create index if not exists workflow_control_action_comments_action_idx on workflow_control_action_comments(action_id, created_at);
+      create index if not exists workflow_monthly_reports_contract_period_idx on workflow_monthly_reports(contract_id, period);
+      create index if not exists workflow_audit_events_contract_idx on workflow_audit_events(contract_id, created_at desc);
+      create index if not exists workflow_audit_events_entity_idx on workflow_audit_events(entity_type, entity_id);
+      create index if not exists workflow_notifications_recipient_idx on workflow_notifications(recipient_role, recipient_company_id, created_at desc);
     `).then(() => undefined);
   }
 

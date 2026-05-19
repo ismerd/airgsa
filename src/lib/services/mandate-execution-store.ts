@@ -5,7 +5,13 @@ import { canViewContract } from "@/lib/auth/permissions";
 import { saveWorkflowAttachment } from "@/lib/services/attachment-store";
 import { createId } from "@/lib/services/ids";
 import { queueWorkflowEmail } from "@/lib/services/notification-email";
-import { assertFileStoreFallbackAllowed, rowData, withPostgres, withPostgresTransaction } from "@/lib/services/postgres-store";
+import {
+  assertFileStoreFallbackAllowed,
+  hasPostgres,
+  rowData,
+  withPostgres,
+  withPostgresTransaction,
+} from "@/lib/services/postgres-store";
 import { listLivePartnerContracts, type LiveContractRoute, type LivePartnerContract } from "@/lib/services/tender-workflow-store";
 
 const STORE_PATH = path.join(process.cwd(), "data", "mandate-execution.json");
@@ -1991,6 +1997,7 @@ async function readLegacyStore(): Promise<MandateExecutionStore> {
     return result.rows[0] ? normalizeStore(rowData<Partial<MandateExecutionStore>>(result.rows[0])) : null;
   });
   if (dbStore) return dbStore;
+  if (hasPostgres()) return EMPTY_STORE;
 
   assertFileStoreFallbackAllowed("Mandate execution store");
   try {
