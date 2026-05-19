@@ -38,21 +38,15 @@ LINKEDIN_API_TOKEN=
 LINKEDIN_IMPORT_API_URL=
 ```
 
-Railway Postgres is the primary production database. Supabase variables are optional and only needed if you choose Supabase Auth or Supabase Storage.
+Railway Postgres is the production database.
 
 `LINKEDIN_API_TOKEN`, `DATABASE_URL`, and provider keys are server-side secrets. Do not expose them with a `NEXT_PUBLIC_` prefix.
 
-`AUTH_SESSION_SECRET` signs the AirGSA session cookie. Set a long random value in production. Without Supabase configuration the app provisions and authenticates approved users through Railway Postgres accounts. With Supabase configured, login can use Supabase Auth and reads the user's role/company from `public.users` and `public.companies`.
+`AUTH_SESSION_SECRET` signs the AirGSA session cookie. Set a long random value in production. The app provisions and authenticates approved users through Railway Postgres accounts.
 
 Set `ALLOW_DEMO_ACCOUNTS=true` only when you intentionally want demo logins to remain available in a deployed environment.
 
-Supabase Auth password recovery is available through `/forgot-password` and `/reset-password` only when Supabase Auth is configured. In the Supabase dashboard, add your deployed domain to the allowed redirect URLs, including:
-
-```bash
-https://your-domain/reset-password
-```
-
-Admin approval of access requests provisions Railway Postgres auth accounts by default and returns a one-time temporary password to the admin response. If `SUPABASE_SERVICE_ROLE_KEY` is configured, Supabase invites are used instead.
+Admin approval of access requests provisions Railway Postgres auth accounts and returns a one-time temporary password to the admin response.
 
 Password reset works with Railway Postgres accounts when an email provider is configured. The simplest MVP provider is Resend: set `RESEND_API_KEY` and `WORKFLOW_EMAIL_ENABLED=true`. Without `WORKFLOW_EMAIL_FROM`, AirGSA uses `AirGSA <onboarding@resend.dev>` for testing, which Resend only allows to send to the email address of your own Resend account. To send to real Airline/GSA users, verify a domain in Resend and set `WORKFLOW_EMAIL_FROM=AirGSA <noreply@your-domain.com>`. SMTP (`SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASSWORD`, `SMTP_FROM`) and `WORKFLOW_EMAIL_WEBHOOK_URL` are also supported.
 
@@ -67,10 +61,10 @@ LinkedIn imports are batched internally in groups of 6 target URLs because the u
 The plain Postgres schema is in:
 
 ```bash
-supabase/schema.sql
+db/schema.sql
 ```
 
-It includes the requested tables, enums, indexes, and RLS policies. Apply `supabase/migrations` to Railway Postgres before production deploys; the directory name is legacy.
+It includes the requested tables, enums, indexes, and RLS policies. Apply `db/migrations` to Railway Postgres before production deploys.
 
 ```bash
 npm run db:migrate

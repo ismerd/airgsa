@@ -2,7 +2,6 @@ import { mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 import type { Pool } from "pg";
 import { assertFileStoreFallbackAllowed, rowData, withPostgres } from "@/lib/services/postgres-store";
-import { createSupabaseAdminClient } from "@/lib/supabase/client";
 
 const STORE_PATH = path.join(process.cwd(), "data", "airline-fleet-aircraft.json");
 const FILE_STORE_LIVE_WRITE_INTERVAL_MS = 60_000;
@@ -89,16 +88,6 @@ export async function syncFleetSightings(sightings: FleetAircraftSighting[]) {
   });
   if (savedToPostgres) return;
 
-  if (canUseSupabaseAdmin()) {
-    try {
-      await syncFleetSightingsToSupabase(normalized);
-      return;
-    } catch (err) {
-      if (process.env.NODE_ENV === "production") throw err;
-      console.warn("[fleet] Supabase persistence unavailable, using file store:", (err as Error).message);
-    }
-  }
-
   assertFileStoreFallbackAllowed("Fleet store");
   await syncFleetSightingsToFile(normalized);
 }
@@ -123,19 +112,6 @@ export async function getStoredFleetAircraft(airlineIcao = "SVA"): Promise<Store
     return records;
   });
   if (dbRecords) return dbRecords;
-
-  if (canUseSupabaseAdmin()) {
-    const supabase = createSupabaseAdminClient();
-    const { data, error } = await supabase
-      .from("airline_fleet_aircraft")
-      .select("*")
-      .eq("airline_icao", airlineIcao)
-      .order("updated_at", { ascending: false });
-
-    if (!error && data) {
-      return (data as StoredFleetAircraft[]).map(normalizeStoredAircraft);
-    }
-  }
 
   assertFileStoreFallbackAllowed("Fleet store");
   const records = await readFileStore();
@@ -165,45 +141,6 @@ function normalizeSighting(sighting: FleetAircraftSighting): StoredFleetAircraft
     last_seen_live_at: sighting.last_seen_live_at ?? now,
     updated_at: now,
   };
-}
-
-async function syncFleetSightingsToSupabase(sightings: StoredFleetAircraft[]) {
-  const supabase = createSupabaseAdminClient();
-  const now = new Date().toISOString();
-  const liveRegistrations = new Set(sightings.map((sighting) => sighting.registration));
-
-  if (sightings.length > 0) {
-    const { error } = await supabase.from("airline_fleet_aircraft").upsert(
-      sightings.map((sighting) => ({
-        ...sighting,
-        status: "in_air",
-        updated_at: now,
-      })),
-      { onConflict: "registration" },
-    );
-    if (error) throw new Error(`fleet upsert failed: ${error.message}`);
-  }
-
-  const { data: activeAircraft, error: readError } = await supabase
-    .from("airline_fleet_aircraft")
-    .select("*")
-    .eq("airline_icao", "SVA")
-    .eq("status", "in_air");
-
-  if (readError) throw new Error(`fleet read failed: ${readError.message}`);
-
-  const endedAircraft = ((activeAircraft ?? []) as StoredFleetAircraft[]).filter(
-    (aircraft) => !liveRegistrations.has(aircraft.registration),
-  );
-
-  await Promise.all(
-    endedAircraft.map((aircraft) =>
-      supabase
-        .from("airline_fleet_aircraft")
-        .update(buildParkedPatch(aircraft, now))
-        .eq("registration", aircraft.registration),
-    ),
-  );
 }
 
 async function syncFleetSightingsToPostgres(client: Pool, sightings: StoredFleetAircraft[]) {
@@ -364,8 +301,4 @@ async function writeFileStore(records: StoredFleetAircraft[]) {
   assertFileStoreFallbackAllowed("Fleet store");
   await mkdir(path.dirname(STORE_PATH), { recursive: true });
   await writeFile(STORE_PATH, `${JSON.stringify(records, null, 2)}\n`, "utf-8");
-}
-
-function canUseSupabaseAdmin() {
-  return Boolean(process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.SUPABASE_SERVICE_ROLE_KEY);
 }

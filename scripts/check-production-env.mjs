@@ -8,14 +8,8 @@ const required = [
 
 const warnings = [
   [
-    "Supabase optional auth/storage",
-    () => Boolean(process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY && process.env.SUPABASE_SERVICE_ROLE_KEY),
-    "Supabase is not configured; Railway Postgres auth will be used",
-  ],
-  [
     "Workflow attachment storage",
     () => Boolean(
-      (process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.SUPABASE_SERVICE_ROLE_KEY) ||
       process.env.ATTACHMENT_STORAGE_ROOT ||
       process.env.FILE_STORAGE_ROOT ||
       process.env.RAILWAY_VOLUME_MOUNT_PATH

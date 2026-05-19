@@ -9,7 +9,7 @@ if (!process.env.DATABASE_URL) {
   process.exit(1);
 }
 
-const migrationsDir = path.join(process.cwd(), "supabase", "migrations");
+const migrationsDir = path.join(process.cwd(), "db", "migrations");
 const migrationFiles = readdirSync(migrationsDir)
   .filter((file) => file.endsWith(".sql"))
   .sort();
@@ -28,16 +28,14 @@ try {
       applied_at timestamptz not null default now()
     )
   `);
-  if ((process.env.MIGRATION_TARGET || "railway").toLowerCase() !== "supabase") {
-    await ensureRailwayCompatibilityBase(client);
-  }
+  await ensureRailwayCompatibilityBase(client);
 
   const appliedResult = await client.query("select version from public.schema_migrations");
   const applied = new Set(appliedResult.rows.map((row) => row.version));
   const pending = migrationFiles.filter((file) => !applied.has(file));
 
   for (const file of pending) {
-    const sql = makeTargetCompatibleSql(await readFile(path.join(migrationsDir, file), "utf8"));
+    const sql = makeRailwayCompatibleSql(await readFile(path.join(migrationsDir, file), "utf8"));
     console.log(`Applying ${file}`);
     await client.query("begin");
     try {
@@ -64,8 +62,7 @@ function shouldUseDatabaseSsl(url) {
   return process.env.DATABASE_SSL === "true" || url.includes("sslmode=require");
 }
 
-function makeTargetCompatibleSql(sql) {
-  if ((process.env.MIGRATION_TARGET || "railway").toLowerCase() === "supabase") return sql;
+function makeRailwayCompatibleSql(sql) {
   return sql.replace(/\s+to\s+authenticated\b/gi, "");
 }
 

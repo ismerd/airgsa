@@ -52,16 +52,10 @@ export async function PATCH(
     try {
       const result = await provisionApprovedRegistration(current);
       if (result.enabled) {
-        if (result.provider === "postgres") {
-          oneTimePassword = result.temporaryPassword;
-          provisioningNote = result.temporaryPassword
-            ? `Railway Postgres account created. User ${result.userId}, company ${result.companyId}. Temporary password issued once in admin response.`
-            : `Existing Railway Postgres account linked. User ${result.userId}, company ${result.companyId}.`;
-        } else {
-          provisioningNote = result.invited
-            ? `Supabase invite sent. User ${result.userId}, company ${result.companyId}.`
-            : `Existing Supabase user linked. User ${result.userId}, company ${result.companyId}.`;
-        }
+        oneTimePassword = result.temporaryPassword;
+        provisioningNote = result.temporaryPassword
+          ? `Railway Postgres account created. User ${result.userId}, company ${result.companyId}. Temporary password issued once in admin response.`
+          : `Existing Railway Postgres account linked. User ${result.userId}, company ${result.companyId}.`;
       } else {
         provisioningNote = "No auth provider configured; registration approved without provisioning.";
       }

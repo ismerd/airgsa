@@ -5,8 +5,8 @@ import path from "node:path";
 import pg from "pg";
 
 const root = process.cwd();
-const schemaPath = path.join(root, "supabase", "schema.sql");
-const migrationsDir = path.join(root, "supabase", "migrations");
+const schemaPath = path.join(root, "db", "schema.sql");
+const migrationsDir = path.join(root, "db", "migrations");
 
 const requiredTables = [
   "app_settings",
@@ -54,11 +54,11 @@ const schemaPolicies = extractSet(schemaSql, /create\s+policy\s+"[^"]+"\s+on\s+p
 const migrationPolicies = extractSet(migrationsSql, /create\s+policy\s+"[^"]+"\s+on\s+public\.([a-z0-9_]+)/gi);
 
 for (const table of requiredTables) {
-  if (!schemaTables.has(table)) failures.push(`${table}: missing from supabase/schema.sql`);
+  if (!schemaTables.has(table)) failures.push(`${table}: missing from db/schema.sql`);
   if (!migrationTables.has(table)) failures.push(`${table}: missing create table migration`);
-  if (!schemaRls.has(table)) failures.push(`${table}: missing RLS enable in supabase/schema.sql`);
+  if (!schemaRls.has(table)) failures.push(`${table}: missing RLS enable in db/schema.sql`);
   if (!migrationRls.has(table)) failures.push(`${table}: missing RLS enable in migrations`);
-  if (!schemaPolicies.has(table)) failures.push(`${table}: missing policy in supabase/schema.sql`);
+  if (!schemaPolicies.has(table)) failures.push(`${table}: missing policy in db/schema.sql`);
   if (!migrationPolicies.has(table)) failures.push(`${table}: missing policy in migrations`);
 }
 

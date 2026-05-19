@@ -6,11 +6,9 @@ import type { SessionPayload } from "@/lib/auth/session";
 import { assertFileStoreFallbackAllowed, rowData, withPostgres, withPostgresTransaction } from "@/lib/services/postgres-store";
 import { createId } from "@/lib/services/ids";
 import { listLivePartnerContracts } from "@/lib/services/tender-workflow-store";
-import { createSupabaseAdminClient } from "@/lib/supabase/client";
 
 const STORE_PATH = path.join(process.cwd(), "data", "attachments.json");
 const STORE_KEY = "workflow_attachment_store";
-const BUCKET_NAME = "workflow-attachments";
 const MAX_DOCUMENT_BYTES = 10 * 1024 * 1024;
 const MAX_LOGO_BYTES = 2 * 1024 * 1024;
 const ALLOWED_DOCUMENT_EXTENSIONS = new Set(["pdf", "doc", "docx", "xls", "xlsx", "csv", "ppt", "pptx", "png", "jpg", "jpeg", "webp"]);
@@ -41,7 +39,7 @@ export type StoredAttachment = {
   fileName: string;
   mimeType: string;
   size: number;
-  storage: "supabase" | "file";
+  storage: "file";
   storagePath: string;
   createdAt: string;
 };
@@ -84,16 +82,10 @@ export async function saveWorkflowAttachment(input: {
   const ownerPath = input.contractId ?? input.entityId ?? "general";
   const storagePath = `${ownerPath}/${id}-${safeName}`;
 
-  let storage: StoredAttachment["storage"] = "file";
-  const uploadedToSupabase = await uploadToSupabase(storagePath, payload.buffer, payload.mimeType);
-  if (uploadedToSupabase) {
-    storage = "supabase";
-  } else {
-    assertAttachmentFileStorageAllowed();
-    const filePath = getAttachmentFilePath(storagePath);
-    await mkdir(path.dirname(filePath), { recursive: true });
-    await writeFile(filePath, payload.buffer);
-  }
+  assertAttachmentFileStorageAllowed();
+  const filePath = getAttachmentFilePath(storagePath);
+  await mkdir(path.dirname(filePath), { recursive: true });
+  await writeFile(filePath, payload.buffer);
 
   const attachment: StoredAttachment = {
     id,
@@ -108,7 +100,7 @@ export async function saveWorkflowAttachment(input: {
     fileName: input.fileName,
     mimeType: payload.mimeType,
     size: input.size ?? payload.buffer.byteLength,
-    storage,
+    storage: "file",
     storagePath,
     createdAt: now,
   };
@@ -130,9 +122,7 @@ export async function readWorkflowAttachment(session: SessionPayload, id: string
 
   if (!canViewAttachment(session, attachment)) throw new Error("Attachment not found");
 
-  const buffer = attachment.storage === "supabase"
-    ? await downloadFromSupabase(attachment.storagePath)
-    : await readFile(getAttachmentFilePath(attachment.storagePath));
+  const buffer = await readFile(getAttachmentFilePath(attachment.storagePath));
 
   return { attachment, buffer };
 }
@@ -154,31 +144,6 @@ async function canViewAttachment(session: SessionPayload, attachment: StoredAtta
     return Boolean(attachment.gsaEmail && attachment.gsaEmail.toLowerCase() === session.email.toLowerCase());
   }
   return false;
-}
-
-async function uploadToSupabase(storagePath: string, buffer: Buffer, mimeType: string) {
-  if (!hasSupabaseAdmin()) return false;
-  try {
-    const supabase = createSupabaseAdminClient();
-    const { data: bucket } = await supabase.storage.getBucket(BUCKET_NAME);
-    if (!bucket) await supabase.storage.createBucket(BUCKET_NAME, { public: false });
-    const { error } = await supabase.storage.from(BUCKET_NAME).upload(storagePath, buffer, {
-      contentType: mimeType,
-      upsert: true,
-    });
-    if (error) throw error;
-    return true;
-  } catch (error) {
-    console.warn("[attachments] Supabase upload failed:", (error as Error).message);
-    return false;
-  }
-}
-
-async function downloadFromSupabase(storagePath: string) {
-  const supabase = createSupabaseAdminClient();
-  const { data, error } = await supabase.storage.from(BUCKET_NAME).download(storagePath);
-  if (error || !data) throw new Error(error?.message ?? "Attachment download failed");
-  return Buffer.from(await data.arrayBuffer());
 }
 
 async function readStore(): Promise<AttachmentStore> {
@@ -315,10 +280,6 @@ function validateAttachmentPayload(input: {
   if (input.mimeType !== "application/octet-stream" && !ALLOWED_DOCUMENT_MIME_TYPES.has(input.mimeType)) {
     throw new Error("Attachment MIME type is not allowed");
   }
-}
-
-function hasSupabaseAdmin() {
-  return Boolean(process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.SUPABASE_SERVICE_ROLE_KEY);
 }
 
 function assertAttachmentFileStorageAllowed() {

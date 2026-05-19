@@ -580,7 +580,6 @@ function badge(s, text, x, y, color) {
       "pg client",
       "news_posts table",
       "DATABASE_URL (server)",
-      "Optional Supabase anon key",
       "Private attachment storage",
     ]},
     { title: "Deployment", color: C.purple, items: [
@@ -612,9 +611,9 @@ function badge(s, text, x, y, color) {
   label(s, "Required environment variables", 0.6, 6.2, 5, 0.28, { size: 11, bold: true, color: C.white });
   const envs = [
     { key: "LINKEDIN_API_TOKEN",           desc: "Apify API key",         required: true  },
-    { key: "NEXT_PUBLIC_SUPABASE_URL",     desc: "Supabase project URL",  required: false },
-    { key: "NEXT_PUBLIC_SUPABASE_ANON_KEY",desc: "Supabase anon key",     required: false },
-    { key: "SUPABASE_SERVICE_ROLE_KEY",    desc: "Supabase admin key",    required: false },
+    { key: "DATABASE_URL",                 desc: "Railway Postgres",      required: true  },
+    { key: "AUTH_SESSION_SECRET",          desc: "Session signing key",   required: true  },
+    { key: "RAILWAY_VOLUME_MOUNT_PATH",    desc: "Attachment storage",    required: false },
   ];
   envs.forEach((e, i) => {
     label(s, e.key, 0.6 + i * 3.1, 6.54, 2.9, 0.28, { size: 8.5, color: C.accent, extra: { fontFace: "Courier New" } });

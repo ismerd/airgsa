@@ -184,7 +184,7 @@ async function ensureSchema() {
         file_name text not null,
         mime_type text not null,
         size_bytes integer not null default 0,
-        storage text not null check (storage in ('supabase', 'file')),
+        storage text not null check (storage in ('file')),
         storage_path text not null,
         created_at timestamptz not null,
         data jsonb not null

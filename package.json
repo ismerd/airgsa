@@ -21,7 +21,6 @@
     "node": ">=20 <23"
   },
   "dependencies": {
-    "@supabase/supabase-js": "^2.49.1",
     "@types/topojson-client": "^3.1.5",
     "apify-client": "^2.23.0",
     "class-variance-authority": "^0.7.1",

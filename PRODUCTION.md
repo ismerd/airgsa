@@ -1,6 +1,6 @@
 # AirGSA Production Runbook
 
-This is the deployment gate for the SaaS version of AirGSA. The production baseline is Railway app + Railway Postgres. Supabase is optional and should only be added if you want Supabase Auth or Supabase Storage.
+This is the deployment gate for the SaaS version of AirGSA. The production baseline is Railway app + Railway Postgres.
 
 ## Required Environment
 
@@ -24,8 +24,7 @@ Optional providers for full production behavior:
 - Flight tracking: `FLIGHTRADAR24_API_KEY`
 - LinkedIn import: `LINKEDIN_API_TOKEN`
 - Cargo execution: `ECARGOWARE_BEARER_TOKEN` or `ECARGOWARE_USERNAME` plus `ECARGOWARE_PASSWORD`
-- Attachments: Railway volume via `RAILWAY_VOLUME_MOUNT_PATH`/`ATTACHMENT_STORAGE_ROOT`, or Supabase Storage via `NEXT_PUBLIC_SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY`
-- Supabase Auth, optional: `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`
+- Attachments: Railway volume via `RAILWAY_VOLUME_MOUNT_PATH`/`ATTACHMENT_STORAGE_ROOT`
 
 Resend is the cheapest MVP email path. With only `RESEND_API_KEY`, AirGSA uses `AirGSA <onboarding@resend.dev>` for testing. Resend restricts that sender to the email address of your own Resend account. Before sending resets or workflow emails to real users, verify a domain and set `WORKFLOW_EMAIL_FROM=AirGSA <noreply@your-domain.com>`.
 
@@ -55,7 +54,7 @@ Use the Resend onboarding sender only for tests. It is enough for password reset
 
 ## Database And Storage
 
-Railway Postgres is the primary database. Apply all files in `supabase/migrations` to the Railway Postgres database before deployment. The folder name is legacy; the SQL is plain Postgres migration SQL.
+Railway Postgres is the primary database. Apply all files in `db/migrations` to the Railway Postgres database before deployment. The SQL is plain Postgres migration SQL.
 
 ```bash
 npm run db:migrate
@@ -91,7 +90,6 @@ npm run check:live-services
 `check:live-services` verifies:
 
 - `DATABASE_URL` accepts a SQL connection
-- Supabase Auth/Storage only if Supabase variables are present
 - Provider gaps are reported as warnings unless they block the configured feature
 
 ## Multi-Tenant Baseline

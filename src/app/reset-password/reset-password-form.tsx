@@ -1,25 +1,15 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { createSupabaseBrowserClient, isSupabaseConfigured } from "@/lib/supabase/client";
 
 export function ResetPasswordForm() {
   const searchParams = useSearchParams();
-  const code = searchParams.get("code");
   const railwayToken = searchParams.get("token");
-  const supabase = useMemo(() => {
-    if (!isSupabaseConfigured) return null;
-    try {
-      return createSupabaseBrowserClient();
-    } catch {
-      return null;
-    }
-  }, []);
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [ready, setReady] = useState(false);
@@ -31,38 +21,19 @@ export function ResetPasswordForm() {
     let active = true;
 
     async function prepareSession() {
-      if (!supabase) {
-        if (railwayToken) {
-          setReady(true);
-          return;
-        }
-        setError("Reset link is missing or expired.");
+      if (railwayToken) {
+        setReady(true);
         return;
       }
-
-      if (code) {
-        const { error: exchangeError } = await supabase.auth.exchangeCodeForSession(code);
-        if (!active) return;
-        if (exchangeError) {
-          setError(exchangeError.message);
-          return;
-        }
-      }
-
-      const { data } = await supabase.auth.getSession();
       if (!active) return;
-      if (!data.session) {
-        setError("Reset session not found. Open the latest password reset link from your email.");
-        return;
-      }
-      setReady(true);
+      setError("Reset link is missing or expired.");
     }
 
     prepareSession();
     return () => {
       active = false;
     };
-  }, [code, railwayToken, supabase]);
+  }, [railwayToken]);
 
   async function handleSubmit(event: React.FormEvent) {
     event.preventDefault();
@@ -78,37 +49,23 @@ export function ResetPasswordForm() {
     setLoading(true);
     setError(null);
 
-    if (railwayToken) {
-      const response = await fetch("/api/auth/password-reset/confirm", {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ token: railwayToken, password }),
-      });
-      const payload = await response.json().catch(() => ({}));
-      setLoading(false);
-      if (!response.ok) {
-        setError(payload.error ?? "Password could not be updated.");
-        return;
-      }
-      setComplete(true);
-      return;
-    }
-
-    if (!supabase) {
+    if (!railwayToken) {
       setLoading(false);
       setError("Reset link is missing or expired.");
       return;
     }
 
-    const { error: updateError } = await supabase.auth.updateUser({ password });
+    const response = await fetch("/api/auth/password-reset/confirm", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ token: railwayToken, password }),
+    });
+    const payload = await response.json().catch(() => ({}));
     setLoading(false);
-
-    if (updateError) {
-      setError(updateError.message);
+    if (!response.ok) {
+      setError(payload.error ?? "Password could not be updated.");
       return;
     }
-
-    await supabase.auth.signOut();
     setComplete(true);
   }
 

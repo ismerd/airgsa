@@ -1,32 +1,16 @@
 import "./load-env.mjs";
-import { createClient } from "@supabase/supabase-js";
 import pg from "pg";
 
 const failures = [];
 const warnings = [];
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 const databaseUrl = process.env.DATABASE_URL;
-const hasSupabase = Boolean(supabaseUrl && supabaseAnonKey && serviceRoleKey);
-const hasPartialSupabase = Boolean(supabaseUrl || supabaseAnonKey || serviceRoleKey);
 const checks = [];
 
 if (!databaseUrl) failures.push("DATABASE_URL is required");
-if (hasPartialSupabase && !hasSupabase) {
-  failures.push("Supabase configuration is incomplete; set all Supabase variables or remove them for Railway-only mode");
-}
 
 if (databaseUrl) {
   await checkDatabaseConnection();
-}
-
-if (hasSupabase) {
-  await checkSupabaseAuth();
-  await checkSupabaseStorage();
-} else {
-  warnings.push("Supabase is not configured; Railway Postgres auth is the primary auth path");
 }
 
 if (process.env.WORKFLOW_EMAIL_ENABLED === "true" && !hasEmailProvider()) {
@@ -77,50 +61,6 @@ console.log(JSON.stringify({
   warnings,
 }, null, 2));
 
-async function checkSupabaseAuth() {
-  const admin = createClient(supabaseUrl, serviceRoleKey, {
-    auth: {
-      autoRefreshToken: false,
-      persistSession: false,
-    },
-  });
-  const anon = createClient(supabaseUrl, supabaseAnonKey, {
-    auth: {
-      autoRefreshToken: false,
-      persistSession: false,
-    },
-  });
-
-  const { error: sessionError } = await anon.auth.getSession();
-  if (sessionError) failures.push(`Supabase anon client failed: ${sessionError.message}`);
-
-  const { error } = await admin.auth.admin.listUsers({ page: 1, perPage: 1 });
-  if (error) failures.push(`Supabase Auth Admin check failed: ${error.message}`);
-  if (!sessionError && !error) {
-    checks.push("Supabase Auth optional provider is reachable");
-  }
-}
-
-async function checkSupabaseStorage() {
-  const admin = createClient(supabaseUrl, serviceRoleKey, {
-    auth: {
-      autoRefreshToken: false,
-      persistSession: false,
-    },
-  });
-  const { data, error } = await admin.storage.getBucket("workflow-attachments");
-  if (error) {
-    failures.push(`Supabase Storage bucket check failed: ${error.message}`);
-    return;
-  }
-  if (!data) {
-    failures.push("Supabase Storage bucket workflow-attachments is missing");
-    return;
-  }
-  if (data.public) failures.push("Supabase Storage bucket workflow-attachments must be private");
-  if (!data.public) checks.push("Supabase workflow-attachments bucket exists and is private");
-}
-
 async function checkDatabaseConnection() {
   const client = new pg.Client({
     connectionString: databaseUrl,
@@ -147,7 +87,6 @@ function hasEmailProvider() {
 
 function hasAttachmentStorage() {
   return Boolean(
-    (process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.SUPABASE_SERVICE_ROLE_KEY) ||
     process.env.ATTACHMENT_STORAGE_ROOT ||
     process.env.FILE_STORAGE_ROOT ||
     process.env.RAILWAY_VOLUME_MOUNT_PATH
