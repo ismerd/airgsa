@@ -15,35 +15,39 @@ function defaultEnabled() {
 }
 
 export async function getFr24Settings(): Promise<Fr24Settings> {
-  const dbResult = await withPostgres(async (client) => {
-    const result = await client.query("select enabled, updated_at, data from fr24_runtime_settings where id = 'default'");
-    if (!result.rows[0]) return { settings: null };
-    const parsed = rowData<Partial<Fr24Settings>>(result.rows[0]);
-    return {
-      settings: {
-        enabled: typeof result.rows[0].enabled === "boolean" ? result.rows[0].enabled : defaultEnabled(),
-        updatedAt: result.rows[0].updated_at?.toISOString?.() ?? parsed.updatedAt,
-      },
-    };
-  });
-  if (dbResult?.settings) return dbResult.settings;
-
-  const legacyDbResult = await readLegacySettingsFromDb();
-  const legacySettings = legacyDbResult?.settings ?? (!dbResult ? await readFileSettings() : { enabled: defaultEnabled() });
-  if (legacySettings.updatedAt) {
-    await withPostgres(async (client) => {
-      await client.query(
-        `
-          insert into fr24_runtime_settings (id, enabled, updated_at, data)
-          values ('default', $1, $2, $3::jsonb)
-          on conflict (id) do update set enabled = excluded.enabled, updated_at = excluded.updated_at, data = excluded.data
-        `,
-        [legacySettings.enabled, legacySettings.updatedAt, JSON.stringify(legacySettings)],
-      );
-      return true;
+  try {
+    const dbResult = await withPostgres(async (client) => {
+      const result = await client.query("select enabled, updated_at, data from fr24_runtime_settings where id = 'default'");
+      if (!result.rows[0]) return { settings: null };
+      const parsed = rowData<Partial<Fr24Settings>>(result.rows[0]);
+      return {
+        settings: {
+          enabled: typeof result.rows[0].enabled === "boolean" ? result.rows[0].enabled : defaultEnabled(),
+          updatedAt: result.rows[0].updated_at?.toISOString?.() ?? parsed.updatedAt,
+        },
+      };
     });
+    if (dbResult?.settings) return dbResult.settings;
+
+    const legacyDbResult = await readLegacySettingsFromDb();
+    const legacySettings = legacyDbResult?.settings ?? (!dbResult ? await readFileSettings() : { enabled: defaultEnabled() });
+    if (legacySettings.updatedAt) {
+      await withPostgres(async (client) => {
+        await client.query(
+          `
+            insert into fr24_runtime_settings (id, enabled, updated_at, data)
+            values ('default', $1, $2, $3::jsonb)
+            on conflict (id) do update set enabled = excluded.enabled, updated_at = excluded.updated_at, data = excluded.data
+          `,
+          [legacySettings.enabled, legacySettings.updatedAt, JSON.stringify(legacySettings)],
+        );
+        return true;
+      });
+    }
+    if (legacySettings.updatedAt || !dbResult) return legacySettings;
+  } catch (error) {
+    console.error("[fr24-settings] failed to read settings:", error);
   }
-  if (legacySettings.updatedAt || !dbResult) return legacySettings;
   return { enabled: defaultEnabled() };
 }
 
