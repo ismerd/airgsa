@@ -43,7 +43,6 @@ export default function AccountsPage() {
   const [loading, setLoading] = useState(true);
   const [notes, setNotes] = useState<Record<string, string>>({});
   const [reviewStates, setReviewStates] = useState<Record<string, "idle" | "loading" | "done">>({});
-  const [oneTimeCredentials, setOneTimeCredentials] = useState<Record<string, string>>({});
 
   async function load() {
     setLoading(true);
@@ -67,10 +66,7 @@ export default function AccountsPage() {
         body: JSON.stringify({ action, note: notes[id] ?? "" }),
       });
       if (!response.ok) throw new Error("Review failed");
-      const data = await response.json();
-      if (action === "approve" && typeof data.oneTimePassword === "string") {
-        setOneTimeCredentials((current) => ({ ...current, [id]: data.oneTimePassword }));
-      }
+      await response.json();
       setReviewStates((s) => ({ ...s, [id]: "done" }));
       await load();
     } catch {
@@ -223,11 +219,6 @@ export default function AccountsPage() {
                           <span className="text-xs text-ink-muted">{formatDate(reg.reviewedAt)}</span>
                         )}
                       </div>
-                      {oneTimeCredentials[reg.id] && (
-                        <div className="rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-xs text-amber-200">
-                          Temporary password: <span className="font-mono font-semibold">{oneTimeCredentials[reg.id]}</span>
-                        </div>
-                      )}
                     </div>
                   ))}
                 </div>

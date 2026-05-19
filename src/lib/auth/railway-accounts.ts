@@ -30,7 +30,6 @@ export type RailwayProvisioningResult =
       userId: string;
       companyId: string;
       invited: false;
-      temporaryPassword?: string;
       provider: "postgres";
     };
 
@@ -89,8 +88,8 @@ export async function provisionRailwayAccount(input: RailwayAccountInput): Promi
     };
   }
 
-  const temporaryPassword = createTemporaryPassword();
-  const password = await hashPassword(temporaryPassword);
+  const inactivePassword = createTemporaryPassword();
+  const password = await hashPassword(inactivePassword);
   const account: StoredRailwayAccount = {
     id: createId("auth"),
     email,
@@ -137,7 +136,6 @@ export async function provisionRailwayAccount(input: RailwayAccountInput): Promi
     userId: account.id,
     companyId,
     invited: false,
-    temporaryPassword,
     provider: "postgres",
   };
 }
@@ -159,13 +157,21 @@ export async function authenticateRailwayAccount(email: string, password: string
 }
 
 export async function createRailwayPasswordReset(email: string) {
+  return createRailwayPasswordToken(email, "reset", 1000 * 60 * 30);
+}
+
+export async function createRailwayInviteToken(email: string) {
+  return createRailwayPasswordToken(email, "invite", 1000 * 60 * 60 * 24 * 7);
+}
+
+async function createRailwayPasswordToken(email: string, purpose: "reset" | "invite", ttlMs: number) {
   const account = await getRailwayAccountByEmail(email);
   if (!account || account.status !== "active") return null;
 
   const token = randomBytes(32).toString("base64url");
   const tokenHash = hashResetToken(token);
   const now = new Date();
-  const expiresAt = new Date(now.getTime() + 1000 * 60 * 30).toISOString();
+  const expiresAt = new Date(now.getTime() + ttlMs).toISOString();
 
   await withPostgres(async (client) => {
     await client.query(
@@ -179,7 +185,7 @@ export async function createRailwayPasswordReset(email: string) {
         tokenHash,
         expiresAt,
         now.toISOString(),
-        JSON.stringify({ email: account.email, accountId: account.id, expiresAt }),
+        JSON.stringify({ email: account.email, accountId: account.id, expiresAt, purpose }),
       ],
     );
     return true;
@@ -188,8 +194,8 @@ export async function createRailwayPasswordReset(email: string) {
   return token;
 }
 
-export async function resetRailwayPassword(token: string, password: string) {
-  if (!token || password.length < 8) return false;
+export async function resetRailwayPassword(token: string, password: string): Promise<SessionPayload | null> {
+  if (!token || password.length < 8) return null;
   const tokenHash = hashResetToken(token);
   const nextPassword = await hashPassword(password);
   const now = new Date().toISOString();
@@ -205,10 +211,10 @@ export async function resetRailwayPassword(token: string, password: string) {
       [tokenHash],
     );
     const row = tokenResult.rows[0] as { id: string; account_id: string; email: string } | undefined;
-    if (!row) return false;
+    if (!row) return null;
 
     const account = await getRailwayAccountByEmail(row.email);
-    if (!account || account.id !== row.account_id) return false;
+    if (!account || account.id !== row.account_id) return null;
 
     const data: StoredRailwayAccount = {
       ...account,
@@ -229,10 +235,41 @@ export async function resetRailwayPassword(token: string, password: string) {
       [account.id, data.passwordHash, data.salt, data.updatedAt, JSON.stringify(data)],
     );
     await client.query("update auth_password_reset_tokens set used_at = $2 where id = $1", [row.id, now]);
-    return true;
+    return accountToSession(data);
   });
 
-  return updated === true;
+  return updated ?? null;
+}
+
+export async function updateRailwayAccountProfile(
+  email: string,
+  input: { name?: string; company?: string },
+): Promise<SessionPayload | null> {
+  const account = await getRailwayAccountByEmail(email);
+  if (!account || account.status !== "active") return null;
+
+  const now = new Date().toISOString();
+  const data: StoredRailwayAccount = {
+    ...account,
+    name: input.name?.trim() || account.name,
+    company: input.company?.trim() || account.company,
+    updatedAt: now,
+  };
+
+  const saved = await withPostgres(async (client) => {
+    await client.query(
+      `update auth_accounts
+       set name = $2,
+           company = $3,
+           updated_at = $4,
+           data = $5::jsonb
+       where id = $1`,
+      [account.id, data.name, data.company, data.updatedAt, JSON.stringify(data)],
+    );
+    return data;
+  });
+
+  return saved ? accountToSession(saved) : null;
 }
 
 async function getRailwayAccountByEmail(email: string): Promise<StoredRailwayAccount | null> {
@@ -253,6 +290,17 @@ function normalizeAccount(account: StoredRailwayAccount): StoredRailwayAccount {
     companyId: account.companyId?.trim() || createCompanyId(account.company, account.role),
     status: account.status === "disabled" ? "disabled" : "active",
     mustChangePassword: Boolean(account.mustChangePassword),
+  };
+}
+
+function accountToSession(account: StoredRailwayAccount): SessionPayload {
+  return {
+    email: account.email,
+    role: account.role,
+    accessRole: account.accessRole,
+    name: account.name,
+    company: account.company,
+    companyId: account.companyId,
   };
 }
 

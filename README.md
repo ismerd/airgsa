@@ -46,9 +46,9 @@ Railway Postgres is the production database.
 
 Set `ALLOW_DEMO_ACCOUNTS=true` only when you intentionally want demo logins to remain available in a deployed environment.
 
-Admin approval of access requests provisions Railway Postgres auth accounts and returns a one-time temporary password to the admin response.
+Admin approval of access requests provisions Railway Postgres auth accounts and sends a single-use setup link to the approved user. The user sets their own password, is signed in, and can finish or skip the profile setup step.
 
-Password reset works with Railway Postgres accounts when an email provider is configured. The simplest MVP provider is Resend: set `RESEND_API_KEY` and `WORKFLOW_EMAIL_ENABLED=true`. Without `WORKFLOW_EMAIL_FROM`, AirGSA uses `AirGSA <onboarding@resend.dev>` for testing, which Resend only allows to send to the email address of your own Resend account. To send to real Airline/GSA users, verify a domain in Resend and set `WORKFLOW_EMAIL_FROM=AirGSA <noreply@your-domain.com>`. SMTP (`SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASSWORD`, `SMTP_FROM`) and `WORKFLOW_EMAIL_WEBHOOK_URL` are also supported.
+Invite and password reset emails work with Railway Postgres accounts when an email provider is configured. The simplest MVP provider is Resend: set `RESEND_API_KEY`. Without `WORKFLOW_EMAIL_FROM`, AirGSA uses `AirGSA <onboarding@resend.dev>` for testing, which Resend only allows to send to the email address of your own Resend account. To send to real Airline/GSA users, verify a domain in Resend and set `WORKFLOW_EMAIL_FROM=AirGSA <noreply@your-domain.com>`. SMTP (`SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASSWORD`, `SMTP_FROM`) and `WORKFLOW_EMAIL_WEBHOOK_URL` are also supported.
 
 Customer RFQ email extraction in `/gsa/quotes` uses `OPENAI_API_KEY` when configured and falls back to local rule extraction when absent. Set `OPENAI_QUOTE_EXTRACTION_MODEL=gpt-4.1-mini` unless you want to test another OpenAI model.
 

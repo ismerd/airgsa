@@ -7,6 +7,7 @@ import {
   readJsonWithLimit,
 } from "@/lib/api/protection";
 import { resetRailwayPassword } from "@/lib/auth/railway-accounts";
+import { createSession } from "@/lib/auth/session";
 
 const PASSWORD_RESET_CONFIRM_BODY_MAX_BYTES = 8 * 1024;
 
@@ -22,10 +23,11 @@ export async function POST(req: NextRequest) {
     if (!token) return NextResponse.json({ error: "Reset token is required." }, { status: 400 });
     if (password.length < 8) return NextResponse.json({ error: "Password must be at least 8 characters." }, { status: 400 });
 
-    const updated = await resetRailwayPassword(token, password);
-    if (!updated) return NextResponse.json({ error: "Reset token is invalid or expired." }, { status: 400 });
+    const account = await resetRailwayPassword(token, password);
+    if (!account) return NextResponse.json({ error: "Reset token is invalid or expired." }, { status: 400 });
 
-    return NextResponse.json({ ok: true });
+    await createSession(account);
+    return NextResponse.json({ ok: true, role: account.role, accessRole: account.accessRole, company: account.company });
   } catch (error) {
     if (error instanceof RequestBodyTooLargeError) return bodyTooLargeResponse(error);
     return NextResponse.json({ error: "Invalid request payload" }, { status: 400 });

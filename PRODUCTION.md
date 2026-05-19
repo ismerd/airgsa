@@ -28,6 +28,8 @@ Optional providers for full production behavior:
 
 Resend is the cheapest MVP email path. With only `RESEND_API_KEY`, AirGSA uses `AirGSA <onboarding@resend.dev>` for testing. Resend restricts that sender to the email address of your own Resend account. Before sending resets or workflow emails to real users, verify a domain and set `WORKFLOW_EMAIL_FROM=AirGSA <noreply@your-domain.com>`.
 
+Approved Airline/GSA access requests require transactional email. The app sends a single-use setup link; it no longer exposes temporary passwords in the admin UI.
+
 ## Railway Variables MVP Set
 
 For the current Railway-only MVP, set these on the Railway app service, not in Git:

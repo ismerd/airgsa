@@ -47,15 +47,13 @@ export async function PATCH(
   }
 
   let provisioningNote = "";
-  let oneTimePassword: string | undefined;
   if (action === "approve") {
     try {
       const result = await provisionApprovedRegistration(current);
       if (result.enabled) {
-        oneTimePassword = result.temporaryPassword;
-        provisioningNote = result.temporaryPassword
-          ? `Railway Postgres account created. User ${result.userId}, company ${result.companyId}. Temporary password issued once in admin response.`
-          : `Existing Railway Postgres account linked. User ${result.userId}, company ${result.companyId}.`;
+        provisioningNote = result.invited
+          ? `Railway Postgres account ready. Invite link sent to ${current.email}. User ${result.userId}, company ${result.companyId}.`
+          : `Railway Postgres account linked. User ${result.userId}, company ${result.companyId}.`;
       } else {
         provisioningNote = "No auth provider configured; registration approved without provisioning.";
       }
@@ -74,5 +72,5 @@ export async function PATCH(
     return NextResponse.json({ error: "Registration not found" }, { status: 404 });
   }
 
-  return NextResponse.json(oneTimePassword ? { ...updated, oneTimePassword } : updated);
+  return NextResponse.json(updated);
 }

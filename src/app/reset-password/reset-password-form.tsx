@@ -10,6 +10,7 @@ import { Input } from "@/components/ui/input";
 export function ResetPasswordForm() {
   const searchParams = useSearchParams();
   const railwayToken = searchParams.get("token");
+  const isInvite = searchParams.get("mode") === "invite";
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [ready, setReady] = useState(false);
@@ -66,6 +67,10 @@ export function ResetPasswordForm() {
       setError(payload.error ?? "Password could not be updated.");
       return;
     }
+    if (isInvite) {
+      window.location.assign("/setup/profile");
+      return;
+    }
     setComplete(true);
   }
 
@@ -76,7 +81,7 @@ export function ResetPasswordForm() {
           <div className="space-y-4">
             <div className="rounded-xl border border-[#0B7A52]/20 bg-success-bg p-4">
               <p className="font-semibold text-ink">Password updated</p>
-              <p className="mt-1 text-sm text-ink-muted">You can now sign in with your new password.</p>
+              <p className="mt-1 text-sm text-ink-muted">You can now continue with your new password.</p>
             </div>
             <Button asChild className="w-full">
               <Link href="/login">Back to login</Link>
@@ -108,7 +113,7 @@ export function ResetPasswordForm() {
             </label>
             {error && <p className="rounded-lg bg-danger-bg px-3 py-2 text-sm text-danger">{error}</p>}
             <Button type="submit" className="w-full" disabled={!ready || loading}>
-              {loading ? "Updating..." : "Update password"}
+              {loading ? "Updating..." : isInvite ? "Set password and continue" : "Update password"}
             </Button>
           </form>
         )}

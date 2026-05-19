@@ -102,14 +102,14 @@ export async function createTeamAccount(input: {
   });
   const issueImmediatePassword = !provisioning.enabled && allowSeedTeamAccounts();
   if (!provisioning.enabled && !issueImmediatePassword) {
-    throw new Error("Team invites require a configured auth provider.");
+    throw new Error("Team invites require Railway Postgres and a configured email provider.");
   }
   const invitedAt = provisioning.enabled && provisioning.invited ? new Date().toISOString() : undefined;
 
   const account: TeamAccount = {
     id: createId("team"),
     email: normalizedEmail,
-    password: provisioning.enabled ? provisioning.temporaryPassword : issueImmediatePassword ? makeDemoPassword(input.name) : undefined,
+    password: issueImmediatePassword ? makeDemoPassword(input.name) : undefined,
     authUserId: provisioning.enabled ? provisioning.userId : undefined,
     role: input.role,
     accessRole: input.accessRole,
