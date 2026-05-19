@@ -12,15 +12,16 @@ import { listLiveApplications, listLivePartnerContracts, listLiveTenders } from 
 
 export default async function GsaProfilePage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const [session, gsa, applications, tenders, contracts] = await Promise.all([
-    getSession(),
+  const session = await getSession();
+  if (!session) notFound();
+
+  const [gsa, applications, tenders, contracts] = await Promise.all([
     getGsaProfileById(id),
     listLiveApplications(),
     listLiveTenders(),
     listLivePartnerContracts(),
   ]);
 
-  if (!session) notFound();
   const tenderById = new Map(tenders.map((tender) => [tender.id, tender]));
   const acceptedContracts = contracts.filter(
     (contract) => contract.gsaId === id && canViewContract(session, contract),

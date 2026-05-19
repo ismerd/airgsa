@@ -1,8 +1,8 @@
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 import type { QueryResultRow } from "pg";
-import { realGsaPartners } from "@/lib/real-gsa-data";
 import { saveWorkflowAttachment, type StoredAttachment } from "@/lib/services/attachment-store";
+import { createId } from "@/lib/services/ids";
 import { assertFileStoreFallbackAllowed, rowData, withPostgres, withPostgresTransaction } from "@/lib/services/postgres-store";
 import type { Status } from "@/lib/types";
 import type { SessionPayload } from "@/lib/auth/session";
@@ -199,7 +199,7 @@ export async function getLiveTender(id: string) {
 export async function createLiveTender(input: TenderCreateInput) {
   const store = await readStore();
   const now = new Date().toISOString();
-  const id = `tnd-${Date.now().toString(36)}`;
+  const id = createId("tnd");
   const tender: LiveTender = {
     ...input,
     id,
@@ -417,15 +417,25 @@ export async function listRoutesForGsa(session: Pick<SessionPayload, "companyId"
 
 export async function createLiveApplication(
   tenderId: string,
-  applicant: Pick<SessionPayload, "company" | "email" | "name" | "companyId">,
+  applicant: Pick<SessionPayload, "company" | "email" | "name" | "companyId"> & {
+    contactName?: string;
+    headquarters?: string;
+    coverage?: string[];
+    markets?: string[];
+    certifications?: string[];
+    cargoFocus?: string;
+    networkScore?: number;
+    financialScore?: number;
+    complianceScore?: number;
+    winRate?: number;
+  },
   input: ApplicationCreateInput,
 ) {
   const store = await readStore();
   const tender = store.tenders.find((item) => item.id === tenderId);
   if (!tender || tender.status !== "open") throw new Error("Tender is not open");
 
-  const partner = realGsaPartners.find((item) => item.name === applicant.company || item.email === applicant.email);
-  const gsaId = applicant.companyId ?? partner?.id ?? slugId(applicant.company || applicant.email);
+  const gsaId = applicant.companyId ?? slugId(applicant.company || applicant.email);
 
   const now = new Date().toISOString();
   const existingIndex = store.applications.findIndex(
@@ -437,24 +447,24 @@ export async function createLiveApplication(
   if (existingApplication && !canEditApplication(existingApplication)) {
     throw new Error("Application edit window has expired");
   }
-  const applicationId = existingApplication?.id ?? `app-${Date.now().toString(36)}`;
+  const applicationId = existingApplication?.id ?? createId("app");
   const application: LiveTenderApplication = {
     id: applicationId,
     tenderId,
     gsaId,
     gsaCompanyId: applicant.companyId,
-    gsaName: partner?.name ?? applicant.company,
-    contactName: partner?.contactName ?? applicant.name,
-    email: partner?.email ?? applicant.email,
-    headquarters: partner?.headquarters ?? "Not provided",
-    coverage: partner?.coverage ?? [],
-    markets: partner?.markets ?? [],
-    certifications: partner?.certifications ?? [],
-    cargoFocus: partner?.cargoFocus ?? "General cargo",
-    networkScore: partner?.networkScore ?? 50,
-    financialScore: partner?.financialScore ?? 50,
-    complianceScore: partner?.complianceScore ?? 50,
-    winRate: partner?.winRate ?? 0,
+    gsaName: applicant.company,
+    contactName: applicant.contactName ?? applicant.name,
+    email: applicant.email,
+    headquarters: applicant.headquarters ?? "Not provided",
+    coverage: applicant.coverage ?? [],
+    markets: applicant.markets ?? [],
+    certifications: applicant.certifications ?? [],
+    cargoFocus: applicant.cargoFocus ?? "General cargo",
+    networkScore: applicant.networkScore ?? 50,
+    financialScore: applicant.financialScore ?? 50,
+    complianceScore: applicant.complianceScore ?? 50,
+    winRate: applicant.winRate ?? 0,
     ...input,
     documents: await persistWorkflowDocuments(input.documents, {
       entityType: "application-document",
@@ -519,7 +529,7 @@ function slugId(value: string) {
   return value
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-|-$/g, "") || `gsa-${Date.now().toString(36)}`;
+    .replace(/^-|-$/g, "") || createId("gsa");
 }
 
 export function canEditApplication(application: Pick<LiveTenderApplication, "submittedAt" | "status">) {

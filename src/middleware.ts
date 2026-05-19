@@ -25,45 +25,54 @@ export async function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
 
   if (isPublic(pathname)) {
-    return NextResponse.next();
+    return withSecurityHeaders(NextResponse.next(), req);
   }
 
   if (pathname.startsWith("/freightforwarder")) {
-    return NextResponse.redirect(new URL("/", req.url));
+    return withSecurityHeaders(NextResponse.redirect(new URL("/", req.url)), req);
   }
 
   const session = await verifySessionCookie(req.cookies.get(SESSION_COOKIE_NAME)?.value);
   if (!session) {
+    if (pathname.startsWith("/api")) {
+      return withSecurityHeaders(NextResponse.json({ error: "Unauthorized" }, { status: 401 }), req);
+    }
     const loginUrl = new URL("/login", req.url);
     loginUrl.searchParams.set("next", pathname);
     const response = NextResponse.redirect(loginUrl);
     response.cookies.delete(SESSION_COOKIE_NAME);
-    return response;
+    return withSecurityHeaders(response, req);
   }
 
   if (!session?.role) {
+    if (pathname.startsWith("/api")) {
+      return withSecurityHeaders(NextResponse.json({ error: "Unauthorized" }, { status: 401 }), req);
+    }
     const response = NextResponse.redirect(new URL("/login", req.url));
     response.cookies.delete(SESSION_COOKIE_NAME);
-    return response;
+    return withSecurityHeaders(response, req);
   }
 
   // Admin-only routes
   if ((pathname.startsWith("/admin") || pathname.startsWith("/api/admin")) && session.role !== "admin") {
-    return NextResponse.redirect(new URL("/login", req.url));
+    if (pathname.startsWith("/api")) {
+      return withSecurityHeaders(NextResponse.json({ error: "Forbidden" }, { status: 403 }), req);
+    }
+    return withSecurityHeaders(NextResponse.redirect(new URL("/login", req.url)), req);
   }
 
   // Airline-only routes
   if (pathname.startsWith("/airline") && session.role !== "airline") {
-    return NextResponse.redirect(new URL("/login", req.url));
+    return withSecurityHeaders(NextResponse.redirect(new URL("/login", req.url)), req);
   }
   if (pathname.startsWith("/airline") && session.role === "airline" && session.accessRole === "operator") {
     const allowed = pathname === "/airline" || pathname.startsWith("/airline/capacity-alerts") || pathname.startsWith("/airline/performance");
-    if (!allowed) return NextResponse.redirect(new URL("/airline", req.url));
+    if (!allowed) return withSecurityHeaders(NextResponse.redirect(new URL("/airline", req.url)), req);
   }
 
   // GSA-only routes
   if (pathname.startsWith("/gsa") && session.role !== "gsa") {
-    return NextResponse.redirect(new URL("/login", req.url));
+    return withSecurityHeaders(NextResponse.redirect(new URL("/login", req.url)), req);
   }
   if (pathname.startsWith("/gsa") && session.role === "gsa" && session.accessRole === "operator") {
     const allowed =
@@ -75,12 +84,33 @@ export async function middleware(req: NextRequest) {
       pathname.startsWith("/gsa/customers") ||
       pathname.startsWith("/gsa/shipments") ||
       pathname.startsWith("/gsa/flights");
-    if (!allowed) return NextResponse.redirect(new URL("/gsa/cargo-workspace", req.url));
+    if (!allowed) return withSecurityHeaders(NextResponse.redirect(new URL("/gsa/cargo-workspace", req.url)), req);
   }
 
-  return NextResponse.next();
+  return withSecurityHeaders(NextResponse.next(), req);
 }
 
 export const config = {
   matcher: ["/((?!_next/static|_next/image|favicon.ico|.*\\..*).*)"],
 };
+
+function withSecurityHeaders(response: NextResponse, request: NextRequest) {
+  response.headers.set("X-Content-Type-Options", "nosniff");
+  response.headers.set("X-Frame-Options", "DENY");
+  response.headers.set("Referrer-Policy", "strict-origin-when-cross-origin");
+  response.headers.set("X-DNS-Prefetch-Control", "on");
+  response.headers.set(
+    "Permissions-Policy",
+    "camera=(), microphone=(), geolocation=(), payment=(), usb=(), browsing-topics=()",
+  );
+
+  if (request.nextUrl.pathname.startsWith("/api")) {
+    response.headers.set("Cache-Control", "no-store");
+  }
+
+  if (process.env.NODE_ENV === "production") {
+    response.headers.set("Strict-Transport-Security", "max-age=31536000; includeSubDomains; preload");
+  }
+
+  return response;
+}

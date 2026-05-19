@@ -1,18 +1,36 @@
 import { NextRequest, NextResponse } from "next/server";
+import {
+  RequestBodyTooLargeError,
+  bodyTooLargeResponse,
+  enforceRateLimit,
+  getClientIp,
+  readJsonWithLimit,
+} from "@/lib/api/protection";
 import { getSession } from "@/lib/auth/session";
 import { rewriteTextWithGemini } from "@/lib/ai/gemini";
 
 const MAX_TEXT_LENGTH = 5000;
+const AI_REWRITE_BODY_LIMIT_BYTES = 16 * 1024;
 
 export async function POST(req: NextRequest) {
   const session = await getSession();
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  const body = (await req.json()) as {
-    text?: unknown;
-    fieldLabel?: unknown;
-    context?: unknown;
-  };
+  const rateLimited = enforceRateLimit({
+    key: `ai-rewrite:${session.companyId ?? session.company}:${session.email}:${getClientIp(req)}`,
+    limit: 80,
+    windowMs: 60_000,
+  });
+  if (rateLimited) return rateLimited;
+
+  let body: { text?: unknown; fieldLabel?: unknown; context?: unknown };
+  try {
+    body = await readJsonWithLimit<{ text?: unknown; fieldLabel?: unknown; context?: unknown }>(req, AI_REWRITE_BODY_LIMIT_BYTES);
+  } catch (error) {
+    if (error instanceof RequestBodyTooLargeError) return bodyTooLargeResponse(error);
+    return NextResponse.json({ error: "Invalid JSON body." }, { status: 400 });
+  }
+
   const text = typeof body.text === "string" ? body.text.trim() : "";
   const fieldLabel = typeof body.fieldLabel === "string" ? body.fieldLabel.slice(0, 120) : undefined;
   const context = typeof body.context === "string" ? body.context.slice(0, 500) : undefined;

@@ -178,12 +178,12 @@ function badge(s, text, x, y, color) {
   gf.forEach((t, i) => label(s, "▸ " + t, 4.7, 2.28 + i * 0.47, 3.6, 0.38, { size: 10.5, color: C.white }));
 
   // Admin features
-  const adm = ["LinkedIn import (Apify)", "News source management", "Platform KPI overview", "Supabase schema ready", "Role governance"];
+  const adm = ["LinkedIn import (Apify)", "News source management", "Platform KPI overview", "Postgres schema ready", "Role governance"];
   adm.forEach((t, i) => label(s, "▸ " + t, 8.85, 2.28 + i * 0.47, 3.6, 0.38, { size: 10.5, color: C.white }));
 
   // Data layer
   box(s, 0.4, 5.3, 12.4, 0.7, { fill: "0F1F35", border: C.accent });
-  label(s, "Shared Data Layer — Supabase (PostgreSQL) · Apify LinkedIn scraper · Mock-data fallback when env vars are empty",
+  label(s, "Shared Data Layer - Railway Postgres - Apify LinkedIn scraper - explicit production env validation",
     0.6, 5.38, 12.0, 0.54, { size: 11, color: C.accent, align: "center" });
 }
 
@@ -199,9 +199,9 @@ function badge(s, text, x, y, color) {
     { route: "/pricing",       name: "Pricing",         color: C.blue,
       bullets: ["3 plans: GSA Network, Airline Desk, Enterprise", "Feature lists per plan", "Price points ($490 / $1 900 / custom)"] },
     { route: "/login",         name: "Login",           color: C.green,
-      bullets: ["Email + password form", "Routes to role selection", "Supabase Auth ready"] },
+      bullets: ["Email + password form", "Routes to role selection", "Postgres auth ready"] },
     { route: "/signup",        name: "Sign Up",         color: C.amber,
-      bullets: ["Name, company, email, role fields", "Role dropdown (Airline / GSA / Admin)", "Supabase onboarding hook"] },
+      bullets: ["Name, company, email, role fields", "Role dropdown (Airline / GSA / Admin)", "Postgres onboarding hook"] },
     { route: "/role-selection",name: "Role Selection",  color: C.purple,
       bullets: ["Post-login workspace picker", "Airline / GSA / Admin cards", "Each opens dedicated workspace"] },
   ];
@@ -523,7 +523,7 @@ function badge(s, text, x, y, color) {
   label(s, "LinkedIn Import — Left Panel (Settings)", 0.6, 2.52, 7.0, 0.32, { size: 13, bold: true, color: C.white });
 
   const importFields = [
-    { label: "Access Token",      desc: "Apify API key — stored in browser localStorage",   color: C.accent },
+    { label: "Access Token",      desc: "Server-side Apify API key from environment",        color: C.accent },
     { label: "LinkedIn pages",    desc: "One URL per line (profile / company / post URLs)",  color: C.blue   },
     { label: "Import posts from", desc: "Dropdown: 1h / 24h / week / month / year / any",   color: C.green  },
     { label: "Automatic import",  desc: "Checkbox + interval (hours / days / weeks)",        color: C.amber  },
@@ -556,7 +556,7 @@ function badge(s, text, x, y, color) {
 // 10 – TECH STACK
 // ══════════════════════════════════════════════════════════════════════════════
 {
-  const s = slide("Tech Stack & Architecture", "Production-ready foundations with mock-data fallback for demos");
+  const s = slide("Tech Stack & Architecture", "Production-ready foundations with persistent operational data");
 
   const cols = [
     { title: "Frontend", color: C.blue, items: [
@@ -576,12 +576,12 @@ function badge(s, text, x, y, color) {
       "maxDuration: 300 s",
     ]},
     { title: "Database", color: C.accent, items: [
-      "Supabase (PostgreSQL)",
-      "supabase-js client",
+      "Railway Postgres",
+      "pg client",
       "news_posts table",
-      "Service role key (server)",
-      "Anon key (client)",
-      "Fallback: mock-data.ts",
+      "DATABASE_URL (server)",
+      "Optional Supabase anon key",
+      "Private attachment storage",
     ]},
     { title: "Deployment", color: C.purple, items: [
       "Railway (production)",

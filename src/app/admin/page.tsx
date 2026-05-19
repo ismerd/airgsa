@@ -44,7 +44,7 @@ export default async function AdminPage() {
 
   const recentActivity = [
     ...pending.slice(0, 3).map((r) => ({
-      text: `${r.name} (${r.company}) — access request pending`,
+      text: `${r.name} (${r.company}) - access request pending`,
       time: formatDateTime(r.submittedAt),
       dot: "bg-amber-400",
     })),

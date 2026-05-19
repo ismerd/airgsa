@@ -20,7 +20,7 @@ const plans = [
     name: "Enterprise",
     price: "Custom",
     description: "For multi-region networks with workflow, governance, and data needs.",
-    features: ["Role-based admin", "Supabase-ready data model", "Storage-ready documents", "OpenAI-ready architecture"],
+    features: ["Role-based admin", "Railway Postgres data model", "Storage-ready documents", "OpenAI-ready architecture"],
   },
 ];
 

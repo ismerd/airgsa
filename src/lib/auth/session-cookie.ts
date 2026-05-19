@@ -8,11 +8,23 @@ export type SessionPayload = {
 };
 
 const encoder = new TextEncoder();
+const SESSION_MAX_AGE_SECONDS = 60 * 60 * 24 * 7;
 
-export const SESSION_COOKIE_NAME = "airgsa-session";
+export const SESSION_COOKIE_NAME = process.env.NODE_ENV === "production" ? "__Host-airgsa-session" : "airgsa-session";
+
+type SignedSessionPayload = SessionPayload & {
+  iat: number;
+  exp: number;
+};
 
 export async function signSessionPayload(payload: SessionPayload) {
-  const body = encodeBase64Url(JSON.stringify(payload));
+  const now = Math.floor(Date.now() / 1000);
+  const signedPayload: SignedSessionPayload = {
+    ...payload,
+    iat: now,
+    exp: now + SESSION_MAX_AGE_SECONDS,
+  };
+  const body = encodeBase64Url(JSON.stringify(signedPayload));
   const signature = bytesToBase64Url(await sign(body));
   return `${body}.${signature}`;
 }
@@ -29,11 +41,20 @@ export async function verifySessionCookie(value: string | undefined): Promise<Se
     const valid = await verify(body, signatureBytes);
     if (!valid) return null;
 
-    const payload = JSON.parse(decodeBase64Url(body)) as SessionPayload;
+    const payload = JSON.parse(decodeBase64Url(body)) as SignedSessionPayload;
     if (!payload.email || !payload.role || !payload.name || !payload.company) return null;
     if (!["airline", "gsa", "admin"].includes(payload.role)) return null;
     if (payload.accessRole && !["owner", "admin", "manager", "operator", "viewer"].includes(payload.accessRole)) return null;
-    return payload;
+    if (!Number.isFinite(payload.iat) || !Number.isFinite(payload.exp)) return null;
+    if (payload.exp <= Math.floor(Date.now() / 1000)) return null;
+    return {
+      email: payload.email,
+      role: payload.role,
+      accessRole: payload.accessRole,
+      name: payload.name,
+      company: payload.company,
+      companyId: payload.companyId,
+    };
   } catch {
     return null;
   }
@@ -61,12 +82,16 @@ async function getSigningKey() {
 }
 
 function getSessionSecret() {
-  return (
+  const secret =
     process.env.AUTH_SESSION_SECRET ||
     process.env.SESSION_SECRET ||
-    process.env.NEXTAUTH_SECRET ||
-    "airgsa-development-session-secret-change-me"
-  );
+    process.env.NEXTAUTH_SECRET;
+
+  if (secret) return secret;
+  if (process.env.NODE_ENV === "production") {
+    throw new Error("AUTH_SESSION_SECRET is required in production");
+  }
+  return "airgsa-development-session-secret-change-me";
 }
 
 function encodeBase64Url(value: string) {

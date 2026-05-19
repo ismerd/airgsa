@@ -204,7 +204,7 @@ export default function CapacityAlertsPage() {
                             <span className="block font-mono text-sm font-semibold text-ink">{route.origin} - {route.destination}</span>
                             <span className="block text-xs text-ink-muted">{route.gsaName}</span>
                             <span className="mt-1 block text-[11px] text-ink-muted">
-                              {route.frequencyPerWeek}/week · {route.aircraft ?? "Aircraft TBC"} · {route.operatingDays ?? route.weekday ?? "days TBC"}
+                              {route.frequencyPerWeek}/week - {route.aircraft ?? "Aircraft TBC"} - {route.operatingDays ?? route.weekday ?? "days TBC"}
                             </span>
                           </span>
                         </label>
@@ -280,7 +280,7 @@ export default function CapacityAlertsPage() {
                 <div key={alert.id} className="flex items-center justify-between gap-4 rounded-lg border border-border-ui bg-surface px-4 py-3">
                   <div className="min-w-0 text-sm text-ink-muted">
                     <span className="font-mono font-medium text-ink-muted">{formatRoutes(alert.routes)}</span>
-                    <span className="mx-2">·</span>
+                    <span className="mx-2">-</span>
                     <span>{alert.sentTo}</span>
                   </div>
                   <Badge variant="muted">{alert.status}</Badge>
@@ -313,15 +313,15 @@ function AlertCard({ alert, saving, onRecall }: { alert: CapacityAlert; saving: 
                 {alert.routes.map((route) => (
                   <span key={route.key} className="rounded-md border border-border-ui bg-surface px-2 py-1 text-xs text-ink-muted">
                     <span className="font-mono font-semibold text-ink">{route.origin} - {route.destination}</span>
-                    {" "}· {route.gsaName} · {route.frequencyPerWeek}/week
+                    {" "}- {route.gsaName} - {route.frequencyPerWeek}/week
                   </span>
                 ))}
               </div>
               <p className="mt-3 text-sm text-ink-muted">{alert.message}</p>
               <p className="mt-2 text-xs text-ink-muted">
                 Sent to: <span className="text-ink">{alert.sentTo}</span>
-                {" · "}Sent at: {formatDateTime(alert.createdAt)}
-                {" · "}{alert.responses} GSA{alert.responses !== 1 ? "s" : ""} responded
+                {" - "}Sent at: {formatDateTime(alert.createdAt)}
+                {" - "}{alert.responses} GSA{alert.responses !== 1 ? "s" : ""} responded
               </p>
             </div>
           </div>

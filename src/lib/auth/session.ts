@@ -7,6 +7,12 @@ import {
 } from "./session-cookie";
 
 const COOKIE_MAX_AGE = 60 * 60 * 24 * 7; // 7 days
+const COOKIE_OPTIONS = {
+  httpOnly: true,
+  secure: process.env.NODE_ENV === "production",
+  sameSite: "lax" as const,
+  path: "/",
+};
 
 export type { SessionPayload };
 
@@ -21,11 +27,8 @@ export async function createSession(account: SessionPayload): Promise<void> {
     companyId: account.companyId,
   };
   cookieStore.set(SESSION_COOKIE_NAME, await signSessionPayload(payload), {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
-    sameSite: "lax",
+    ...COOKIE_OPTIONS,
     maxAge: COOKIE_MAX_AGE,
-    path: "/",
   });
 }
 
@@ -42,5 +45,8 @@ export async function getSession(): Promise<SessionPayload | null> {
 
 export async function clearSession(): Promise<void> {
   const cookieStore = await cookies();
-  cookieStore.delete(SESSION_COOKIE_NAME);
+  cookieStore.set(SESSION_COOKIE_NAME, "", {
+    ...COOKIE_OPTIONS,
+    maxAge: 0,
+  });
 }

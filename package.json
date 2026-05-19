@@ -5,8 +5,14 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
+    "check:production": "node scripts/check-production-env.mjs",
+    "check:migrations": "node scripts/check-migrations.mjs",
+    "check:live-services": "node scripts/check-live-services.mjs",
+    "check:saas": "node scripts/check-saas-readiness.mjs",
+    "db:migrate": "node scripts/apply-migrations.mjs",
     "seed:demo": "node scripts/seed-demo.mjs",
     "test:permissions": "node scripts/check-permissions.mjs",
+    "test:workflow": "node scripts/check-workflow-smoke.mjs",
     "start": "node scripts/start.mjs",
     "lint": "eslint"
   },
@@ -42,8 +48,7 @@
     "eslint-config-next": "15.5.18",
     "pptxgenjs": "^4.0.1",
     "tailwindcss": "^4",
-    "typescript": "^5",
-    "xlsx": "^0.18.5"
+    "typescript": "^5"
   },
   "overrides": {
     "postcss": "^8.5.10"

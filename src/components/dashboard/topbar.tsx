@@ -3,17 +3,18 @@
 import React, { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Bell, Search } from "lucide-react";
+import { Bell, CheckCheck, Search } from "lucide-react";
 import { CommandAssistant } from "@/components/dashboard/command-assistant";
 import { buttonVariants } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
 import {
+  getAirlineApplicationsForNotifications,
+  getAirlineApplicationSeenState,
   isUnreadAirlineApplication,
   markAirlineApplicationsSeen,
   subscribeToAirlineApplicationsSeen,
 } from "@/lib/client-notification-state";
-import type { LiveTenderApplication } from "@/lib/services/tender-workflow-store";
 
 type NotificationItem = {
   id: string;
@@ -21,6 +22,7 @@ type NotificationItem = {
   body: string;
   href: string;
   workflowId?: string;
+  tenderId?: string;
 };
 
 type WorkflowNotification = {
@@ -29,6 +31,10 @@ type WorkflowNotification = {
   body: string;
   href: string;
   readAt?: string;
+};
+
+type GsaTenderSeenState = {
+  seenTenderIds: Record<string, number>;
 };
 
 export function Topbar({
@@ -43,6 +49,7 @@ export function Topbar({
   const pathname = usePathname();
   const [notificationCount, setNotificationCount] = useState(0);
   const [notifications, setNotifications] = useState<NotificationItem[]>([]);
+  const [dismissingIds, setDismissingIds] = useState<Set<string>>(new Set());
   const [open, setOpen] = useState(false);
   const wrapperRef = useRef<HTMLDivElement>(null);
   const isAirline = pathname.startsWith("/airline");
@@ -57,7 +64,7 @@ export function Topbar({
 
   useEffect(() => {
     if (pathname.startsWith("/airline/applications")) {
-      markAirlineApplicationsSeen();
+      markAirlineApplicationsSeen().catch(() => undefined);
       setNotifications([]);
       setNotificationCount(0);
     }
@@ -79,7 +86,15 @@ export function Topbar({
         }));
     }
 
+    async function loadGsaTenderSeenState(): Promise<GsaTenderSeenState> {
+      const res = await fetch("/api/tenders/seen", { cache: "no-store" });
+      if (!res.ok) return { seenTenderIds: {} };
+      const data = await res.json();
+      return { seenTenderIds: data.state?.seenTenderIds ?? {} };
+    }
+
     if (isAirline) {
+      let active = true;
       function loadAirlineNotifications() {
         if (pathname.startsWith("/airline/applications")) {
           setNotifications([]);
@@ -89,46 +104,57 @@ export function Topbar({
 
         Promise.all([
           loadWorkflowNotifications(),
-          fetch("/api/applications").then((res) => (res.ok ? res.json() : null)),
+          getAirlineApplicationsForNotifications(),
+          getAirlineApplicationSeenState(),
         ])
-          .then(([workflowItems, data]) => {
-            const applicationItems = data ? ((data.applications ?? []) as LiveTenderApplication[])
-              .filter(isUnreadAirlineApplication)
+          .then(([workflowItems, applications, seenState]) => {
+            if (!active) return;
+            const applicationItems = applications
+              .filter((item) => isUnreadAirlineApplication(item, seenState.lastSeenAt))
               .map((item) => ({
                 id: item.id,
                 title: `New application from ${item.gsaName}`,
                 body: item.proposedCommission || "Review the submitted proposal.",
                 href: `/airline/applications/${item.id}`,
-              })) : [];
+              }));
             const items = [...workflowItems, ...applicationItems];
             setNotifications(items);
             setNotificationCount(items.length);
           })
-          .catch(() => setNotificationCount(0));
+          .catch(() => {
+            if (active) setNotificationCount(0);
+          });
       }
 
       loadAirlineNotifications();
-      return subscribeToAirlineApplicationsSeen(loadAirlineNotifications);
+      const unsubscribe = subscribeToAirlineApplicationsSeen(loadAirlineNotifications);
+      return () => {
+        active = false;
+        unsubscribe();
+      };
     }
 
     Promise.all([
       loadWorkflowNotifications(),
       fetch("/api/tenders").then((res) => (res.ok ? res.json() : null)),
-      fetch("/api/applications").then((res) => (res.ok ? res.json() : null)),
+      getAirlineApplicationsForNotifications(),
+      loadGsaTenderSeenState(),
     ])
-      .then(([workflowItems, tenderData, applicationData]) => {
-        if (!tenderData || !applicationData) {
+      .then(([workflowItems, tenderData, applications, seenState]) => {
+        if (!tenderData) {
           setNotifications(workflowItems);
           setNotificationCount(workflowItems.length);
           return;
         }
         const appliedTenderIds = new Set(
-          ((applicationData.applications ?? []) as LiveTenderApplication[]).map((application) => application.tenderId),
+          applications.map((application) => application.tenderId),
         );
         const tenderItems = (tenderData.tenders ?? [])
           .filter((tender: { id: string }) => !appliedTenderIds.has(tender.id))
+          .filter((tender: { id: string }) => !seenState.seenTenderIds[tender.id])
           .map((tender: { id: string; title: string; airline: string; countryScope?: string }) => ({
             id: tender.id,
+            tenderId: tender.id,
             title: tender.title,
             body: `${tender.airline} tender${tender.countryScope ? ` - ${tender.countryScope}` : ""}`,
             href: `/gsa/tenders/${tender.id}`,
@@ -170,9 +196,21 @@ export function Topbar({
             </button>
             {open && (
               <div className="absolute right-0 top-full z-50 mt-2 w-80 overflow-hidden rounded-xl border border-border-ui bg-surface shadow-2xl">
-                <div className="border-b border-border-ui px-4 py-3">
-                  <p className="text-sm font-semibold text-ink">Notifications</p>
-                  <p className="text-xs text-ink-muted">{notificationCount} new item{notificationCount === 1 ? "" : "s"}</p>
+                <div className="flex items-start justify-between gap-3 border-b border-border-ui px-4 py-3">
+                  <div>
+                    <p className="text-sm font-semibold text-ink">Notifications</p>
+                    <p className="text-xs text-ink-muted">{notificationCount} unread item{notificationCount === 1 ? "" : "s"}</p>
+                  </div>
+                  {notifications.length > 0 && (
+                    <button
+                      type="button"
+                      onClick={() => dismissNotifications(notifications)}
+                      className="inline-flex items-center gap-1.5 rounded-md px-2 py-1 text-xs font-semibold text-brand transition hover:bg-brand-light"
+                    >
+                      <CheckCheck className="h-3.5 w-3.5" />
+                      Mark all read
+                    </button>
+                  )}
                 </div>
                 {notifications.length === 0 ? (
                   <p className="px-4 py-5 text-sm text-ink-muted">No new notifications.</p>
@@ -183,10 +221,12 @@ export function Topbar({
                         key={item.id}
                         href={item.href}
                         onClick={() => {
-                          if (item.workflowId) fetch(`/api/notifications/${item.workflowId}`, { method: "PATCH" }).catch(() => undefined);
+                          dismissNotifications([item]);
                           setOpen(false);
                         }}
-                        className="block border-b border-border-ui px-4 py-3 transition-colors last:border-b-0 hover:bg-surface2"
+                        className={`block border-b border-border-ui px-4 py-3 transition-all duration-200 last:border-b-0 hover:bg-surface2 ${
+                          dismissingIds.has(item.id) ? "translate-x-1 bg-surface2 opacity-45" : "translate-x-0 opacity-100"
+                        }`}
                       >
                         <p className="text-sm font-semibold text-ink">{item.title}</p>
                         <p className="mt-1 text-xs text-ink-muted">{item.body}</p>
@@ -206,4 +246,45 @@ export function Topbar({
       )}
     </header>
   );
+
+  function dismissNotifications(items: NotificationItem[]) {
+    if (items.length === 0) return;
+    const ids = new Set(items.map((item) => item.id));
+    setDismissingIds((current) => new Set([...current, ...ids]));
+    setNotificationCount((current) => Math.max(0, current - items.length));
+    markVisibleNotificationsSeen(items, isAirline).catch(() => undefined);
+
+    window.setTimeout(() => {
+      setNotifications((current) => current.filter((item) => !ids.has(item.id)));
+      setDismissingIds((current) => {
+        const next = new Set(current);
+        for (const id of ids) next.delete(id);
+        return next;
+      });
+    }, 180);
+  }
+}
+
+async function markVisibleNotificationsSeen(items: NotificationItem[], isAirline: boolean) {
+  if (items.length === 0) return;
+  const workflowIds = items.map((item) => item.workflowId).filter(Boolean);
+  const tenderIds = items.map((item) => item.tenderId).filter(Boolean);
+
+  const requests: Promise<unknown>[] = workflowIds.map((id) =>
+    fetch(`/api/notifications/${id}`, { method: "PATCH" }),
+  );
+
+  if (isAirline && items.some((item) => !item.workflowId && !item.tenderId)) {
+    requests.push(markAirlineApplicationsSeen());
+  }
+
+  if (!isAirline && tenderIds.length > 0) {
+    requests.push(fetch("/api/tenders/seen", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ markAllSeenIds: tenderIds }),
+    }));
+  }
+
+  await Promise.allSettled(requests);
 }

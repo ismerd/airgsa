@@ -1,6 +1,6 @@
 # AirGSA MVP
 
-B2B  aviation cargo MVP built with Next.js App Router, TypeScript, TailwindCSS, shadcn-style UI primitives, Supabase-ready services, Recharts, and mock data.
+B2B aviation cargo MVP built with Next.js App Router, TypeScript, TailwindCSS, shadcn-style UI primitives, Railway Postgres-backed services, and Recharts.
 
 ## Local Development
 
@@ -27,46 +27,57 @@ The production start script binds to `0.0.0.0` and uses `process.env.PORT || 300
 3. Railway will use `railway.json`:
    - Build command: `npm run build`
    - Start command: `npm run start`
-4. Add environment variables only when Supabase is ready:
+4. Add production environment variables:
 
 ```bash
-NEXT_PUBLIC_SUPABASE_URL=
-NEXT_PUBLIC_SUPABASE_ANON_KEY=
-SUPABASE_SERVICE_ROLE_KEY=
+DATABASE_URL=
 AUTH_SESSION_SECRET=
+NEXT_PUBLIC_APP_URL=
+RAILWAY_VOLUME_MOUNT_PATH=/data
 LINKEDIN_API_TOKEN=
 LINKEDIN_IMPORT_API_URL=
 ```
 
-The MVP still runs with mock data if Supabase variables are empty.
+Railway Postgres is the primary production database. Supabase variables are optional and only needed if you choose Supabase Auth or Supabase Storage.
 
-`LINKEDIN_API_TOKEN` and `SUPABASE_SERVICE_ROLE_KEY` are server-side secrets. Do not expose them with a `NEXT_PUBLIC_` prefix.
+`LINKEDIN_API_TOKEN`, `DATABASE_URL`, and provider keys are server-side secrets. Do not expose them with a `NEXT_PUBLIC_` prefix.
 
-`AUTH_SESSION_SECRET` signs the AirGSA session cookie. Set a long random value in production. Without Supabase configuration the app falls back to demo accounts; with Supabase configured, login uses Supabase Auth and reads the user's role/company from `public.users` and `public.companies`.
+`AUTH_SESSION_SECRET` signs the AirGSA session cookie. Set a long random value in production. Without Supabase configuration the app provisions and authenticates approved users through Railway Postgres accounts. With Supabase configured, login can use Supabase Auth and reads the user's role/company from `public.users` and `public.companies`.
 
 Set `ALLOW_DEMO_ACCOUNTS=true` only when you intentionally want demo logins to remain available in a deployed environment.
 
-Supabase Auth password recovery is available through `/forgot-password` and `/reset-password`. In the Supabase dashboard, add your deployed domain to the allowed redirect URLs, including:
+Supabase Auth password recovery is available through `/forgot-password` and `/reset-password` only when Supabase Auth is configured. In the Supabase dashboard, add your deployed domain to the allowed redirect URLs, including:
 
 ```bash
 https://your-domain/reset-password
 ```
 
-Admin approval of access requests provisions Supabase users when `SUPABASE_SERVICE_ROLE_KEY` is configured. The user receives a Supabase invite email and sets their own password.
+Admin approval of access requests provisions Railway Postgres auth accounts by default and returns a one-time temporary password to the admin response. If `SUPABASE_SERVICE_ROLE_KEY` is configured, Supabase invites are used instead.
+
+Password reset works with Railway Postgres accounts when an email provider is configured. The simplest MVP provider is Resend: set `RESEND_API_KEY` and `WORKFLOW_EMAIL_ENABLED=true`. Without `WORKFLOW_EMAIL_FROM`, AirGSA uses `AirGSA <onboarding@resend.dev>` for testing, which Resend only allows to send to the email address of your own Resend account. To send to real Airline/GSA users, verify a domain in Resend and set `WORKFLOW_EMAIL_FROM=AirGSA <noreply@your-domain.com>`. SMTP (`SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASSWORD`, `SMTP_FROM`) and `WORKFLOW_EMAIL_WEBHOOK_URL` are also supported.
+
+Customer RFQ email extraction in `/gsa/quotes` uses `OPENAI_API_KEY` when configured and falls back to local rule extraction when absent. Set `OPENAI_QUOTE_EXTRACTION_MODEL=gpt-4.1-mini` unless you want to test another OpenAI model.
 
 `LINKEDIN_IMPORT_API_URL` is the POST endpoint of your LinkedIn import provider. The app sends the import settings to this endpoint and expects either an array of posts or a response object with `data`, `items`, `results`, `posts`, or `output`.
 
 LinkedIn imports are batched internally in groups of 6 target URLs because the upstream provider only accepts 6 targets per request. This is hidden from admins in the UI. Admins choose sources, import lookback such as "last 24 hours" or "last 2 weeks", and an automatic schedule such as "every 12 hours" or "every 1 week". Imported posts can stay unclassified for manual review. OpenAI classification is intentionally not automatic because model calls are paid API usage.
 
-## Supabase
+## Database
 
-The schema is in:
+The plain Postgres schema is in:
 
 ```bash
 supabase/schema.sql
 ```
 
-It includes the requested tables, enums, indexes, basic RLS policies, and a private `contract-documents` storage bucket.
+It includes the requested tables, enums, indexes, and RLS policies. Apply `supabase/migrations` to Railway Postgres before production deploys; the directory name is legacy.
+
+```bash
+npm run db:migrate
+npm run check:migrations
+```
+
+For file uploads on Railway without another provider, mount a Railway volume and set `RAILWAY_VOLUME_MOUNT_PATH` or `ATTACHMENT_STORAGE_ROOT`.
 
 ## Useful Routes
 

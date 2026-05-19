@@ -1,0 +1,13 @@
+{
+  "states": [
+    {
+      "sessionKey": "airline:saudia@airgsa.demo",
+      "key": "airline-applications-seen",
+      "updatedAt": "2026-05-19T02:26:45.082Z",
+      "data": {
+        "lastSeenAt": 1779157605082,
+        "tenderSeenAt": {}
+      }
+    }
+  ]
+}

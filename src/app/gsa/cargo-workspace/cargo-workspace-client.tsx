@@ -29,7 +29,7 @@ type Tab = "rates" | "bookings" | "tracking";
 type BookingSubView = "create" | "search" | "update" | "cancel";
 
 type ExecutionResult = {
-  mode?: "live" | "mock";
+  mode?: "live";
   status?: number | "not-configured";
   ok?: boolean;
   response?: unknown;
@@ -146,7 +146,8 @@ export function CargoWorkspaceClient({ operations }: { operations: EcargowareOpe
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ operationId, ...payload }),
       });
-      setResult((await res.json()) as ExecutionResult);
+      const data = (await res.json()) as ExecutionResult;
+      setResult(res.ok ? data : { ...data, error: data.error ?? data.message ?? "Cargo system execution failed." });
     } catch {
       setResult({ error: "Cargo system unreachable. Check your connection." });
     } finally {
@@ -807,13 +808,13 @@ function ApiResult({ result, running, label, successLabel }: { result: Execution
       </Card>
     );
   }
-  if (result.error) {
+  if (result.error || result.ok === false) {
     return (
       <Card>
         <CardContent className="p-4">
           <div className="flex items-start gap-3 rounded-lg border border-danger/25 bg-danger-bg p-3">
             <X className="mt-0.5 h-5 w-5 shrink-0 text-danger" />
-            <p className="text-sm font-semibold text-danger">{result.error}</p>
+            <p className="text-sm font-semibold text-danger">{result.error ?? result.message ?? "Cargo system execution failed."}</p>
           </div>
         </CardContent>
       </Card>
@@ -827,7 +828,7 @@ function ApiResult({ result, running, label, successLabel }: { result: Execution
           <div>
             <p className="text-sm font-bold text-success">{successLabel}</p>
             <p className="text-xs text-ink-muted">
-              {result.mode === "live" ? "Live response from ECAGROWARE" : "Simulated — connect credentials for live data"}
+              Live response from ECAGROWARE
             </p>
           </div>
           {result.status && (

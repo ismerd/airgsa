@@ -1,11 +1,10 @@
 "use client";
 
 import dynamic from "next/dynamic";
-import { BarChart3, DollarSign, Plane, PlaneLanding, Scale } from "lucide-react";
+import { BarChart3, Plane, PlaneLanding, Route } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import type { CargoDestination, FlightTrackerRecord, LandedAirportCluster, ProductMix } from "@/lib/dummy-flight-data";
-import { formatCurrency } from "@/lib/utils";
+import type { CargoDestination, FlightTrackerRecord, LandedAirportCluster, ProductMix } from "@/lib/flight-data-types";
 
 const FlightLeafletMap = dynamic(
   () => import("@/components/dashboard/flight-map-leaflet").then((module) => module.FlightLeafletMap),
@@ -80,10 +79,10 @@ export function FlightWorldMap({
             <p className="mt-1 text-sm text-ink-muted">{subtitle}</p>
           </div>
           <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
-            <SummaryMetric icon={Plane} label="Flights" value={String(summary.totalFlights)} />
-            <SummaryMetric icon={Scale} label="Tonnage" value={`${summary.totalTonnage.toFixed(1)} t`} />
-            <SummaryMetric icon={DollarSign} label="Revenue" value={formatCurrency(summary.totalRevenue)} />
-            <SummaryMetric icon={BarChart3} label="Avg LF" value={`${summary.averageLoadFactor}%`} />
+            <SummaryMetric icon={Plane} label="Live flights" value={String(summary.totalFlights)} />
+            <SummaryMetric icon={BarChart3} label="Freighters" value={String(summary.freighterFlights)} />
+            <SummaryMetric icon={PlaneLanding} label="Belly cargo" value={String(summary.bellyFlights)} />
+            <SummaryMetric icon={Route} label="Routes resolved" value={String(summary.routedFlights)} />
           </div>
         </div>
         {(enableFlightTypeFilter || landedAirportClusters.length > 0) && (
@@ -204,12 +203,13 @@ function FlightDetails({
       <div className="mt-4 grid grid-cols-2 gap-3 text-sm">
         <Detail label="Airline" value={flight.airlineName} />
         <Detail label="GSA" value={flight.gsaName} />
-        <Detail label="Tonnage" value={`${flight.tonnage.toFixed(1)} t`} />
-        <Detail label="Load factor" value={`${flight.loadFactor}%`} />
-        <Detail label="Revenue" value={formatCurrency(flight.revenue)} />
-        <Detail label="Avg yield" value={`$${flight.averageYield.toFixed(2)}/kg`} />
+        <Detail label="Aircraft" value={flight.aircraftType ?? "Unknown"} />
+        <Detail label="Registration" value={flight.registration ?? "Unknown"} />
+        <Detail label="Altitude" value={flight.altitude ? `${flight.altitude.toLocaleString("en-GB")} ft` : "Unknown"} />
+        <Detail label="Ground speed" value={flight.gspeed ? `${flight.gspeed.toLocaleString("en-GB")} kt` : "Unknown"} />
       </div>
 
+      {products.length > 0 && (
       <div className="mt-4">
         <p className="text-xs font-semibold uppercase tracking-[0.16em] text-ink-muted">Product mix</p>
         <div className="mt-3 space-y-2">
@@ -226,7 +226,9 @@ function FlightDetails({
           ))}
         </div>
       </div>
+      )}
 
+      {flight.cargoDestinations.length > 0 && (
       <div className="mt-4">
         <p className="text-xs font-semibold uppercase tracking-[0.16em] text-ink-muted">Cargo destinations</p>
         <div className="mt-3 space-y-2">
@@ -235,6 +237,7 @@ function FlightDetails({
           ))}
         </div>
       </div>
+      )}
     </div>
   );
 }
@@ -306,12 +309,11 @@ function Legend({ title, items }: { title: string; items: { name: string; color:
 
 function getFlightSummary(flights: FlightTrackerRecord[]) {
   const totalFlights = flights.length;
-  const totalTonnage = flights.reduce((sum, flight) => sum + flight.tonnage, 0);
-  const totalRevenue = flights.reduce((sum, flight) => sum + flight.revenue, 0);
-  const averageLoadFactor =
-    totalFlights === 0 ? 0 : Math.round(flights.reduce((sum, flight) => sum + flight.loadFactor, 0) / totalFlights);
+  const freighterFlights = flights.filter((flight) => flight.flightType === "freighter").length;
+  const bellyFlights = flights.filter((flight) => flight.flightType === "belly").length;
+  const routedFlights = flights.filter((flight) => flight.origin.countryCode !== "XX" && flight.destination.countryCode !== "XX").length;
 
-  return { totalFlights, totalTonnage, totalRevenue, averageLoadFactor };
+  return { totalFlights, freighterFlights, bellyFlights, routedFlights };
 }
 
 function getFlightFilterOptions(flights: FlightTrackerRecord[]) {

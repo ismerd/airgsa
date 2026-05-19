@@ -19,7 +19,7 @@ import {
   YAxis,
 } from "recharts";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import type { CountryPerformance, GsaPerformance } from "@/lib/airline-performance-data";
+import type { CountryPerformance, GsaPerformance } from "@/lib/performance-types";
 import type { KpiPoint } from "@/lib/types";
 
 type ChartCurrencyProps = { currencySymbol?: string; currencyCode?: string; headerControls?: React.ReactNode };

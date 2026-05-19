@@ -1,7 +1,16 @@
 import { NextRequest, NextResponse } from "next/server";
+import {
+  RequestBodyTooLargeError,
+  bodyTooLargeResponse,
+  enforceRateLimit,
+  getClientIp,
+  readJsonWithLimit,
+} from "@/lib/api/protection";
+import { getSession } from "@/lib/auth/session";
 import { getFr24Settings } from "@/lib/services/fr24-settings";
 
 const FR24_BASE = "https://fr24api.flightradar24.com";
+const FR24_TEST_BODY_LIMIT_BYTES = 8 * 1024;
 
 type Fr24Position = {
   fr24_id: string;
@@ -17,7 +26,39 @@ type Fr24Position = {
   dest_iata?: string;
 };
 
-export async function GET(req: NextRequest) {
+export async function GET() {
+  return runFr24Test();
+}
+
+export async function POST(req: NextRequest) {
+  const session = await getSession();
+  if (!session || session.role !== "admin") {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
+  }
+  const rateLimited = enforceRateLimit({
+    key: `fr24-test:${session.email}:${getClientIp(req)}`,
+    limit: 30,
+    windowMs: 60_000,
+  });
+  if (rateLimited) return rateLimited;
+
+  let body: { apiKey?: unknown };
+  try {
+    body = await readJsonWithLimit<{ apiKey?: unknown }>(req, FR24_TEST_BODY_LIMIT_BYTES);
+  } catch (error) {
+    if (error instanceof RequestBodyTooLargeError) return bodyTooLargeResponse(error);
+    body = {};
+  }
+  const apiKey = typeof body.apiKey === "string" ? body.apiKey.trim() : "";
+  return runFr24Test(apiKey || undefined, session);
+}
+
+async function runFr24Test(apiKeyOverride?: string, providedSession?: NonNullable<Awaited<ReturnType<typeof getSession>>>) {
+  const session = providedSession ?? await getSession();
+  if (!session || session.role !== "admin") {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
+  }
+
   const settings = await getFr24Settings();
 
   if (!settings.enabled) {
@@ -28,9 +69,7 @@ export async function GET(req: NextRequest) {
     }, { status: 409 });
   }
 
-  const apiKey =
-    req.nextUrl.searchParams.get("apiKey") ??
-    process.env.FLIGHTRADAR24_API_KEY;
+  const apiKey = apiKeyOverride ?? process.env.FLIGHTRADAR24_API_KEY;
 
   if (!apiKey) {
     return NextResponse.json(

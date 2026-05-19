@@ -3,7 +3,7 @@
 import L from "leaflet";
 import { useEffect, useState } from "react";
 import { CircleMarker, MapContainer, Marker, Polyline, TileLayer, Tooltip, useMap } from "react-leaflet";
-import type { FlightTrackerRecord, LandedAirportCluster } from "@/lib/dummy-flight-data";
+import type { FlightTrackerRecord, LandedAirportCluster } from "@/lib/flight-data-types";
 
 type FlightLeafletMapProps = {
   flights: FlightTrackerRecord[];
@@ -188,9 +188,11 @@ function FlightLayer({
           <span className="ml-1 text-slate-500">
             {flight.origin.airportCode}–{flight.destination.airportCode}
           </span>
-          <span className="ml-2 text-slate-400 text-[11px]">
-            {flight.tonnage.toFixed(1)} t · {flight.loadFactor}% LF
-          </span>
+          {flight.aircraftType && (
+            <span className="ml-2 text-slate-400 text-[11px]">
+              {flight.aircraftType}
+            </span>
+          )}
         </Tooltip>
       </Marker>
     </>

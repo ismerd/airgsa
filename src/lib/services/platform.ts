@@ -1,44 +1,22 @@
 import {
-  airlineCampaigns,
-  applications,
-  gsaCampaigns,
-  gsaProfiles,
-  kpiSeries,
-  notifications,
-  tenders,
-} from "@/lib/mock-data";
-import {
   linkedinImportDefaults,
   listLinkedinSources,
   listNewsPosts,
   newsCategories,
 } from "@/lib/services/intelligence-store";
-import { isSupabaseConfigured } from "@/lib/supabase/client";
+import { getGsaProfileById } from "@/lib/services/gsa-profile";
+import { listLiveTenders } from "@/lib/services/tender-workflow-store";
 
-export {
-  airlineCampaigns,
-  applications,
-  gsaCampaigns,
-  gsaProfiles,
-  kpiSeries,
-  linkedinImportDefaults,
-  newsCategories,
-  notifications,
-  tenders,
-};
+export { linkedinImportDefaults, newsCategories };
+export { getGsaProfileById };
 
 export async function getTenders() {
-  if (!isSupabaseConfigured) return tenders;
-  return tenders;
+  return listLiveTenders();
 }
 
 export async function getTenderById(id: string) {
   const rows = await getTenders();
   return rows.find((tender) => tender.id === id) ?? null;
-}
-
-export async function getGsaProfileById(id: string) {
-  return gsaProfiles.find((profile) => profile.id === id) ?? null;
 }
 
 export async function getNewsPosts() {

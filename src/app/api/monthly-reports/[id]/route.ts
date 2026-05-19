@@ -1,8 +1,16 @@
 import { NextRequest, NextResponse } from "next/server";
+import {
+  RequestBodyTooLargeError,
+  bodyTooLargeResponse,
+  enforceRateLimit,
+  getClientIp,
+  readJsonWithLimit,
+} from "@/lib/api/protection";
 import { getSession } from "@/lib/auth/session";
 import { updateMonthlyReport, type MonthlyReportUpdateInput } from "@/lib/services/mandate-execution-store";
 
 const STATUSES = new Set(["draft", "submitted", "accepted", "changes-requested", "rejected"]);
+const MONTHLY_REPORT_PATCH_BODY_LIMIT_BYTES = 96 * 1024;
 
 export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const session = await getSession();
@@ -11,7 +19,21 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     return NextResponse.json({ error: "Manager access required" }, { status: 403 });
   }
 
-  const input = (await req.json()) as MonthlyReportUpdateInput;
+  const rateLimited = enforceRateLimit({
+    key: `monthly-report-patch:${session.companyId ?? session.company}:${session.email}:${getClientIp(req)}`,
+    limit: 80,
+    windowMs: 60_000,
+  });
+  if (rateLimited) return rateLimited;
+
+  let input: MonthlyReportUpdateInput;
+  try {
+    input = await readJsonWithLimit<MonthlyReportUpdateInput>(req, MONTHLY_REPORT_PATCH_BODY_LIMIT_BYTES);
+  } catch (error) {
+    if (error instanceof RequestBodyTooLargeError) return bodyTooLargeResponse(error);
+    return NextResponse.json({ error: "Invalid JSON body." }, { status: 400 });
+  }
+
   if (input.status && !STATUSES.has(input.status)) {
     return NextResponse.json({ error: "Invalid monthly report status" }, { status: 400 });
   }

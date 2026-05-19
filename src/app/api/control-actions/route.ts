@@ -1,4 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
+import {
+  RequestBodyTooLargeError,
+  bodyTooLargeResponse,
+  enforceRateLimit,
+  getClientIp,
+  readJsonWithLimit,
+} from "@/lib/api/protection";
 import { getSession } from "@/lib/auth/session";
 import {
   createControlAction,
@@ -7,6 +14,7 @@ import {
 } from "@/lib/services/mandate-execution-store";
 
 const SEVERITIES = new Set(["info", "warning", "critical"]);
+const CONTROL_ACTION_BODY_LIMIT_BYTES = 48 * 1024;
 
 export async function GET() {
   const session = await getSession();
@@ -24,7 +32,21 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Manager access required" }, { status: 403 });
   }
 
-  const input = (await req.json()) as ControlActionCreateInput;
+  const rateLimited = enforceRateLimit({
+    key: `control-action-create:${session.companyId ?? session.company}:${session.email}:${getClientIp(req)}`,
+    limit: 80,
+    windowMs: 60_000,
+  });
+  if (rateLimited) return rateLimited;
+
+  let input: ControlActionCreateInput;
+  try {
+    input = await readJsonWithLimit<ControlActionCreateInput>(req, CONTROL_ACTION_BODY_LIMIT_BYTES);
+  } catch (error) {
+    if (error instanceof RequestBodyTooLargeError) return bodyTooLargeResponse(error);
+    return NextResponse.json({ error: "Invalid JSON body." }, { status: 400 });
+  }
+
   if (!input.contractId || !input.title) {
     return NextResponse.json({ error: "Missing control action fields" }, { status: 400 });
   }

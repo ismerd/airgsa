@@ -15,16 +15,17 @@ import { Sidebar, type NavGroup } from "@/components/dashboard/sidebar";
 import { getSession } from "@/lib/auth/session";
 import { canViewApplication } from "@/lib/auth/permissions";
 import { getAirlineProfile } from "@/lib/services/airline-profile";
+import { listMandateQuotes, listMonthlyReports, listWorkflowNotifications } from "@/lib/services/mandate-execution-store";
 import { listLiveApplications, listLiveTenders } from "@/lib/services/tender-workflow-store";
 import { SAUDIA_CARGO } from "@/lib/saudia-cargo-data";
 
-function getNav(pendingApplications: number, accessRole?: string): NavGroup[] {
+function getNav(pendingApplications: number, controlQueueCount: number, accessRole?: string): NavGroup[] {
   if (accessRole === "operator") {
     return [
       {
         heading: "Operations",
         items: [
-          { label: "Dashboard", href: "/airline", icon: PanelLeft },
+          { label: "Control Center", href: "/airline", icon: PanelLeft, badgeCount: controlQueueCount },
           { label: "Capacity alerts", href: "/airline/capacity-alerts", icon: BellRing },
         ],
       },
@@ -41,7 +42,7 @@ function getNav(pendingApplications: number, accessRole?: string): NavGroup[] {
   {
     heading: "Overview",
     items: [
-      { label: "Dashboard", href: "/airline", icon: PanelLeft },
+      { label: "Control Center", href: "/airline", icon: PanelLeft, badgeCount: controlQueueCount },
     ],
   },
   {
@@ -84,7 +85,17 @@ function getNav(pendingApplications: number, accessRole?: string): NavGroup[] {
 }
 
 export default async function AirlineLayout({ children }: { children: React.ReactNode }) {
-  const [session, profile, applications, tenders] = await Promise.all([getSession(), Promise.resolve(getAirlineProfile()), listLiveApplications(), listLiveTenders()]);
+  const session = await getSession();
+  const [applications, tenders, quotes, reports, notifications] = session
+    ? await Promise.all([
+        listLiveApplications(),
+        listLiveTenders(),
+        listMandateQuotes(session),
+        listMonthlyReports(session),
+        listWorkflowNotifications(session),
+      ])
+    : [[], [], [], [], []];
+  const profile = await getAirlineProfile(session);
   const tenderById = new Map(tenders.map((tender) => [tender.id, tender]));
   const pendingApplications = session
     ? applications.filter((application) =>
@@ -92,10 +103,14 @@ export default async function AirlineLayout({ children }: { children: React.Reac
         canViewApplication(session, application, tenderById.get(application.tenderId) ?? null),
       ).length
     : 0;
+  const pendingQuoteApprovals = session ? quotes.filter((quote) => quote.status === "airline-approval-required").length : 0;
+  const submittedReports = session ? reports.filter((report) => report.status === "submitted").length : 0;
+  const unreadNotifications = session ? notifications.filter((notification) => !notification.readAt).length : 0;
+  const controlQueueCount = pendingApplications + pendingQuoteApprovals + submittedReports + unreadNotifications;
   return (
     <div className="flex min-h-screen bg-page">
       <Sidebar
-        groups={getNav(pendingApplications, session?.accessRole)}
+        groups={getNav(pendingApplications, controlQueueCount, session?.accessRole)}
         role="Airline"
         brand={{
           name: SAUDIA_CARGO.name,

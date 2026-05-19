@@ -9,7 +9,6 @@ import {
   Clock,
   Loader2,
   Plane,
-  Save,
   Wifi,
   WifiOff,
 } from "lucide-react";
@@ -18,8 +17,6 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Topbar } from "@/components/dashboard/topbar";
-
-const LS_KEY = "airgsa_fr24_api_key";
 
 type FlightSummaryResult = {
   status: number | null;
@@ -69,18 +66,11 @@ function JsonBlock({ data }: { data: unknown }) {
 
 export default function Fr24TestPage() {
   const [apiKey, setApiKey] = useState("");
-  const [saved, setSaved] = useState(false);
   const [loading, setLoading] = useState(false);
   const [settingsLoading, setSettingsLoading] = useState(true);
   const [settingsSaving, setSettingsSaving] = useState(false);
   const [settings, setSettings] = useState<Fr24Settings>({ enabled: true });
   const [result, setResult] = useState<TestResult | null>(null);
-
-  // Load persisted key on mount
-  useEffect(() => {
-    const stored = localStorage.getItem(LS_KEY);
-    if (stored) setApiKey(stored);
-  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -102,23 +92,15 @@ export default function Fr24TestPage() {
     };
   }, []);
 
-  function saveKey() {
-    if (apiKey.trim()) {
-      localStorage.setItem(LS_KEY, apiKey.trim());
-    } else {
-      localStorage.removeItem(LS_KEY);
-    }
-    setSaved(true);
-    setTimeout(() => setSaved(false), 2000);
-  }
-
   async function runTest() {
     setLoading(true);
     setResult(null);
     try {
-      const params = new URLSearchParams();
-      if (apiKey.trim()) params.set("apiKey", apiKey.trim());
-      const res = await fetch(`/api/admin/fr24-test?${params.toString()}`);
+      const res = await fetch("/api/admin/fr24-test", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ apiKey: apiKey.trim() || undefined }),
+      });
       const data: TestResult = await res.json();
       setResult(data);
     } catch (e) {
@@ -165,8 +147,8 @@ export default function Fr24TestPage() {
               Live cargo detection now uses the FR24 cargo category filter on the full positions endpoint.
             </p>
             <p className="mt-3 text-xs text-ink-muted">
-              The API key entered here is saved in your browser. Set <code className="font-mono text-brand">FLIGHTRADAR24_API_KEY</code> in
-              Railway environment variables for production — that takes precedence and nothing needs to be entered here.
+              Set <code className="font-mono text-brand">FLIGHTRADAR24_API_KEY</code> in Railway environment variables for production.
+              The field below is a one-time test override and is not stored by the browser or server.
             </p>
           </div>
 
@@ -225,20 +207,17 @@ export default function Fr24TestPage() {
               <div className="space-y-1.5">
                 <label className="text-xs font-semibold uppercase tracking-wide text-ink-muted">
                   FR24 API key
-                  <span className="ml-1 normal-case font-normal">(saved in browser · leave empty to use env var)</span>
+                  <span className="ml-1 normal-case font-normal">(one-time override - leave empty to use env var)</span>
                 </label>
                 <div className="flex gap-2">
                   <Input
                     type="password"
                     placeholder="fr24-xxxxxxxxxxxxxxxx"
                     value={apiKey}
-                    onChange={(e) => { setApiKey(e.target.value); setSaved(false); }}
+                    onChange={(e) => setApiKey(e.target.value)}
                     className="font-mono flex-1"
+                    autoComplete="off"
                   />
-                  <Button variant="outline" onClick={saveKey} className="shrink-0">
-                    <Save className="h-4 w-4" />
-                    {saved ? "Saved" : "Save"}
-                  </Button>
                 </div>
               </div>
               <Button onClick={runTest} disabled={loading || !settings.enabled} size="lg">
@@ -295,7 +274,7 @@ export default function Fr24TestPage() {
                 <div className="rounded-xl border border-amber-500/30 bg-amber-500/5 p-4">
                   <p className="text-sm font-semibold text-amber-300">No API key configured</p>
                   <p className="mt-1 text-sm text-ink-muted">
-                    Enter your key above and click <strong>Save</strong>, or set <code className="font-mono text-brand">FLIGHTRADAR24_API_KEY</code> in Railway.
+                    Enter a one-time key above, or set <code className="font-mono text-brand">FLIGHTRADAR24_API_KEY</code> in Railway.
                   </p>
                 </div>
               )}

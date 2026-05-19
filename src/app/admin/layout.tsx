@@ -1,4 +1,4 @@
-import { Database, LayoutDashboard, Newspaper, Users, Wifi } from "lucide-react";
+import { Database, LayoutDashboard, MailCheck, Newspaper, Users, Wifi } from "lucide-react";
 import { Sidebar, type NavGroup } from "@/components/dashboard/sidebar";
 
 const nav: NavGroup[] = [
@@ -14,6 +14,7 @@ const nav: NavGroup[] = [
       { label: "Accounts", href: "/admin/accounts", icon: Users },
       { label: "Sources", href: "/admin/sources", icon: Database },
       { label: "Content import", href: "/admin/content", icon: Newspaper },
+      { label: "Email delivery", href: "/admin/email-deliveries", icon: MailCheck },
     ],
   },
   {

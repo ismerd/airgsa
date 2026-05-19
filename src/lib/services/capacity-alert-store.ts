@@ -2,11 +2,12 @@ import { mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 import type { SessionPayload } from "@/lib/auth/session";
 import { canViewContract } from "@/lib/auth/permissions";
-import { assertFileStoreFallbackAllowed, rowData, withPostgres } from "@/lib/services/postgres-store";
+import { assertFileStoreFallbackAllowed, rowData, withPostgres, withPostgresTransaction } from "@/lib/services/postgres-store";
+import { createId } from "@/lib/services/ids";
 import { listLivePartnerContracts, type LivePartnerContract } from "@/lib/services/tender-workflow-store";
 
 const STORE_PATH = path.join(process.cwd(), "data", "capacity-alerts.json");
-const STORE_KEY = "capacity_alert_store";
+const LEGACY_STORE_KEY = "capacity_alert_store";
 
 export type CapacityAlertUrgency = "normal" | "urgent" | "critical";
 export type CapacityAlertStatus = "active" | "filled" | "recalled";
@@ -96,7 +97,7 @@ export async function createCapacityAlert(session: SessionPayload, input: Capaci
 
   const now = new Date().toISOString();
   const alert: CapacityAlert = {
-    id: `cap-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 7)}`,
+    id: createId("cap"),
     airline: selectedRoutes[0]?.airline ?? session.company,
     airlineCompanyId: selectedRoutes[0]?.airlineCompanyId ?? session.companyId,
     routes: selectedRoutes,
@@ -205,9 +206,44 @@ function resolveSentTo(routes: CapacityAlertRoute[], targetGsaCompanyId: string 
 }
 
 async function readStore(): Promise<CapacityAlertStore> {
+  const dbStore = await readStoreFromPostgres();
+  if (dbStore) {
+    if (dbStore.alerts.length > 0) return dbStore;
+    const legacyStore = await readLegacyStore();
+    if (legacyStore.alerts.length > 0) {
+      await writeStoreToPostgres(legacyStore);
+      return legacyStore;
+    }
+    return dbStore;
+  }
+
+  return readLegacyStore();
+}
+
+async function writeStore(store: CapacityAlertStore) {
+  const saved = await writeStoreToPostgres(store);
+  if (saved) return;
+
+  assertFileStoreFallbackAllowed("Capacity alert store");
+  await mkdir(path.dirname(STORE_PATH), { recursive: true });
+  await writeFile(STORE_PATH, `${JSON.stringify(normalizeStore(store), null, 2)}\n`, "utf-8");
+}
+
+function normalizeStore(store: Partial<CapacityAlertStore>): CapacityAlertStore {
+  return { alerts: store.alerts ?? [] };
+}
+
+async function readStoreFromPostgres(): Promise<CapacityAlertStore | null> {
+  return withPostgres(async (client) => {
+    const result = await client.query("select data from public.capacity_alerts order by created_at desc");
+    return normalizeStore({ alerts: result.rows.map((row) => rowData<CapacityAlert>(row)) });
+  });
+}
+
+async function readLegacyStore(): Promise<CapacityAlertStore> {
   const dbStore = await withPostgres(async (client) => {
-    const result = await client.query("select value as data from app_settings where key = $1", [STORE_KEY]);
-    return result.rows[0] ? normalizeStore(rowData<Partial<CapacityAlertStore>>(result.rows[0])) : { alerts: [] };
+    const result = await client.query("select value as data from app_settings where key = $1", [LEGACY_STORE_KEY]);
+    return result.rows[0] ? normalizeStore(rowData<Partial<CapacityAlertStore>>(result.rows[0])) : null;
   });
   if (dbStore) return dbStore;
 
@@ -220,23 +256,26 @@ async function readStore(): Promise<CapacityAlertStore> {
   }
 }
 
-async function writeStore(store: CapacityAlertStore) {
-  const saved = await withPostgres(async (client) => {
-    await client.query(
-      `insert into app_settings (key, value, updated_at)
-       values ($1, $2::jsonb, now())
-       on conflict (key) do update set value = excluded.value, updated_at = now()`,
-      [STORE_KEY, JSON.stringify(store)],
-    );
+async function writeStoreToPostgres(store: CapacityAlertStore) {
+  return withPostgresTransaction(async (client) => {
+    await client.query("delete from public.capacity_alerts");
+    for (const alert of normalizeStore(store).alerts) {
+      await client.query(
+        `insert into public.capacity_alerts
+          (id, airline_company_id, target_gsa_company_id, status, urgency, data, created_at, updated_at)
+         values ($1, $2, $3, $4, $5, $6::jsonb, $7, $8)`,
+        [
+          alert.id,
+          alert.airlineCompanyId ?? null,
+          alert.targetGsaCompanyId ?? null,
+          alert.status,
+          alert.urgency,
+          JSON.stringify(alert),
+          alert.createdAt,
+          alert.updatedAt,
+        ],
+      );
+    }
     return true;
   });
-  if (saved) return;
-
-  assertFileStoreFallbackAllowed("Capacity alert store");
-  await mkdir(path.dirname(STORE_PATH), { recursive: true });
-  await writeFile(STORE_PATH, `${JSON.stringify(store, null, 2)}\n`, "utf-8");
-}
-
-function normalizeStore(store: Partial<CapacityAlertStore>): CapacityAlertStore {
-  return { alerts: store.alerts ?? [] };
 }

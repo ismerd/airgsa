@@ -24,7 +24,11 @@ import { Button, buttonVariants } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
-import { markAirlineApplicationsSeen } from "@/lib/client-notification-state";
+import {
+  getAirlineApplicationSeenState,
+  markAirlineApplicationsSeen,
+  markTenderApplicationsSeen as persistTenderApplicationsSeen,
+} from "@/lib/client-notification-state";
 import type { LiveTender, LiveTenderApplication } from "@/lib/services/tender-workflow-store";
 import {
   getApplicationsForTender,
@@ -38,8 +42,6 @@ import type { Status } from "@/lib/types";
 
 type ApplicationStatusFilter = "all" | "pending" | "shortlisted" | "accepted" | "rejected";
 type ApplicationSort = "score-desc" | "submitted-desc" | "gsa-asc" | "status-asc";
-
-const TENDER_APPLICATIONS_SEEN_KEY = "airgsa.airline.applications.tenderSeenAt";
 
 export default function ApplicationsPage() {
   const searchParams = useSearchParams();
@@ -59,19 +61,23 @@ export default function ApplicationsPage() {
 
   useEffect(() => {
     let active = true;
-    markAirlineApplicationsSeen();
+    markAirlineApplicationsSeen().catch(() => undefined);
 
-    fetch("/api/applications")
-      .then((res) => (res.ok ? res.json() : { applications: [], tenders: [] }))
-      .then((data) => {
+    Promise.all([
+      fetch("/api/applications").then((res) => (res.ok ? res.json() : { applications: [], tenders: [] })),
+      getAirlineApplicationSeenState(),
+    ])
+      .then(([data, seenState]) => {
         if (!active) return;
         setApplications(data.applications ?? []);
         setTenders(data.tenders ?? []);
+        setTenderSeenAt(seenState.tenderSeenAt);
       })
       .catch(() => {
         if (!active) return;
         setApplications([]);
         setTenders([]);
+        setTenderSeenAt({});
       })
       .finally(() => {
         if (active) setLoading(false);
@@ -80,23 +86,6 @@ export default function ApplicationsPage() {
     return () => {
       active = false;
     };
-  }, []);
-
-  useEffect(() => {
-    try {
-      const raw = window.localStorage.getItem(TENDER_APPLICATIONS_SEEN_KEY);
-      if (!raw) return;
-      const parsed = JSON.parse(raw) as Record<string, unknown>;
-      setTenderSeenAt(
-        Object.fromEntries(
-          Object.entries(parsed)
-            .filter(([, value]) => typeof value === "number" && Number.isFinite(value))
-            .map(([key, value]) => [key, value as number]),
-        ),
-      );
-    } catch {
-      setTenderSeenAt({});
-    }
   }, []);
 
   const applicationsByTender = useMemo(() => {
@@ -260,9 +249,13 @@ export default function ApplicationsPage() {
     const seenAt = Math.max(Date.now(), latestPendingSubmittedAt);
     setTenderSeenAt((current) => {
       const next = { ...current, [tenderId]: seenAt };
-      window.localStorage.setItem(TENDER_APPLICATIONS_SEEN_KEY, JSON.stringify(next));
       return next;
     });
+    persistTenderApplicationsSeen(tenderId, latestPendingSubmittedAt)
+      .then((state) => {
+        if (state) setTenderSeenAt(state.tenderSeenAt);
+      })
+      .catch(() => undefined);
   }
 
   return (

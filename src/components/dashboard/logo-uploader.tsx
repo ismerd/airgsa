@@ -79,13 +79,13 @@ export function LogoUploader({
       <input
         ref={inputRef}
         type="file"
-        accept="image/png,image/jpeg,image/webp,image/svg+xml"
+        accept="image/png,image/jpeg,image/webp"
         className="hidden"
         onChange={handleFile}
       />
 
       <p className="text-[10px] text-ink-muted">
-        PNG, JPG, SVG or WebP · max 2 MB<br />Click logo to change
+        PNG, JPG or WebP · max 2 MB<br />Click logo to change
       </p>
     </div>
   );

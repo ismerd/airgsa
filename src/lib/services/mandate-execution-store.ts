@@ -3,11 +3,22 @@ import path from "node:path";
 import type { SessionPayload } from "@/lib/auth/session";
 import { canViewContract } from "@/lib/auth/permissions";
 import { saveWorkflowAttachment } from "@/lib/services/attachment-store";
-import { assertFileStoreFallbackAllowed, rowData, withPostgres } from "@/lib/services/postgres-store";
+import { createId } from "@/lib/services/ids";
+import { queueWorkflowEmail } from "@/lib/services/notification-email";
+import { assertFileStoreFallbackAllowed, rowData, withPostgres, withPostgresTransaction } from "@/lib/services/postgres-store";
 import { listLivePartnerContracts, type LiveContractRoute, type LivePartnerContract } from "@/lib/services/tender-workflow-store";
 
 const STORE_PATH = path.join(process.cwd(), "data", "mandate-execution.json");
-const STORE_KEY = "mandate_execution_store";
+const LEGACY_STORE_KEY = "mandate_execution_store";
+const EMPTY_STORE: MandateExecutionStore = {
+  quotes: [],
+  bookings: [],
+  controlActions: [],
+  controlActionComments: [],
+  notifications: [],
+  monthlyReports: [],
+  auditEvents: [],
+};
 
 export type MandateQuoteStatus =
   | "draft"
@@ -62,6 +73,24 @@ export type MandateQuote = {
   status: MandateQuoteStatus;
   decisionReason?: string;
   counterRatePerKg?: number;
+  sourceChannel?: "manual" | "customer-email";
+  sourceEmailText?: string;
+  sourceEmailProvider?: "openai" | "rules";
+  sourceEmailConfidence?: number;
+  dimensions?: string;
+  volumeCbm?: number;
+  readyDate?: string;
+  product?: string;
+  routingPreference?: string;
+  transitRequirement?: string;
+  dangerousGoods?: boolean;
+  unNumber?: string;
+  dgClass?: string;
+  packingInstruction?: string;
+  temperatureRange?: string;
+  handlingNotes?: string[];
+  requestedConfirmations?: string[];
+  priority?: "standard" | "priority" | "urgent";
   createdAt: string;
   updatedAt: string;
   decidedAt?: string;
@@ -83,7 +112,27 @@ export type QuoteCreateInput = Pick<
   | "requestedRatePerKg"
   | "flightDate"
   | "deadline"
->;
+> & Partial<Pick<
+  MandateQuote,
+  | "sourceChannel"
+  | "sourceEmailText"
+  | "sourceEmailProvider"
+  | "sourceEmailConfidence"
+  | "dimensions"
+  | "volumeCbm"
+  | "readyDate"
+  | "product"
+  | "routingPreference"
+  | "transitRequirement"
+  | "dangerousGoods"
+  | "unNumber"
+  | "dgClass"
+  | "packingInstruction"
+  | "temperatureRange"
+  | "handlingNotes"
+  | "requestedConfirmations"
+  | "priority"
+>>;
 
 export type QuoteActionInput = {
   action: "approve" | "reject" | "counter" | "decline";
@@ -487,6 +536,16 @@ export async function markAllWorkflowNotificationsRead(session: SessionPayload) 
   return store.notifications.filter((notification) => isNotificationForSession(notification, session));
 }
 
+export async function createWorkflowNotifications(inputs: Array<Omit<WorkflowNotification, "id" | "createdAt">>) {
+  if (inputs.length === 0) return [];
+  const store = await readStore();
+  const notifications = inputs.map(buildWorkflowNotification);
+  store.notifications.unshift(...notifications);
+  await writeStore(store);
+  await dispatchWorkflowNotifications(notifications);
+  return notifications;
+}
+
 export async function listMonthlyReports(session: SessionPayload) {
   const [store, contracts] = await Promise.all([readStore(), listLivePartnerContracts()]);
   const visibleContractIds = new Set(contracts.filter((contract) => canViewContract(session, contract)).map((contract) => contract.id));
@@ -509,7 +568,7 @@ export async function createMandateQuote(session: SessionPayload, input: QuoteCr
   const now = new Date().toISOString();
   const quote: MandateQuote = {
     ...input,
-    id: `quo-${Date.now().toString(36)}`,
+    id: createId("quo"),
     tenderId: contract.tenderId,
     airlineCompanyId: contract.airlineCompanyId,
     airlineEmail: contract.airlineEmail,
@@ -630,7 +689,7 @@ export async function createMandateBooking(session: SessionPayload, input: Booki
   const bookedRevenueAmount = roundMoney(quote.weightKg * ratePerKg);
   const revenueAmount = roundMoney(weightKg * ratePerKg);
   const booking: MandateBooking = {
-    id: `bkg-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`,
+    id: createId("bkg"),
     quoteId: quote.id,
     contractId: quote.contractId,
     tenderId: quote.tenderId,
@@ -795,7 +854,7 @@ export async function createControlAction(session: SessionPayload, input: Contro
 
   const now = new Date().toISOString();
   const action: ContractControlAction = {
-    id: `act-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`,
+    id: createId("act"),
     contractId: contract.id,
     tenderId: contract.tenderId,
     airline: contract.airline,
@@ -825,8 +884,10 @@ export async function createControlAction(session: SessionPayload, input: Contro
     summary: `${session.company} opened control action for ${action.gsaName}: ${action.title}`,
     metadata: { contractId: action.contractId, status: action.status, severity: action.severity },
   }));
-  store.notifications.unshift(buildControlActionCreatedNotification(action));
+  const notifications = [buildControlActionCreatedNotification(action)];
+  store.notifications.unshift(...notifications);
   await writeStore(store);
+  await dispatchWorkflowNotifications(notifications);
   return action;
 }
 
@@ -872,8 +933,10 @@ export async function updateControlAction(session: SessionPayload, id: string, i
     summary: `${session.company} updated control action ${action.title} to ${action.status}`,
     metadata: { contractId: action.contractId, status: action.status, severity: action.severity },
   }));
-  store.notifications.unshift(...buildControlActionUpdateNotifications(session, action));
+  const notifications = buildControlActionUpdateNotifications(session, action);
+  store.notifications.unshift(...notifications);
   await writeStore(store);
+  await dispatchWorkflowNotifications(notifications);
   return action;
 }
 
@@ -910,7 +973,7 @@ export async function addControlActionComment(session: SessionPayload, actionId:
     dataUrl: input.attachmentDataUrl,
   });
   const comment: ControlActionComment = {
-    id: `actc-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`,
+    id: createId("actc"),
     actionId: action.id,
     contractId: action.contractId,
     body: input.body?.trim() || "",
@@ -941,8 +1004,10 @@ export async function addControlActionComment(session: SessionPayload, actionId:
     summary: `${session.company} commented on control action ${action.title}`,
     metadata: { contractId: action.contractId, attachmentName: comment.attachmentName },
   }));
-  store.notifications.unshift(...buildControlActionCommentNotifications(session, store.controlActions[actionIndex], comment));
+  const notifications = buildControlActionCommentNotifications(session, store.controlActions[actionIndex], comment);
+  store.notifications.unshift(...notifications);
   await writeStore(store);
+  await dispatchWorkflowNotifications(notifications);
   return comment;
 }
 
@@ -975,7 +1040,7 @@ export async function createMonthlyReport(session: SessionPayload, input: Monthl
   const revisions = baseReport ? appendMonthlyReportRevision(baseReport, session) : [];
   const report: MonthlyContractReport = {
     ...(baseReport ?? {}),
-    id: baseReport?.id ?? `mrep-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`,
+    id: baseReport?.id ?? createId("mrep"),
     contractId: contract.id,
     tenderId: contract.tenderId,
     airline: contract.airline,
@@ -1025,8 +1090,10 @@ export async function createMonthlyReport(session: SessionPayload, input: Monthl
     summary: `${report.gsaName} ${status === "submitted" ? "submitted" : "saved"} monthly report ${report.period}`,
     metadata: { contractId: report.contractId, period: report.period, status: report.status, version: report.version },
   }));
-  if (status === "submitted") store.notifications.unshift(buildMonthlyReportSubmittedNotification(report));
+  const notifications = status === "submitted" ? [buildMonthlyReportSubmittedNotification(report)] : [];
+  store.notifications.unshift(...notifications);
   await writeStore(store);
+  await dispatchWorkflowNotifications(notifications);
   return report;
 }
 
@@ -1109,7 +1176,11 @@ export async function updateMonthlyReport(session: SessionPayload, id: string, i
     metadata: { contractId: report.contractId, period: report.period, status: report.status, version: report.version },
   }));
   if (airlineCanReview && ["accepted", "changes-requested", "rejected"].includes(status)) {
-    store.notifications.unshift(buildMonthlyReportReviewedNotification(report));
+    const notifications = [buildMonthlyReportReviewedNotification(report)];
+    store.notifications.unshift(...notifications);
+    await writeStore(store);
+    await dispatchWorkflowNotifications(notifications);
+    return report;
   }
   await writeStore(store);
   return report;
@@ -1232,7 +1303,7 @@ export async function createRecommendedControlActions(session: SessionPayload) {
       const now = new Date().toISOString();
       const dueDate = new Date(Date.now() + (snapshot.riskLevel === "red" ? 3 : 7) * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
       const action: ContractControlAction = {
-        id: `act-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`,
+        id: createId("act"),
         contractId: contract.id,
         tenderId: contract.tenderId,
         airline: contract.airline,
@@ -1254,7 +1325,8 @@ export async function createRecommendedControlActions(session: SessionPayload) {
         createdBy: session.email,
       };
       store.controlActions.unshift(action);
-      store.notifications.unshift(buildControlActionCreatedNotification(action));
+      const notification = buildControlActionCreatedNotification(action);
+      store.notifications.unshift(notification);
       store.auditEvents.unshift(buildAuditEvent(session, {
         entityType: "control-action",
         entityId: action.id,
@@ -1266,7 +1338,12 @@ export async function createRecommendedControlActions(session: SessionPayload) {
     }
   }
 
-  if (created.length > 0) await writeStore(store);
+  if (created.length > 0) {
+    await writeStore(store);
+    await dispatchWorkflowNotifications(
+      store.notifications.filter((notification) => notification.type === "control-action" && created.some((action) => action.id === notification.entityId)),
+    );
+  }
   return created;
 }
 
@@ -1489,7 +1566,7 @@ function buildAuditEvent(
 ): MandateAuditEvent {
   return {
     ...event,
-    id: `aud-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`,
+    id: createId("aud"),
     actorEmail: session.email,
     actorName: session.name,
     actorRole: session.role,
@@ -1708,15 +1785,27 @@ function formatTimelineMoney(value: number) {
 function buildWorkflowNotification(input: Omit<WorkflowNotification, "id" | "createdAt">): WorkflowNotification {
   return {
     ...input,
-    id: `ntf-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`,
+    id: createId("ntf"),
     createdAt: new Date().toISOString(),
   };
+}
+
+async function dispatchWorkflowNotifications(notifications: WorkflowNotification[]) {
+  if (notifications.length === 0) return;
+  await Promise.all(notifications.map(async (notification) => {
+    try {
+      await queueWorkflowEmail(notification);
+    } catch (error) {
+      console.warn("[notifications] email dispatch failed:", (error as Error).message);
+    }
+  }));
 }
 
 function buildControlActionCreatedNotification(action: ContractControlAction) {
   return buildWorkflowNotification({
     recipientRole: "gsa",
     recipientCompanyId: action.gsaCompanyId,
+    recipientEmail: action.assigneeEmail,
     title: `New airline control action: ${action.title}`,
     body: `${action.airline} opened a ${action.severity} action for ${action.market}.`,
     href: "/gsa/performance",
@@ -1742,6 +1831,7 @@ function buildControlActionUpdateNotifications(session: SessionPayload, action: 
     return [buildWorkflowNotification({
       recipientRole: "gsa",
       recipientCompanyId: action.gsaCompanyId,
+      recipientEmail: action.assigneeEmail,
       title: `Airline updated action: ${action.title}`,
       body: `${action.airline} changed the action status to ${action.status}.`,
       href: "/gsa/performance",
@@ -1769,6 +1859,7 @@ function buildControlActionCommentNotifications(session: SessionPayload, action:
     return [buildWorkflowNotification({
       recipientRole: "gsa",
       recipientCompanyId: action.gsaCompanyId,
+      recipientEmail: action.assigneeEmail,
       title: `${action.airline} commented on an action`,
       body: comment.attachmentName ? `${comment.body || "Attachment added"} (${comment.attachmentName})` : comment.body,
       href: "/gsa/performance",
@@ -1796,6 +1887,7 @@ function buildMonthlyReportReviewedNotification(report: MonthlyContractReport) {
   return buildWorkflowNotification({
     recipientRole: "gsa",
     recipientCompanyId: report.gsaCompanyId,
+    recipientEmail: report.ownerEmail,
     title: `${report.airline} reviewed monthly report ${report.period}`,
     body: `Report status: ${report.status}${report.airlineReviewNote ? ` - ${report.airlineReviewNote}` : ""}`,
     href: "/gsa/monthly-reports",
@@ -1809,7 +1901,7 @@ function isNotificationForSession(notification: WorkflowNotification, session: S
   if (notification.recipientRole !== session.role) return false;
   if (notification.recipientCompanyId && session.companyId) return notification.recipientCompanyId === session.companyId;
   if (notification.recipientEmail) return notification.recipientEmail.toLowerCase() === session.email.toLowerCase();
-  return true;
+  return false;
 }
 
 function canManageWorkflow(session: SessionPayload) {
@@ -1824,9 +1916,79 @@ function statusOrder(status: ControlActionStatus) {
 }
 
 async function readStore(): Promise<MandateExecutionStore> {
+  const dbStore = await readStoreFromPostgres();
+  if (dbStore) {
+    if (!isEmptyStore(dbStore)) return dbStore;
+
+    const legacyStore = await readLegacyStore();
+    if (!isEmptyStore(legacyStore)) {
+      await writeStoreToPostgres(legacyStore);
+      return legacyStore;
+    }
+
+    return EMPTY_STORE;
+  }
+
+  return readLegacyStore();
+}
+
+async function writeStore(store: MandateExecutionStore) {
+  const saved = await writeStoreToPostgres(store);
+  if (saved) return;
+
+  assertFileStoreFallbackAllowed("Mandate execution store");
+  await mkdir(path.dirname(STORE_PATH), { recursive: true });
+  await writeFile(STORE_PATH, `${JSON.stringify(normalizeStore(store), null, 2)}\n`, "utf-8");
+}
+
+function normalizeStore(store: Partial<MandateExecutionStore>): MandateExecutionStore {
+  return {
+    quotes: store.quotes ?? EMPTY_STORE.quotes,
+    bookings: store.bookings ?? EMPTY_STORE.bookings,
+    controlActions: store.controlActions ?? EMPTY_STORE.controlActions,
+    controlActionComments: store.controlActionComments ?? EMPTY_STORE.controlActionComments,
+    notifications: store.notifications ?? EMPTY_STORE.notifications,
+    monthlyReports: store.monthlyReports ?? EMPTY_STORE.monthlyReports,
+    auditEvents: store.auditEvents ?? EMPTY_STORE.auditEvents,
+  };
+}
+
+async function readStoreFromPostgres(): Promise<MandateExecutionStore | null> {
+  return withPostgres(async (client) => {
+    const [
+      quotesResult,
+      bookingsResult,
+      actionsResult,
+      commentsResult,
+      notificationsResult,
+      reportsResult,
+      auditResult,
+    ] = await Promise.all([
+      client.query("select data from public.workflow_mandate_quotes order by created_at desc"),
+      client.query("select data from public.workflow_mandate_bookings order by created_at desc"),
+      client.query("select data from public.workflow_control_actions order by updated_at desc"),
+      client.query("select data from public.workflow_control_action_comments order by created_at asc"),
+      client.query("select data from public.workflow_notifications order by created_at desc"),
+      client.query("select data from public.workflow_monthly_reports order by period desc, updated_at desc"),
+      client.query("select data from public.workflow_audit_events order by created_at desc"),
+    ]);
+
+    return normalizeStore({
+      quotes: quotesResult.rows.map((row) => rowData<MandateQuote>(row)),
+      bookings: bookingsResult.rows.map((row) => rowData<MandateBooking>(row)),
+      controlActions: actionsResult.rows.map((row) => rowData<ContractControlAction>(row)),
+      controlActionComments: commentsResult.rows.map((row) => rowData<ControlActionComment>(row)),
+      notifications: notificationsResult.rows.map((row) => rowData<WorkflowNotification>(row)),
+      monthlyReports: reportsResult.rows.map((row) => rowData<MonthlyContractReport>(row)),
+      auditEvents: auditResult.rows.map((row) => rowData<MandateAuditEvent>(row)),
+    });
+  });
+}
+
+async function readLegacyStore(): Promise<MandateExecutionStore> {
   const dbStore = await withPostgres(async (client) => {
-    const result = await client.query("select value as data from app_settings where key = $1", [STORE_KEY]);
-    return result.rows[0] ? normalizeStore(rowData<Partial<MandateExecutionStore>>(result.rows[0])) : normalizeStore({});
+    const result = await client.query("select value as data from app_settings where key = $1", [LEGACY_STORE_KEY]);
+    return result.rows[0] ? normalizeStore(rowData<Partial<MandateExecutionStore>>(result.rows[0])) : null;
   });
   if (dbStore) return dbStore;
 
@@ -1835,37 +1997,172 @@ async function readStore(): Promise<MandateExecutionStore> {
     const raw = await readFile(STORE_PATH, "utf-8");
     return normalizeStore(JSON.parse(raw) as Partial<MandateExecutionStore>);
   } catch {
-    return { quotes: [], bookings: [], controlActions: [], controlActionComments: [], notifications: [], monthlyReports: [], auditEvents: [] };
+    return EMPTY_STORE;
   }
 }
 
-async function writeStore(store: MandateExecutionStore) {
-  const saved = await withPostgres(async (client) => {
-    await client.query(
-      `
-        insert into app_settings (key, value, updated_at)
-        values ($1, $2::jsonb, now())
-        on conflict (key) do update set value = excluded.value, updated_at = now()
-      `,
-      [STORE_KEY, JSON.stringify(store)],
-    );
+async function writeStoreToPostgres(store: MandateExecutionStore) {
+  const normalizedStore = normalizeStore(store);
+  return withPostgresTransaction(async (client) => {
+    await client.query("delete from public.workflow_control_action_comments");
+    await client.query("delete from public.workflow_notifications");
+    await client.query("delete from public.workflow_audit_events");
+    await client.query("delete from public.workflow_monthly_reports");
+    await client.query("delete from public.workflow_control_actions");
+    await client.query("delete from public.workflow_mandate_bookings");
+    await client.query("delete from public.workflow_mandate_quotes");
+
+    for (const quote of normalizedStore.quotes) {
+      await client.query(
+        `insert into public.workflow_mandate_quotes
+          (id, contract_id, airline_company_id, gsa_company_id, status, deadline, created_at, updated_at, data)
+         values ($1, $2, $3, $4, $5, $6, $7, $8, $9::jsonb)`,
+        [
+          quote.id,
+          quote.contractId,
+          quote.airlineCompanyId ?? null,
+          quote.gsaCompanyId ?? null,
+          quote.status,
+          quote.deadline || null,
+          quote.createdAt,
+          quote.updatedAt,
+          JSON.stringify(quote),
+        ],
+      );
+    }
+
+    for (const booking of normalizedStore.bookings) {
+      await client.query(
+        `insert into public.workflow_mandate_bookings
+          (id, contract_id, quote_id, airline_company_id, gsa_company_id, status, created_at, updated_at, data)
+         values ($1, $2, $3, $4, $5, $6, $7, $8, $9::jsonb)`,
+        [
+          booking.id,
+          booking.contractId,
+          booking.quoteId,
+          booking.airlineCompanyId ?? null,
+          booking.gsaCompanyId ?? null,
+          booking.status,
+          booking.createdAt,
+          booking.updatedAt,
+          JSON.stringify(booking),
+        ],
+      );
+    }
+
+    for (const action of normalizedStore.controlActions) {
+      await client.query(
+        `insert into public.workflow_control_actions
+          (id, contract_id, airline_company_id, gsa_company_id, status, severity, due_date, created_at, updated_at, data)
+         values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10::jsonb)`,
+        [
+          action.id,
+          action.contractId,
+          action.airlineCompanyId ?? null,
+          action.gsaCompanyId ?? null,
+          action.status,
+          action.severity,
+          action.dueDate || null,
+          action.createdAt,
+          action.updatedAt,
+          JSON.stringify({ ...action, comments: undefined }),
+        ],
+      );
+    }
+
+    for (const comment of normalizedStore.controlActionComments) {
+      const action = normalizedStore.controlActions.find((item) => item.id === comment.actionId);
+      await client.query(
+        `insert into public.workflow_control_action_comments
+          (id, action_id, contract_id, airline_company_id, gsa_company_id, created_at, data)
+         values ($1, $2, $3, $4, $5, $6, $7::jsonb)`,
+        [
+          comment.id,
+          comment.actionId,
+          comment.contractId,
+          action?.airlineCompanyId ?? null,
+          action?.gsaCompanyId ?? null,
+          comment.createdAt,
+          JSON.stringify(comment),
+        ],
+      );
+    }
+
+    for (const report of normalizedStore.monthlyReports) {
+      await client.query(
+        `insert into public.workflow_monthly_reports
+          (id, contract_id, airline_company_id, gsa_company_id, period, status, version, created_at, updated_at, data)
+         values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10::jsonb)`,
+        [
+          report.id,
+          report.contractId,
+          report.airlineCompanyId ?? null,
+          report.gsaCompanyId ?? null,
+          report.period,
+          report.status,
+          report.version,
+          report.createdAt,
+          report.updatedAt,
+          JSON.stringify(report),
+        ],
+      );
+    }
+
+    for (const event of normalizedStore.auditEvents) {
+      await client.query(
+        `insert into public.workflow_audit_events
+          (id, contract_id, entity_type, entity_id, actor_email, actor_role, created_at, data)
+         values ($1, $2, $3, $4, $5, $6, $7, $8::jsonb)`,
+        [
+          event.id,
+          resolveAuditContractId(event),
+          event.entityType,
+          event.entityId,
+          event.actorEmail,
+          event.actorRole,
+          event.createdAt,
+          JSON.stringify(event),
+        ],
+      );
+    }
+
+    for (const notification of normalizedStore.notifications) {
+      await client.query(
+        `insert into public.workflow_notifications
+          (id, recipient_role, recipient_company_id, recipient_email, type, entity_id, read_at, created_at, data)
+         values ($1, $2, $3, $4, $5, $6, $7, $8, $9::jsonb)`,
+        [
+          notification.id,
+          notification.recipientRole,
+          notification.recipientCompanyId ?? null,
+          notification.recipientEmail ?? null,
+          notification.type,
+          notification.entityId,
+          notification.readAt ?? null,
+          notification.createdAt,
+          JSON.stringify(notification),
+        ],
+      );
+    }
+
     return true;
   });
-  if (saved) return;
-
-  assertFileStoreFallbackAllowed("Mandate execution store");
-  await mkdir(path.dirname(STORE_PATH), { recursive: true });
-  await writeFile(STORE_PATH, `${JSON.stringify(store, null, 2)}\n`, "utf-8");
 }
 
-function normalizeStore(store: Partial<MandateExecutionStore>): MandateExecutionStore {
-  return {
-    quotes: store.quotes ?? [],
-    bookings: store.bookings ?? [],
-    controlActions: store.controlActions ?? [],
-    controlActionComments: store.controlActionComments ?? [],
-    notifications: store.notifications ?? [],
-    monthlyReports: store.monthlyReports ?? [],
-    auditEvents: store.auditEvents ?? [],
-  };
+function resolveAuditContractId(event: MandateAuditEvent) {
+  if (event.entityType === "contract" || event.entityType === "route") return event.entityId;
+  const contractId = event.metadata?.contractId;
+  return typeof contractId === "string" && contractId ? contractId : null;
+}
+
+function isEmptyStore(store: MandateExecutionStore) {
+  return (
+    store.quotes.length === 0 &&
+    store.bookings.length === 0 &&
+    store.controlActions.length === 0 &&
+    store.controlActionComments.length === 0 &&
+    store.notifications.length === 0 &&
+    store.monthlyReports.length === 0 &&
+    store.auditEvents.length === 0
+  );
 }

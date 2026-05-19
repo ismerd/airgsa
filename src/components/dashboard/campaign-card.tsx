@@ -1,4 +1,4 @@
-import { Calendar, Eye, Globe, ImageIcon, MessageSquare, Send } from "lucide-react";
+import { Calendar, Eye, Globe, ImageIcon, MessageSquare } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import type { Campaign, CampaignChannel, CampaignStatus, CampaignType } from "@/lib/types";
@@ -166,31 +166,3 @@ function getInitials(name: string) {
     .toUpperCase();
 }
 
-export function CampaignChannelTeaser() {
-  return (
-    <div className="rounded-lg border border-dashed border-border-ui bg-surface p-6">
-      <div className="flex items-start gap-4">
-        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md bg-surface2">
-          <Send className="h-5 w-5 text-ink-muted" />
-        </div>
-        <div>
-          <p className="text-xs font-semibold uppercase tracking-widest text-ink-muted">Phase 2 — Coming soon</p>
-          <h3 className="mt-1 text-base font-semibold text-ink">Social channel distribution</h3>
-          <p className="mt-1.5 max-w-xl text-sm text-ink-muted">
-            Connect LinkedIn, Instagram, and more to extend your reach beyond the platform. Prepare content once, manage it centrally, and distribute it across your digital ecosystem with full control over timing, format, and audience.
-          </p>
-          <div className="mt-4 flex flex-wrap gap-2">
-            {["LinkedIn", "Instagram", "X / Twitter", "Facebook"].map((ch) => (
-              <span
-                key={ch}
-                className="rounded border border-border-ui bg-surface2 px-3 py-1 text-xs text-ink-muted"
-              >
-                {ch}
-              </span>
-            ))}
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}

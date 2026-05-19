@@ -2,6 +2,51 @@
   "quotes": [
     {
       "contractId": "ctr-app-mp9mxpw4",
+      "routeId": "",
+      "origin": "MUC",
+      "destination": "BKK",
+      "customer": "Atlas Components",
+      "contactName": "Atlas Components",
+      "contactEmail": "",
+      "cargoType": "General Cargo (Industrial Components)",
+      "weightKg": 2350,
+      "pieces": 6,
+      "requestedRatePerKg": 2.3,
+      "flightDate": "2026-05-20",
+      "deadline": "2026-05-20T04:00",
+      "sourceChannel": "customer-email",
+      "sourceEmailText": "Dear Cargo Team,\n\nGood day.\n\nPlease assist with your best net/net rate and space option for the shipment below:\n\nDetails\n- Origin: Munich (MUC)\n- Destination: Bangkok (BKK)\n- Commodity: General Cargo (Industrial Components)\n- Chargeable Weight: 2,350 kg\n- Pieces / Dimensions: 6 pcs / 115 x 100 x 145 cm each\n- Volume: approx. 10.0 cbm\n- Ready Date: 28 May\n\nRequirements\n- Product: GCR\n- Routing: Prefer fastest available connection\n- Transit Time: Priority\n\nKindly advise:\n- Rate + all-in charges\n- Available flights / routing\n- Space confirmation\n\nCargo is firm and can be booked immediately after customer approval.\n\nBest regards,\nAtlas Components",
+      "sourceEmailProvider": "rules",
+      "sourceEmailConfidence": 0.72,
+      "dimensions": "6 pcs / 115 x 100 x 145 cm each",
+      "volumeCbm": 10,
+      "readyDate": "28 May",
+      "product": "GCR",
+      "routingPreference": "Prefer fastest available connection",
+      "transitRequirement": "Priority",
+      "dangerousGoods": false,
+      "handlingNotes": [],
+      "requestedConfirmations": [
+        "Rate + all-in charges",
+        "Available flights / routing",
+        "Space confirmation"
+      ],
+      "priority": "urgent",
+      "id": "quo-310d376a-e709-412c-be2f-5b1f888963df",
+      "tenderId": "tnd-mp9mxpvy",
+      "airlineCompanyId": "airline-saudia-cargo",
+      "airlineEmail": "saudia@airgsa.demo",
+      "airline": "Saudia Cargo",
+      "gsaCompanyId": "gsa-forto",
+      "gsaId": "gsa-forto",
+      "gsaName": "Forto Logistics",
+      "floorRatePerKg": 2.15,
+      "status": "auto-approved",
+      "createdAt": "2026-05-19T03:01:38.445Z",
+      "updatedAt": "2026-05-19T03:01:38.445Z"
+    },
+    {
+      "contractId": "ctr-app-mp9mxpw4",
       "routeId": "seed-fra-ruh",
       "origin": "FRA",
       "destination": "RUH",
@@ -485,6 +530,83 @@
     }
   ],
   "auditEvents": [
+    {
+      "entityType": "quote",
+      "entityId": "quo-310d376a-e709-412c-be2f-5b1f888963df",
+      "action": "quote.created",
+      "summary": "Forto Logistics created quote MUC-BKK for Atlas Components",
+      "metadata": {
+        "contractId": "ctr-app-mp9mxpw4",
+        "requestedRatePerKg": 2.3,
+        "status": "auto-approved"
+      },
+      "id": "aud-e50d4cf7-0506-4ff2-b268-a082e3d3d285",
+      "actorEmail": "lena.hartmann@forto.example",
+      "actorName": "Lena Hartmann",
+      "actorRole": "gsa",
+      "company": "Forto Logistics",
+      "createdAt": "2026-05-19T03:01:38.445Z"
+    },
+    {
+      "entityType": "route",
+      "entityId": "ctr-app-01e23067-ff3b-47f5-be9b-4726a931e616",
+      "action": "route.assigned",
+      "summary": "Smoke Cargo assigned route-smoke-1779155557126 to Smoke GSA Partner",
+      "metadata": {
+        "routeCount": 1
+      },
+      "id": "aud-23ff0a1e-3de1-4702-90cd-0227cdc49b46",
+      "actorEmail": "airline-smoke-1779155557126@airgsa.test",
+      "actorName": "Workflow Smoke Airline",
+      "actorRole": "airline",
+      "company": "Smoke Cargo",
+      "createdAt": "2026-05-19T01:52:39.637Z"
+    },
+    {
+      "entityType": "route",
+      "entityId": "ctr-app-ff0b636f-6c9a-4abf-8189-5f2908280d65",
+      "action": "route.assigned",
+      "summary": "Smoke Cargo assigned route-smoke-1779155535596 to Smoke GSA Partner",
+      "metadata": {
+        "routeCount": 1
+      },
+      "id": "aud-798be15a-9493-4e98-9abe-e31c514aa3ee",
+      "actorEmail": "airline-smoke-1779155535596@airgsa.test",
+      "actorName": "Workflow Smoke Airline",
+      "actorRole": "airline",
+      "company": "Smoke Cargo",
+      "createdAt": "2026-05-19T01:52:18.517Z"
+    },
+    {
+      "entityType": "route",
+      "entityId": "ctr-app-3cba0a2b-b435-460e-b078-2e5057c878d4",
+      "action": "route.assigned",
+      "summary": "Smoke Cargo assigned route-smoke-1779154609811 to Smoke GSA Partner",
+      "metadata": {
+        "routeCount": 1
+      },
+      "id": "aud-f28b49f9-bf3f-49aa-86d3-96e6b81cec30",
+      "actorEmail": "airline-smoke-1779154609811@airgsa.test",
+      "actorName": "Workflow Smoke Airline",
+      "actorRole": "airline",
+      "company": "Smoke Cargo",
+      "createdAt": "2026-05-19T01:36:52.978Z"
+    },
+    {
+      "entityType": "route",
+      "entityId": "ctr-app-60d46a6e-a324-4726-b6e5-0f4579ebeb5c",
+      "action": "route.assigned",
+      "summary": "Smoke Cargo assigned route-smoke-1779154427597 to Smoke GSA Partner",
+      "metadata": {
+        "routeCount": 1
+      },
+      "id": "aud-41eeed07-ad4d-4ae9-9fd5-0e5fd1da1346",
+      "actorEmail": "airline-smoke-1779154427597@airgsa.test",
+      "actorName": "Workflow Smoke Airline",
+      "actorRole": "airline",
+      "company": "Smoke Cargo",
+      "createdAt": "2026-05-19T01:33:50.513Z"
+    },
     {
       "entityType": "monthly-report",
       "entityId": "mrep-mp9mxq2x-yjq6",

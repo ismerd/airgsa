@@ -1,10 +1,18 @@
 import { NextRequest, NextResponse } from "next/server";
+import {
+  RequestBodyTooLargeError,
+  bodyTooLargeResponse,
+  enforceRateLimit,
+  getClientIp,
+  readJsonWithLimit,
+} from "@/lib/api/protection";
 import { getSession } from "@/lib/auth/session";
 import { canReviewApplication, canViewApplication } from "@/lib/auth/permissions";
 import { getLiveApplication, getLiveTender, updateLiveApplicationStatus } from "@/lib/services/tender-workflow-store";
 import type { Status } from "@/lib/types";
 
 const ALLOWED = new Set(["pending", "shortlisted", "accepted", "rejected"]);
+const APPLICATION_STATUS_BODY_LIMIT_BYTES = 4 * 1024;
 
 export async function GET(_: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const session = await getSession();
@@ -26,7 +34,21 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   const session = await getSession();
   if (!session || session.role !== "airline") return NextResponse.json({ error: "Airline login required" }, { status: 403 });
 
-  const body = (await req.json()) as { status?: Status };
+  const rateLimited = enforceRateLimit({
+    key: `application-review:${session.companyId ?? session.company}:${session.email}:${getClientIp(req)}`,
+    limit: 60,
+    windowMs: 60_000,
+  });
+  if (rateLimited) return rateLimited;
+
+  let body: { status?: Status };
+  try {
+    body = await readJsonWithLimit<{ status?: Status }>(req, APPLICATION_STATUS_BODY_LIMIT_BYTES);
+  } catch (error) {
+    if (error instanceof RequestBodyTooLargeError) return bodyTooLargeResponse(error);
+    return NextResponse.json({ error: "Invalid JSON body." }, { status: 400 });
+  }
+
   if (!body.status || !ALLOWED.has(body.status)) {
     return NextResponse.json({ error: "Invalid status" }, { status: 400 });
   }

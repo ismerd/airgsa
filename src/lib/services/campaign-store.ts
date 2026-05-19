@@ -2,12 +2,14 @@ import { mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 import type { SessionPayload } from "@/lib/auth/session";
 import { canViewContract } from "@/lib/auth/permissions";
-import { assertFileStoreFallbackAllowed, rowData, withPostgres } from "@/lib/services/postgres-store";
+import { assertFileStoreFallbackAllowed, rowData, withPostgres, withPostgresTransaction } from "@/lib/services/postgres-store";
+import { createWorkflowNotifications } from "@/lib/services/mandate-execution-store";
+import { createId } from "@/lib/services/ids";
 import { listLivePartnerContracts } from "@/lib/services/tender-workflow-store";
 import type { Campaign, CampaignChannel, CampaignStatus, CampaignType } from "@/lib/types";
 
 const STORE_PATH = path.join(process.cwd(), "data", "campaigns.json");
-const STORE_KEY = "campaign_store";
+const LEGACY_STORE_KEY = "campaign_store";
 
 type CampaignStore = {
   campaigns: Campaign[];
@@ -45,7 +47,7 @@ export async function createCampaign(session: SessionPayload, input: CampaignInp
   const status = input.status ?? "draft";
   const targeting = await resolveCampaignTargeting(session, input);
   const campaign: Campaign = {
-    id: `cmp-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 7)}`,
+    id: createId("cmp"),
     title: input.title.trim(),
     type: input.type,
     status,
@@ -69,6 +71,7 @@ export async function createCampaign(session: SessionPayload, input: CampaignInp
   const store = await readStore();
   store.campaigns.unshift(campaign);
   await writeStore(store);
+  if (campaign.status === "published") await notifyCampaignPublished(session, campaign);
   return campaign;
 }
 
@@ -109,6 +112,7 @@ export async function updateCampaign(session: SessionPayload, id: string, input:
   };
   store.campaigns[index] = campaign;
   await writeStore(store);
+  if (current.status !== "published" && campaign.status === "published") await notifyCampaignPublished(session, campaign);
   return campaign;
 }
 
@@ -166,14 +170,81 @@ async function resolveCampaignTargeting(session: SessionPayload, input: Pick<Cam
   };
 }
 
+async function notifyCampaignPublished(session: SessionPayload, campaign: Campaign) {
+  if (campaign.authorRole !== "airline") return;
+  const contracts = (await listLivePartnerContracts()).filter((contract) => canViewContract(session, contract));
+  const selectedTargets = new Set(campaign.targetCompanyIds ?? []);
+  const targetContracts = contracts.filter((contract) => {
+    if (!contract.gsaCompanyId) return selectedTargets.size === 0;
+    return selectedTargets.size === 0 || selectedTargets.has(contract.gsaCompanyId);
+  });
+  const seen = new Set<string>();
+  const notifications = targetContracts.flatMap((contract) => {
+    const recipientKey = contract.gsaCompanyId ?? contract.email ?? contract.gsaId;
+    if (!recipientKey || seen.has(recipientKey)) return [];
+    seen.add(recipientKey);
+    return [{
+      recipientRole: "gsa" as const,
+      recipientCompanyId: contract.gsaCompanyId,
+      recipientEmail: contract.email,
+      title: `New airline campaign: ${campaign.title}`,
+      body: `${campaign.author} published a ${formatCampaignType(campaign.type)} campaign for ${campaign.audience}.`,
+      href: "/gsa/campaigns",
+      type: "system" as const,
+      entityId: campaign.id,
+    }];
+  });
+
+  await createWorkflowNotifications(notifications);
+}
+
+function formatCampaignType(type: CampaignType) {
+  return type.replace(/_/g, " ");
+}
+
 function formatCampaignDate(value: string) {
   return new Intl.DateTimeFormat("en-GB", { day: "2-digit", month: "short", year: "numeric", timeZone: "UTC" }).format(new Date(value));
 }
 
 async function readStore(): Promise<CampaignStore> {
+  const dbStore = await readStoreFromPostgres();
+  if (dbStore) {
+    if (dbStore.campaigns.length > 0) return dbStore;
+    const legacyStore = await readLegacyStore();
+    if (legacyStore.campaigns.length > 0) {
+      await writeStoreToPostgres(legacyStore);
+      return legacyStore;
+    }
+    return dbStore;
+  }
+
+  return readLegacyStore();
+}
+
+async function writeStore(store: CampaignStore) {
+  const saved = await writeStoreToPostgres(store);
+  if (saved) return;
+
+  assertFileStoreFallbackAllowed("Campaign store");
+  await mkdir(path.dirname(STORE_PATH), { recursive: true });
+  await writeFile(STORE_PATH, `${JSON.stringify(normalizeStore(store), null, 2)}\n`, "utf-8");
+}
+
+function normalizeStore(store: Partial<CampaignStore>): CampaignStore {
+  return { campaigns: store.campaigns ?? [] };
+}
+
+async function readStoreFromPostgres(): Promise<CampaignStore | null> {
+  return withPostgres(async (client) => {
+    const result = await client.query("select data from public.platform_campaigns order by updated_at desc, created_at desc");
+    return normalizeStore({ campaigns: result.rows.map((row) => rowData<Campaign>(row)) });
+  });
+}
+
+async function readLegacyStore(): Promise<CampaignStore> {
   const dbStore = await withPostgres(async (client) => {
-    const result = await client.query("select value as data from app_settings where key = $1", [STORE_KEY]);
-    return result.rows[0] ? normalizeStore(rowData<Partial<CampaignStore>>(result.rows[0])) : { campaigns: [] };
+    const result = await client.query("select value as data from app_settings where key = $1", [LEGACY_STORE_KEY]);
+    return result.rows[0] ? normalizeStore(rowData<Partial<CampaignStore>>(result.rows[0])) : null;
   });
   if (dbStore) return dbStore;
 
@@ -186,23 +257,25 @@ async function readStore(): Promise<CampaignStore> {
   }
 }
 
-async function writeStore(store: CampaignStore) {
-  const saved = await withPostgres(async (client) => {
-    await client.query(
-      `insert into app_settings (key, value, updated_at)
-       values ($1, $2::jsonb, now())
-       on conflict (key) do update set value = excluded.value, updated_at = now()`,
-      [STORE_KEY, JSON.stringify(store)],
-    );
+async function writeStoreToPostgres(store: CampaignStore) {
+  return withPostgresTransaction(async (client) => {
+    await client.query("delete from public.platform_campaigns");
+    for (const campaign of normalizeStore(store).campaigns) {
+      await client.query(
+        `insert into public.platform_campaigns
+          (id, author_role, author_company_id, status, data, created_at, updated_at)
+         values ($1, $2, $3, $4, $5::jsonb, $6, $7)`,
+        [
+          campaign.id,
+          campaign.authorRole,
+          campaign.authorCompanyId ?? null,
+          campaign.status,
+          JSON.stringify(campaign),
+          campaign.createdAt,
+          campaign.updatedAt ?? campaign.createdAt,
+        ],
+      );
+    }
     return true;
   });
-  if (saved) return;
-
-  assertFileStoreFallbackAllowed("Campaign store");
-  await mkdir(path.dirname(STORE_PATH), { recursive: true });
-  await writeFile(STORE_PATH, `${JSON.stringify(store, null, 2)}\n`, "utf-8");
-}
-
-function normalizeStore(store: Partial<CampaignStore>): CampaignStore {
-  return { campaigns: store.campaigns ?? [] };
 }

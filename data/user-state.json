@@ -1,0 +1,24 @@
+{
+  "states": [
+    {
+      "sessionKey": "airline:saudia@airgsa.demo",
+      "key": "airline-applications-seen",
+      "updatedAt": "2026-05-19T02:34:16.824Z",
+      "data": {
+        "lastSeenAt": 1779158056824,
+        "tenderSeenAt": {}
+      }
+    },
+    {
+      "sessionKey": "gsa:lena.hartmann@forto.example",
+      "key": "gsa-tenders-seen",
+      "updatedAt": "2026-05-19T03:43:16.810Z",
+      "data": {
+        "seenTenderIds": {
+          "tnd-demo-benelux-2026": 1779162191945,
+          "tnd-demo-france-2026": 1779162196810
+        }
+      }
+    }
+  ]
+}

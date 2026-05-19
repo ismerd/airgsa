@@ -1,19 +1,23 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { AlertTriangle, CheckCircle2, Inbox, PackageCheck, Plus, Send, ShieldCheck, X } from "lucide-react";
+import { AlertTriangle, CheckCircle2, Inbox, Mail, PackageCheck, Plus, Send, ShieldCheck, Sparkles, X } from "lucide-react";
 import { Topbar } from "@/components/dashboard/topbar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
+import type { CustomerEmailExtraction } from "@/lib/services/customer-email-parser";
 import type { MandateBooking, MandateQuote, MandateQuoteStatus } from "@/lib/services/mandate-execution-store";
-import type { LivePartnerContract } from "@/lib/services/tender-workflow-store";
+import type { LiveContractRoute, LivePartnerContract } from "@/lib/services/tender-workflow-store";
 
 type QuoteForm = {
   contractId: string;
   routeId: string;
+  origin: string;
+  destination: string;
   customer: string;
   contactName: string;
   contactEmail: string;
@@ -28,6 +32,8 @@ type QuoteForm = {
 const emptyForm: QuoteForm = {
   contractId: "",
   routeId: "",
+  origin: "",
+  destination: "",
   customer: "",
   contactName: "",
   contactEmail: "",
@@ -37,6 +43,19 @@ const emptyForm: QuoteForm = {
   requestedRatePerKg: "",
   flightDate: "",
   deadline: "",
+};
+
+type ParsedEmailResult = {
+  provider: "openai" | "rules";
+  confidence: number;
+  extracted: CustomerEmailExtraction;
+  match?: {
+    contractId?: string;
+    routeId?: string;
+    routeOrigin?: string;
+    routeDestination?: string;
+    exactRouteMatch?: boolean;
+  };
 };
 
 const statusConfig: Record<MandateQuoteStatus, { label: string; variant: "default" | "success" | "warning" | "muted" | "danger" }> = {
@@ -58,6 +77,9 @@ export default function QuotesPage() {
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [showCreate, setShowCreate] = useState(false);
+  const [emailText, setEmailText] = useState("");
+  const [parsedEmail, setParsedEmail] = useState<ParsedEmailResult | null>(null);
+  const [parsingEmail, setParsingEmail] = useState(false);
 
   useEffect(() => {
     refresh();
@@ -66,7 +88,14 @@ export default function QuotesPage() {
   useEffect(() => {
     if (!form.contractId && contracts.length > 0) {
       const contract = contracts[0];
-      setForm((current) => ({ ...current, contractId: contract.id, routeId: firstAssignedRouteId(contract) }));
+      const route = firstAssignedRoute(contract);
+      setForm((current) => ({
+        ...current,
+        contractId: contract.id,
+        routeId: route?.id ?? "",
+        origin: route?.origin ?? current.origin,
+        destination: route?.destination ?? current.destination,
+      }));
     }
   }, [contracts, form.contractId]);
 
@@ -94,7 +123,7 @@ export default function QuotesPage() {
   }
 
   async function submitQuote() {
-    if (!selectedContract || !selectedRoute) return;
+    if (!selectedContract) return;
     setSaving(true);
     setError(null);
     try {
@@ -103,22 +132,93 @@ export default function QuotesPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           ...form,
-          origin: selectedRoute.origin,
-          destination: selectedRoute.destination,
+          origin: form.origin || selectedRoute?.origin,
+          destination: form.destination || selectedRoute?.destination,
           weightKg: Number(form.weightKg),
           pieces: Number(form.pieces),
           requestedRatePerKg: Number(form.requestedRatePerKg),
+          sourceChannel: parsedEmail ? "customer-email" : "manual",
+          sourceEmailText: parsedEmail ? emailText : undefined,
+          sourceEmailProvider: parsedEmail?.provider,
+          sourceEmailConfidence: parsedEmail?.confidence,
+          dimensions: parsedEmail?.extracted.dimensions,
+          volumeCbm: parsedEmail?.extracted.volumeCbm,
+          readyDate: parsedEmail?.extracted.readyDate,
+          product: parsedEmail?.extracted.product,
+          routingPreference: parsedEmail?.extracted.routingPreference,
+          transitRequirement: parsedEmail?.extracted.transitRequirement,
+          dangerousGoods: parsedEmail?.extracted.dangerousGoods,
+          unNumber: parsedEmail?.extracted.unNumber,
+          dgClass: parsedEmail?.extracted.dgClass,
+          packingInstruction: parsedEmail?.extracted.packingInstruction,
+          temperatureRange: parsedEmail?.extracted.temperatureRange,
+          handlingNotes: parsedEmail?.extracted.handlingNotes,
+          requestedConfirmations: parsedEmail?.extracted.requestedConfirmations,
+          priority: parsedEmail?.extracted.priority,
         }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? "Quote could not be created");
       setQuotes((current) => [data.quote, ...current]);
-      setForm({ ...emptyForm, contractId: selectedContract.id, routeId: selectedRoute.id });
+      setForm({
+        ...emptyForm,
+        contractId: selectedContract.id,
+        routeId: selectedRoute?.id ?? "",
+        origin: selectedRoute?.origin ?? "",
+        destination: selectedRoute?.destination ?? "",
+      });
+      setParsedEmail(null);
+      setEmailText("");
       setShowCreate(false);
     } catch (err) {
       setError((err as Error).message);
     } finally {
       setSaving(false);
+    }
+  }
+
+  async function parseCustomerEmail(sample?: string) {
+    const text = sample ?? emailText;
+    if (!text.trim()) return;
+    setParsingEmail(true);
+    setError(null);
+    try {
+      const res = await fetch("/api/quotes/email", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ emailText: text, contractId: form.contractId || undefined }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error ?? "Customer email could not be parsed");
+
+      const result = data as ParsedEmailResult;
+      const extracted = result.extracted;
+      const matchedContract = contracts.find((contract) => contract.id === result.match?.contractId) ?? selectedContract ?? contracts[0] ?? null;
+      const exactRoute = matchedContract?.contractRoutes.find((route) => route.id === result.match?.routeId && result.match?.exactRouteMatch) ?? null;
+      const flightDate = normalizeOperationalDate(extracted.readyDate);
+
+      setEmailText(text);
+      setParsedEmail(result);
+      setShowCreate(true);
+      setForm((current) => ({
+        ...current,
+        contractId: matchedContract?.id ?? current.contractId,
+        routeId: exactRoute?.id ?? "",
+        origin: extracted.origin || exactRoute?.origin || current.origin,
+        destination: extracted.destination || exactRoute?.destination || current.destination,
+        customer: extracted.customer,
+        contactName: extracted.contactName,
+        contactEmail: extracted.contactEmail,
+        cargoType: extracted.commodity,
+        weightKg: extracted.chargeableWeightKg ? String(extracted.chargeableWeightKg) : "",
+        pieces: extracted.pieces ? String(extracted.pieces) : "1",
+        flightDate,
+        deadline: defaultQuoteDeadline(),
+      }));
+    } catch (err) {
+      setError((err as Error).message);
+    } finally {
+      setParsingEmail(false);
     }
   }
 
@@ -199,6 +299,57 @@ export default function QuotesPage() {
         </section>
 
         <Card>
+          <CardHeader className="flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+            <div>
+              <CardTitle className="flex items-center gap-2">
+                <Mail className="h-5 w-5 text-brand" />
+                Customer email intake
+              </CardTitle>
+              <p className="mt-1 text-sm text-ink-muted">Paste a customer RFQ email, extract the cargo details, then send an offer from an assigned contract.</p>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {CUSTOMER_EMAIL_EXAMPLES.map((example, index) => (
+                <Button
+                  key={example.customer}
+                  size="sm"
+                  variant="outline"
+                  onClick={() => parseCustomerEmail(example.text)}
+                  disabled={parsingEmail}
+                >
+                  Option {index + 1}
+                </Button>
+              ))}
+            </div>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <Textarea
+              value={emailText}
+              onChange={(event) => setEmailText(event.target.value)}
+              rows={9}
+              placeholder="Paste customer email..."
+            />
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div className="flex flex-wrap gap-2">
+                {parsedEmail && (
+                  <>
+                    <Badge variant={parsedEmail.provider === "openai" ? "success" : "warning"}>
+                      {parsedEmail.provider === "openai" ? "OpenAI extracted" : "Rule fallback"}
+                    </Badge>
+                    <Badge variant="muted">{Math.round(parsedEmail.confidence * 100)}% confidence</Badge>
+                    {!parsedEmail.match?.exactRouteMatch && <Badge variant="warning">No exact assigned route match</Badge>}
+                  </>
+                )}
+              </div>
+              <Button onClick={() => parseCustomerEmail()} disabled={parsingEmail || !emailText.trim()}>
+                <Sparkles className="h-4 w-4" />
+                {parsingEmail ? "Extracting..." : "Extract RFQ"}
+              </Button>
+            </div>
+            {parsedEmail && <ExtractedEmailPanel extracted={parsedEmail.extracted} />}
+          </CardContent>
+        </Card>
+
+        <Card>
           <CardHeader className="flex-row items-center justify-between">
             <div>
               <CardTitle>New customer quote</CardTitle>
@@ -221,7 +372,14 @@ export default function QuotesPage() {
                     <Field label="Contract">
                       <Select value={form.contractId} onChange={(event) => {
                         const contract = contracts.find((item) => item.id === event.target.value);
-                        setForm((current) => ({ ...current, contractId: event.target.value, routeId: contract ? firstAssignedRouteId(contract) : "" }));
+                        const route = contract ? firstAssignedRoute(contract) : null;
+                        setForm((current) => ({
+                          ...current,
+                          contractId: event.target.value,
+                          routeId: route?.id ?? "",
+                          origin: route?.origin ?? current.origin,
+                          destination: route?.destination ?? current.destination,
+                        }));
                       }}>
                         {contracts.map((contract) => (
                           <option key={contract.id} value={contract.id}>{contract.airline} - {contract.market}</option>
@@ -229,7 +387,16 @@ export default function QuotesPage() {
                       </Select>
                     </Field>
                     <Field label="Assigned route">
-                      <Select value={form.routeId} onChange={(event) => setForm((current) => ({ ...current, routeId: event.target.value }))}>
+                      <Select value={form.routeId} onChange={(event) => {
+                        const route = selectedContract?.contractRoutes.find((item) => item.id === event.target.value);
+                        setForm((current) => ({
+                          ...current,
+                          routeId: event.target.value,
+                          origin: route?.origin ?? current.origin,
+                          destination: route?.destination ?? current.destination,
+                        }));
+                      }}>
+                        <option value="">No exact assigned route</option>
                         {(selectedContract?.contractRoutes.filter((route) => route.status === "assigned") ?? []).map((route) => (
                           <option key={route.id} value={route.id}>{route.origin}-{route.destination}</option>
                         ))}
@@ -251,6 +418,8 @@ export default function QuotesPage() {
                   )}
 
                   <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+                    <Field label="Origin"><Input value={form.origin} onChange={(event) => setForm((current) => ({ ...current, origin: event.target.value.toUpperCase() }))} /></Field>
+                    <Field label="Destination"><Input value={form.destination} onChange={(event) => setForm((current) => ({ ...current, destination: event.target.value.toUpperCase() }))} /></Field>
                     <Field label="Customer"><Input value={form.customer} onChange={(event) => setForm((current) => ({ ...current, customer: event.target.value }))} /></Field>
                     <Field label="Contact name"><Input value={form.contactName} onChange={(event) => setForm((current) => ({ ...current, contactName: event.target.value }))} /></Field>
                     <Field label="Contact email"><Input type="email" value={form.contactEmail} onChange={(event) => setForm((current) => ({ ...current, contactEmail: event.target.value }))} /></Field>
@@ -260,9 +429,9 @@ export default function QuotesPage() {
                     <Field label="Flight date"><Input type="date" value={form.flightDate} onChange={(event) => setForm((current) => ({ ...current, flightDate: event.target.value }))} /></Field>
                     <Field label="Customer deadline"><Input type="datetime-local" value={form.deadline} onChange={(event) => setForm((current) => ({ ...current, deadline: event.target.value }))} /></Field>
                   </div>
-                  <Button disabled={saving || !form.customer || !form.requestedRatePerKg || !form.routeId} onClick={submitQuote}>
+                  <Button disabled={saving || !form.customer || !form.requestedRatePerKg || !form.origin || !form.destination} onClick={submitQuote}>
                     <Send className="h-4 w-4" />
-                    Submit quote
+                    Accept and send offer
                   </Button>
                 </>
               )}
@@ -292,12 +461,42 @@ export default function QuotesPage() {
   );
 }
 
-function firstAssignedRouteId(contract: LivePartnerContract) {
-  return contract.contractRoutes.find((route) => route.status === "assigned")?.id ?? "";
+function firstAssignedRoute(contract: LivePartnerContract): LiveContractRoute | null {
+  return contract.contractRoutes.find((route) => route.status === "assigned") ?? null;
 }
 
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return <label><span className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-ink-muted">{label}</span>{children}</label>;
+}
+
+function ExtractedEmailPanel({ extracted }: { extracted: CustomerEmailExtraction }) {
+  return (
+    <div className="grid gap-3 rounded-xl border border-border-ui bg-surface2 p-4 text-sm md:grid-cols-2 xl:grid-cols-4">
+      <Info label="Customer" value={extracted.customer} />
+      <Info label="Lane" value={`${extracted.origin || "-"}-${extracted.destination || "-"}`} />
+      <Info label="Commodity" value={extracted.commodity} />
+      <Info label="Product" value={extracted.product} />
+      <Info label="Weight" value={`${extracted.chargeableWeightKg.toLocaleString()} kg`} />
+      <Info label="Pieces" value={String(extracted.pieces)} />
+      <Info label="Dimensions" value={extracted.dimensions || "-"} />
+      <Info label="Ready" value={extracted.readyDate || "-"} />
+      <div className="md:col-span-2 xl:col-span-4">
+        <div className="flex flex-wrap gap-2">
+          {extracted.dangerousGoods && <Badge variant="warning">DG {extracted.unNumber ?? ""} {extracted.dgClass ? `Class ${extracted.dgClass}` : ""}</Badge>}
+          {extracted.temperatureRange && <Badge variant="success">Temp {extracted.temperatureRange}</Badge>}
+          {extracted.volumeCbm && <Badge variant="muted">{extracted.volumeCbm} cbm</Badge>}
+          <Badge variant={extracted.priority === "urgent" ? "danger" : extracted.priority === "priority" ? "warning" : "muted"}>
+            {extracted.priority}
+          </Badge>
+        </div>
+        {(extracted.handlingNotes.length > 0 || extracted.requestedConfirmations.length > 0) && (
+          <p className="mt-3 text-xs text-ink-muted">
+            {[...extracted.handlingNotes, ...extracted.requestedConfirmations].slice(0, 4).join(" · ")}
+          </p>
+        )}
+      </div>
+    </div>
+  );
 }
 
 function QuoteCard({
@@ -349,6 +548,28 @@ function QuoteCard({
           <div className="rounded-lg border border-border-ui bg-surface2 p-3 text-sm text-ink-muted">{quote.decisionReason}</div>
         )}
 
+        {quote.sourceChannel === "customer-email" && (
+          <div className="rounded-lg border border-border-ui bg-surface2 p-3">
+            <div className="flex flex-wrap items-center gap-2">
+              <Badge variant="muted">Customer email</Badge>
+              {quote.sourceEmailProvider && <Badge variant={quote.sourceEmailProvider === "openai" ? "success" : "warning"}>{quote.sourceEmailProvider}</Badge>}
+              {quote.dangerousGoods && <Badge variant="warning">DG {quote.unNumber ?? ""}</Badge>}
+              {quote.temperatureRange && <Badge variant="success">Temp {quote.temperatureRange}</Badge>}
+              {quote.priority && <Badge variant={quote.priority === "urgent" ? "danger" : quote.priority === "priority" ? "warning" : "muted"}>{quote.priority}</Badge>}
+            </div>
+            <div className="mt-3 grid gap-2 text-xs text-ink-muted md:grid-cols-3">
+              <span>Product: {quote.product || quote.cargoType}</span>
+              <span>Dims: {quote.dimensions || "-"}</span>
+              <span>Ready: {quote.readyDate || quote.flightDate}</span>
+            </div>
+            {(quote.routingPreference || quote.transitRequirement) && (
+              <p className="mt-2 text-xs text-ink-muted">
+                {[quote.routingPreference, quote.transitRequirement].filter(Boolean).join(" · ")}
+              </p>
+            )}
+          </div>
+        )}
+
         {booking && (
           <div className="grid gap-3 rounded-lg border border-success/25 bg-success-bg p-3 text-sm md:grid-cols-4">
             <Info label="AWB" value={booking.awbNumber} />
@@ -378,7 +599,7 @@ function QuoteCard({
               </>
             )}
             <Button size="sm" variant="outline" onClick={onCounter} disabled={quote.status === "declined" || quote.status === "expired"}>
-              Counter
+              Send counter-offer
             </Button>
             <Button size="sm" variant="ghost" onClick={onDecline} disabled={quote.status === "declined" || quote.status === "expired"}>
               <X className="h-3.5 w-3.5" />
@@ -416,6 +637,36 @@ function formatDateTime(value: string) {
   }).format(new Date(value));
 }
 
+function normalizeOperationalDate(value: string) {
+  const parsed = parseReadyDate(value);
+  const tomorrow = new Date();
+  tomorrow.setDate(tomorrow.getDate() + 1);
+  const effective = parsed && parsed.getTime() > Date.now() ? parsed : tomorrow;
+  return effective.toISOString().slice(0, 10);
+}
+
+function defaultQuoteDeadline() {
+  const deadline = new Date();
+  deadline.setHours(deadline.getHours() + 24, 0, 0, 0);
+  return toDateTimeLocal(deadline);
+}
+
+function toDateTimeLocal(value: Date) {
+  const offsetMs = value.getTimezoneOffset() * 60_000;
+  return new Date(value.getTime() - offsetMs).toISOString().slice(0, 16);
+}
+
+function parseReadyDate(value: string) {
+  if (!value.trim()) return null;
+  const direct = new Date(value);
+  if (!Number.isNaN(direct.getTime())) return direct;
+  const match = value.match(/(\d{1,2})\s+([A-Za-z]+)/);
+  if (!match) return null;
+  const month = MONTHS[match[2].toLowerCase()];
+  if (month === undefined) return null;
+  return new Date(Date.UTC(new Date().getUTCFullYear(), month, Number(match[1])));
+}
+
 function StatCard({ icon, label, value }: { icon: React.ReactNode; label: string; value: string }) {
   return (
     <Card>
@@ -429,3 +680,135 @@ function StatCard({ icon, label, value }: { icon: React.ReactNode; label: string
     </Card>
   );
 }
+
+const MONTHS: Record<string, number> = {
+  january: 0,
+  jan: 0,
+  february: 1,
+  feb: 1,
+  march: 2,
+  mar: 2,
+  april: 3,
+  apr: 3,
+  may: 4,
+  june: 5,
+  jun: 5,
+  july: 6,
+  jul: 6,
+  august: 7,
+  aug: 7,
+  september: 8,
+  sep: 8,
+  october: 9,
+  oct: 9,
+  november: 10,
+  nov: 10,
+  december: 11,
+  dec: 11,
+};
+
+const CUSTOMER_EMAIL_EXAMPLES = [
+  {
+    customer: "Atlas Components",
+    text: `Dear Cargo Team,
+
+Good day.
+
+Please assist with your best net/net rate and space option for the shipment below:
+
+Details
+- Origin: Munich (MUC)
+- Destination: Bangkok (BKK)
+- Commodity: General Cargo (Industrial Components)
+- Chargeable Weight: 2,350 kg
+- Pieces / Dimensions: 6 pcs / 115 x 100 x 145 cm each
+- Volume: approx. 10.0 cbm
+- Ready Date: 28 May
+
+Requirements
+- Product: GCR
+- Routing: Prefer fastest available connection
+- Transit Time: Priority
+
+Kindly advise:
+- Rate + all-in charges
+- Available flights / routing
+- Space confirmation
+
+Cargo is firm and can be booked immediately after customer approval.
+
+Best regards,
+Atlas Components`,
+  },
+  {
+    customer: "BlueLine Logistics",
+    text: `Dear Cargo Team,
+
+Hope you are well.
+
+We have a dangerous goods shipment and need your acceptance approval, rate, and space indication:
+
+Shipment Details
+- Origin: Abu Dhabi (AUH)
+- Destination: Amsterdam (AMS)
+- Commodity: Lithium Ion Batteries
+- UN Number: UN3480
+- Class: 9
+- Packing Instruction: PI965 Section IA
+- Chargeable Weight: 1,080 kg
+- Pieces: 3 pallets
+- Dimensions: 120 x 100 x 135 cm each
+- Ready Date: 03 June
+
+Handling
+- Fully DG compliant with DGD available
+- Shipper's Declaration and MSDS are ready
+
+Kindly confirm:
+- DG acceptance approval
+- Rate (incl. DG surcharge)
+- Available routing and transit time
+- Space availability
+
+Shipment is ready to move once acceptance and commercial approval are confirmed.
+
+Best regards,
+BlueLine Logistics`,
+  },
+  {
+    customer: "MedBridge Forwarding",
+    text: `Dear Cargo Team,
+
+Good day.
+
+We have a healthcare shipment requiring temperature-controlled handling. Please share your best available offer:
+
+Shipment Details
+- Origin: Basel (BSL)
+- Destination: Riyadh (RUH)
+- Commodity: Healthcare Products
+- Product: Temp Control (+2 to +8°C)
+- Chargeable Weight: 2,950 kg
+- Pieces: 7 pallets
+- Dimensions: 120 x 100 x 155 cm each
+- Ready Date: 05 June
+
+Requirements
+- Active / Passive handling as per airline capability
+- Temperature range strictly +2°C to +8°C
+- Prefer direct flight or minimal transit exposure
+
+Kindly provide:
+- Pharma rate (incl. premium if applicable)
+- Product confirmation (e.g. QEP / CEIV compliant handling)
+- Routing & transit time
+- Space confirmation
+
+Shipment is high priority and time/temperature sensitive.
+
+Looking forward to your quick support.
+
+Best regards,
+MedBridge Forwarding`,
+  },
+] as const;

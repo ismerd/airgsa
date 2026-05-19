@@ -3,6 +3,9 @@
 import { useCallback, useRef, useState } from "react";
 import { File, FileSpreadsheet, FileText, ImageIcon, Upload, X } from "lucide-react";
 
+const MAX_FILE_BYTES = 10 * 1024 * 1024;
+const ALLOWED_EXTENSIONS = new Set(["pdf", "doc", "docx", "xls", "xlsx", "csv", "png", "jpg", "jpeg", "ppt", "pptx"]);
+
 export type DroppedFile = {
   id: string;
   name: string;
@@ -57,16 +60,23 @@ function formatSize(bytes: number) {
 
 export function FileDropzone({ files, onChange, hint }: Props) {
   const [dragging, setDragging] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
   const absorb = useCallback(async (incoming: FileList | null) => {
     if (!incoming) return;
+    setError(null);
     const existing = new Set(files.map((f) => f.name));
+    const incomingFiles = Array.from(incoming).filter((f) => !existing.has(f.name));
+    const rejected = incomingFiles.find((file) => !isAllowedFile(file));
+    if (rejected) {
+      setError(`${rejected.name} is not allowed. Use PDF, Word, Excel, CSV, PowerPoint or images up to 10 MB.`);
+      return;
+    }
     const next: DroppedFile[] = await Promise.all(
-      Array.from(incoming)
-        .filter((f) => !existing.has(f.name))
+      incomingFiles
         .map(async (f) => ({
-          id: `${f.name}-${f.size}-${Math.random()}`,
+          id: createClientFileId(f),
           name: f.name,
           size: f.size,
           mimeType: f.type || "application/octet-stream",
@@ -120,6 +130,7 @@ export function FileDropzone({ files, onChange, hint }: Props) {
             {hint ?? "PDF, Word, Excel, CSV, images"}
           </p>
         </div>
+        {error && <p className="text-xs font-medium text-danger">{error}</p>}
         <input
           ref={inputRef}
           type="file"
@@ -157,6 +168,17 @@ export function FileDropzone({ files, onChange, hint }: Props) {
       )}
     </div>
   );
+}
+
+function isAllowedFile(file: File) {
+  if (file.size > MAX_FILE_BYTES) return false;
+  const extension = file.name.includes(".") ? file.name.split(".").pop()?.toLowerCase() : undefined;
+  return Boolean(extension && ALLOWED_EXTENSIONS.has(extension));
+}
+
+function createClientFileId(file: File) {
+  if (globalThis.crypto?.randomUUID) return `file-${globalThis.crypto.randomUUID()}`;
+  return `file-${file.name}-${file.size}-${file.lastModified}`;
 }
 
 function readAsDataUrl(file: File) {

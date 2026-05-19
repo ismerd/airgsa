@@ -42,7 +42,7 @@ export function ForgotPasswordForm() {
           <div className="rounded-xl border border-[#0B7A52]/20 bg-success-bg p-4">
             <p className="font-semibold text-ink">Reset link sent</p>
             <p className="mt-1 text-sm leading-6 text-ink-muted">
-              Check your inbox for a Supabase password reset email. The link opens the password update page.
+              Check your inbox for a password reset email. The link opens the password update page.
             </p>
           </div>
         ) : (

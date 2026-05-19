@@ -5,7 +5,7 @@ import { feature } from "topojson-client";
 import { useEffect, useMemo, useState } from "react";
 import { GeoJSON, MapContainer, TileLayer, useMap } from "react-leaflet";
 import type { FeatureCollection, Geometry } from "geojson";
-import type { CountryPerformance } from "@/lib/airline-performance-data";
+import type { CountryPerformance } from "@/lib/performance-types";
 import { formatCurrency } from "@/lib/utils";
 
 type CountryPerformanceWorldLeafletProps = {

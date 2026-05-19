@@ -1,4 +1,4 @@
-import type { AirportPoint } from "@/lib/dummy-flight-data";
+import type { AirportPoint } from "@/lib/flight-data-types";
 import { realGsaFlightPartners } from "@/lib/real-gsa-data";
 
 export const SAUDIA_CARGO = {

@@ -11,6 +11,7 @@ import { createSupabaseBrowserClient, isSupabaseConfigured } from "@/lib/supabas
 export function ResetPasswordForm() {
   const searchParams = useSearchParams();
   const code = searchParams.get("code");
+  const railwayToken = searchParams.get("token");
   const supabase = useMemo(() => {
     if (!isSupabaseConfigured) return null;
     try {
@@ -31,7 +32,11 @@ export function ResetPasswordForm() {
 
     async function prepareSession() {
       if (!supabase) {
-        setError("Password reset requires Supabase Auth to be configured.");
+        if (railwayToken) {
+          setReady(true);
+          return;
+        }
+        setError("Reset link is missing or expired.");
         return;
       }
 
@@ -57,11 +62,10 @@ export function ResetPasswordForm() {
     return () => {
       active = false;
     };
-  }, [code, supabase]);
+  }, [code, railwayToken, supabase]);
 
   async function handleSubmit(event: React.FormEvent) {
     event.preventDefault();
-    if (!supabase) return;
     if (password.length < 8) {
       setError("Password must be at least 8 characters.");
       return;
@@ -73,6 +77,29 @@ export function ResetPasswordForm() {
 
     setLoading(true);
     setError(null);
+
+    if (railwayToken) {
+      const response = await fetch("/api/auth/password-reset/confirm", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ token: railwayToken, password }),
+      });
+      const payload = await response.json().catch(() => ({}));
+      setLoading(false);
+      if (!response.ok) {
+        setError(payload.error ?? "Password could not be updated.");
+        return;
+      }
+      setComplete(true);
+      return;
+    }
+
+    if (!supabase) {
+      setLoading(false);
+      setError("Reset link is missing or expired.");
+      return;
+    }
+
     const { error: updateError } = await supabase.auth.updateUser({ password });
     setLoading(false);
 

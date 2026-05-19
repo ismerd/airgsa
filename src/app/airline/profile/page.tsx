@@ -6,11 +6,10 @@ import { Topbar } from "@/components/dashboard/topbar";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { LogoUploader } from "@/components/dashboard/logo-uploader";
 import { getSession, updateSession } from "@/lib/auth/session";
-import { canViewTender } from "@/lib/auth/permissions";
+import { canViewContract, canViewTender } from "@/lib/auth/permissions";
 import { getAirlineProfile } from "@/lib/services/airline-profile";
 import { SAUDIA_CARGO } from "@/lib/saudia-cargo-data";
-import { realGsaPartners } from "@/lib/real-gsa-data";
-import { listLiveTenders } from "@/lib/services/tender-workflow-store";
+import { listLivePartnerContracts, listLiveTenders } from "@/lib/services/tender-workflow-store";
 
 export const dynamic = "force-dynamic";
 
@@ -23,16 +22,18 @@ async function updateContactName(formData: FormData) {
 }
 
 export default async function AirlineProfilePage() {
-  const [session, profile, tenders] = await Promise.all([
+  const [session, tenders, contracts] = await Promise.all([
     getSession(),
-    Promise.resolve(getAirlineProfile()),
     listLiveTenders(),
+    listLivePartnerContracts(),
   ]);
+  const profile = await getAirlineProfile(session);
 
   const visibleTenders = session ? tenders.filter((tender) => canViewTender(session, tender)) : [];
+  const visibleContracts = session ? contracts.filter((contract) => canViewContract(session, contract)) : [];
   const activeTenders = visibleTenders.filter((t) => t.status === "open").length;
   const draftTenders = visibleTenders.filter((t) => t.status === "draft").length;
-  const gsaCount = realGsaPartners.length;
+  const gsaCount = new Set(visibleContracts.map((contract) => contract.gsaCompanyId ?? contract.gsaId)).size;
 
   return (
     <>

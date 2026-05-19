@@ -8,7 +8,7 @@ export type EcargowareExecuteInput = {
 };
 
 export type EcargowareExecutionResult = {
-  mode: "live" | "mock";
+  mode: "live";
   status: number | "not-configured";
   ok: boolean;
   operation: Pick<EcargowareOperation, "id" | "group" | "label" | "method" | "path">;
@@ -53,14 +53,14 @@ export async function executeEcargowareOperation(input: EcargowareExecuteInput):
 
   if (!token) {
     return {
-      mode: "mock",
+      mode: "live",
       status: "not-configured",
-      ok: true,
+      ok: false,
       operation: pickOperation(operation),
       request,
-      response: buildMockResponse(operation, input),
+      response: null,
       message:
-        "eCargoWare credentials are not configured. This is a safe preview of the request AirGSA would send from the server.",
+        "eCargoWare credentials are not configured. Live cargo-system execution is disabled until server credentials are set.",
     };
   }
 
@@ -199,31 +199,4 @@ function pickOperation(operation: EcargowareOperation) {
     method: operation.method,
     path: operation.path,
   };
-}
-
-function buildMockResponse(operation: EcargowareOperation, input: EcargowareExecuteInput) {
-  switch (operation.group) {
-    case "Bookings":
-      return {
-        reference: input.body && typeof input.body === "object" ? (input.body as Record<string, unknown>).awbNo ?? "SV-DEMO-BOOKING" : "SV-DEMO-BOOKING",
-        status: operation.destructive ? "cancellation-preview" : "booking-preview",
-      };
-    case "Tracking":
-      return {
-        awbNo: input.pathParams?.awbno ?? "16012345678",
-        latestStatus: "Ready for live eCargoWare credentials",
-        milestones: ["Accepted", "Booked", "Departed"],
-      };
-    case "Rates":
-      return {
-        currency: "EUR",
-        rate: 2.35,
-        chargeableWeight: "Calculated by eCargoWare in live mode",
-      };
-    default:
-      return {
-        preview: true,
-        note: `${operation.label} is configured and ready for live execution once credentials are provided.`,
-      };
-  }
 }

@@ -1,5 +1,13 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { ApifyClient } from "apify-client";
+import {
+  RequestBodyTooLargeError,
+  bodyTooLargeResponse,
+  enforceRateLimit,
+  getClientIp,
+  readJsonWithLimit,
+} from "@/lib/api/protection";
+import { getSession } from "@/lib/auth/session";
 import {
   buildLinkedinImportBatches,
   extractLinkedinPostsFromResponse,
@@ -7,13 +15,14 @@ import {
   normalizeLinkedinPost,
   type RawLinkedinPost,
 } from "@/lib/services/linkedin";
-import { upsertImportedLinkedinPosts } from "@/lib/services/intelligence-store";
+import { listLinkedinSources, upsertImportedLinkedinPosts } from "@/lib/services/intelligence-store";
 import type { LinkedinImportPostedLimit } from "@/lib/types";
 
 export const runtime = "nodejs";
 export const maxDuration = 300;
 
 const APIFY_ACTOR_ID = "WI0tj4Ieb5Kq458gB";
+const LINKEDIN_IMPORT_BODY_LIMIT_BYTES = 256 * 1024;
 
 type ImportRequest = {
   token?: string;
@@ -24,10 +33,31 @@ type ImportRequest = {
   maxPosts?: number;
 };
 
-export async function POST(request: Request) {
-  const body = (await request.json()) as ImportRequest;
-  const token = body.token || process.env.LINKEDIN_API_TOKEN;
-  const targetUrls = body.targetUrls?.filter(Boolean) ?? [];
+export async function POST(request: NextRequest) {
+  const session = await getSession();
+  if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  if (session.role !== "admin") return NextResponse.json({ error: "Admin access required" }, { status: 403 });
+
+  const rateLimited = enforceRateLimit({
+    key: `linkedin-import:${session.email}:${getClientIp(request)}`,
+    limit: 20,
+    windowMs: 60_000,
+  });
+  if (rateLimited) return rateLimited;
+
+  let body: ImportRequest;
+  try {
+    body = await readJsonWithLimit<ImportRequest>(request, LINKEDIN_IMPORT_BODY_LIMIT_BYTES);
+  } catch (error) {
+    if (error instanceof RequestBodyTooLargeError) return bodyTooLargeResponse(error);
+    return NextResponse.json({ error: "Invalid JSON body." }, { status: 400 });
+  }
+
+  const token = process.env.LINKEDIN_API_TOKEN || body.token;
+  const activeSourceUrls = (await listLinkedinSources())
+    .filter((source) => source.status === "active")
+    .map((source) => source.url);
+  const targetUrls = body.targetUrls?.filter(Boolean).length ? body.targetUrls.filter(Boolean) : activeSourceUrls;
   const postedLimit = body.postedLimit ?? "24h";
 
   if (!token) {

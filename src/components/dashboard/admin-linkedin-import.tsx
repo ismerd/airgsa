@@ -1,41 +1,24 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { AlertCircle, CalendarClock, CheckCircle2, Clock3, KeyRound, Link2, Loader2, Play, Save } from "lucide-react";
+import { AlertCircle, CheckCircle2, Clock3, KeyRound, Link2, Loader2, Play, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import {
-  getPostedLimitLabel,
-  getScheduleLabel,
   linkedinImportDefaults,
+  getPostedLimitLabel,
   POSTED_LIMIT_OPTIONS,
 } from "@/lib/services/linkedin";
-import type { LinkedinImportPostedLimit, LinkedinImportScheduleUnit } from "@/lib/types";
+import type { LinkedinImportPostedLimit } from "@/lib/types";
 import type { LinkedinPostPreview } from "@/lib/types";
-
-const SETTINGS_STORAGE_KEY = "airgsa.linkedin-import-settings";
-
-type SavedImportSettings = {
-  token: string;
-  targetUrls: string;
-  postedLimit: LinkedinImportPostedLimit;
-  scheduleEnabled: boolean;
-  scheduleValue: number;
-  scheduleUnit: LinkedinImportScheduleUnit;
-  includeReposts: boolean;
-  includeQuotePosts: boolean;
-};
 
 export function AdminLinkedinImport() {
   const [token, setToken] = useState("");
   const [targetUrls, setTargetUrls] = useState(linkedinImportDefaults.targetUrls.join("\n"));
   const [postedLimit, setPostedLimit] = useState<LinkedinImportPostedLimit>("24h");
-  const [scheduleEnabled, setScheduleEnabled] = useState(false);
-  const [scheduleValue, setScheduleValue] = useState(12);
-  const [scheduleUnit, setScheduleUnit] = useState<LinkedinImportScheduleUnit>("hours");
   const [includeReposts, setIncludeReposts] = useState(linkedinImportDefaults.includeReposts);
   const [includeQuotePosts, setIncludeQuotePosts] = useState(linkedinImportDefaults.includeQuotePosts);
   const [isImporting, setIsImporting] = useState(false);
@@ -58,68 +41,31 @@ export function AdminLinkedinImport() {
     [targetUrls],
   );
 
-  const scheduleLabel = getScheduleLabel(scheduleValue, scheduleUnit);
   const postedLimitLabel = getPostedLimitLabel(postedLimit);
 
   useEffect(() => {
-    const saved = window.localStorage.getItem(SETTINGS_STORAGE_KEY);
-    if (saved) {
-      try {
-        const settings = JSON.parse(saved) as SavedImportSettings;
-        setToken(settings.token ?? "");
-        setTargetUrls(settings.targetUrls);
-        setPostedLimit(settings.postedLimit ?? "24h");
-        setScheduleEnabled(settings.scheduleEnabled);
-        setScheduleValue(settings.scheduleValue);
-        setScheduleUnit(settings.scheduleUnit);
-        setIncludeReposts(settings.includeReposts);
-        setIncludeQuotePosts(settings.includeQuotePosts);
-        return;
-      } catch {
-        window.localStorage.removeItem(SETTINGS_STORAGE_KEY);
-      }
-    }
-
-    void fetch("/api/linkedin-sources", { cache: "no-store" })
-      .then((response) => response.ok ? response.json() : null)
-      .then((payload) => {
-        const urls = (payload?.sources ?? [])
-          .filter((source: { status: string }) => source.status === "active")
-          .map((source: { url: string }) => source.url)
-          .join("\n");
-        if (urls) setTargetUrls(urls);
-      })
-      .catch(() => undefined);
+    void loadActiveSources(false);
   }, []);
 
-  function saveSettings() {
+  async function loadActiveSources(showMessage = true) {
     setSaveMessage(null);
     setSaveError(null);
     setImportError(null);
-
-    if (sourceCount === 0) {
-      setSaveError("Bitte mindestens eine LinkedIn Seite eintragen.");
-      return;
+    try {
+      const response = await fetch("/api/linkedin-sources", { cache: "no-store" });
+      const payload = await response.json();
+      if (!response.ok) throw new Error(payload.error ?? "LinkedIn sources could not be loaded");
+      const urls = (payload?.sources ?? [])
+        .filter((source: { status: string }) => source.status === "active")
+        .map((source: { url: string }) => source.url)
+        .join("\n");
+      setTargetUrls(urls);
+      if (showMessage) {
+        setSaveMessage(urls ? "Active LinkedIn sources loaded from the source manager." : "No active LinkedIn sources configured.");
+      }
+    } catch (error) {
+      setSaveError(error instanceof Error ? error.message : "LinkedIn sources could not be loaded");
     }
-
-    if (scheduleValue < 1) {
-      setSaveError("Wiederholung muss groesser als 0 sein.");
-      return;
-    }
-
-    const settings: SavedImportSettings = {
-      token,
-      targetUrls,
-      postedLimit,
-      scheduleEnabled,
-      scheduleValue,
-      scheduleUnit,
-      includeReposts,
-      includeQuotePosts,
-    };
-
-    window.localStorage.setItem(SETTINGS_STORAGE_KEY, JSON.stringify(settings));
-    setSaveMessage("Einstellungen und Token wurden lokal in diesem Browser gespeichert.");
   }
 
   async function runImport() {
@@ -181,7 +127,7 @@ export function AdminLinkedinImport() {
               onChange={(event) => setToken(event.target.value)}
             />
             <p className="text-xs text-ink-muted">
-              Local testing stores this token in your browser. For Railway, also add it as <code>LINKEDIN_API_TOKEN</code>.
+              Prefer <code>LINKEDIN_API_TOKEN</code> in the production environment. This field is a one-time override and is not stored.
             </p>
           </div>
 
@@ -223,37 +169,10 @@ export function AdminLinkedinImport() {
             </div>
 
             <div className="rounded-md border border-border-ui bg-surface2 p-4">
-              <label className="flex items-center gap-2 text-sm font-semibold text-ink">
-                <CalendarClock className="h-4 w-4 text-brand" />
-                Automatic import
-              </label>
-              <label className="mt-3 flex items-center gap-2 text-sm text-ink">
-                <input
-                  type="checkbox"
-                  checked={scheduleEnabled}
-                  onChange={(event) => setScheduleEnabled(event.target.checked)}
-                  className="h-4 w-4 accent-cyan-400"
-                />
-                Run automatically
-              </label>
-              <div className="mt-3 grid grid-cols-[1fr_1.3fr] gap-2">
-                <Input
-                  type="number"
-                  min={1}
-                  disabled={!scheduleEnabled}
-                  value={scheduleValue}
-                  onChange={(event) => setScheduleValue(Number(event.target.value))}
-                />
-                <Select
-                  disabled={!scheduleEnabled}
-                  value={scheduleUnit}
-                  onChange={(event) => setScheduleUnit(event.target.value as LinkedinImportScheduleUnit)}
-                >
-                  <option value="hours">hours</option>
-                  <option value="days">days</option>
-                  <option value="weeks">weeks</option>
-                </Select>
-              </div>
+              <p className="text-sm font-semibold text-ink">Run mode</p>
+              <p className="mt-2 text-sm leading-6 text-ink-muted">
+                Imports run manually from this admin screen or through the secured API. Cron scheduling should be configured at the hosting layer with an admin session or service job.
+              </p>
             </div>
           </div>
 
@@ -284,11 +203,11 @@ export function AdminLinkedinImport() {
           </div>
 
           <div className="flex flex-col gap-3 sm:flex-row">
-            <Button onClick={saveSettings}>
-              <Save className="h-4 w-4" />
-              Save settings
+            <Button onClick={() => void loadActiveSources(true)} variant="outline">
+              <RefreshCw className="h-4 w-4" />
+              Reload active sources
             </Button>
-            <Button variant="outline" onClick={runImport} disabled={isImporting}>
+            <Button onClick={runImport} disabled={isImporting || sourceCount === 0}>
               {isImporting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Play className="h-4 w-4" />}
               {isImporting ? "Importing..." : "Import now"}
             </Button>
@@ -320,7 +239,7 @@ export function AdminLinkedinImport() {
               <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0" />
               <span>
                 Imported {importResult.importedCount} post{importResult.importedCount === 1 ? "" : "s"}.
-                {importResult.stored ? ` Saved ${importResult.savedCount} to Supabase.` : " Supabase saving is not configured yet."}
+                {importResult.stored ? ` Saved ${importResult.savedCount} to the database.` : " Database saving is not configured yet."}
               </span>
             </div>
           ) : null}
@@ -337,7 +256,7 @@ export function AdminLinkedinImport() {
             <SummaryItem label="Sources watched" value={`${sourceCount}`} />
             <SummaryItem label="Posts from" value={postedLimitLabel} />
             <SummaryItem label="Apify filter value" value={postedLimit} mono />
-            <SummaryItem label="Automatic schedule" value={scheduleEnabled ? scheduleLabel : "off"} />
+            <SummaryItem label="Run mode" value="manual / secured API" />
             <SummaryItem label="Category mode" value="manual review" />
             <SummaryItem label="Quote posts" value={includeQuotePosts ? "included" : "ignored"} />
             <SummaryItem label="Reposts" value={includeReposts ? "included" : "ignored"} />

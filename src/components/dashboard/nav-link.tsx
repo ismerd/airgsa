@@ -4,12 +4,13 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import {
+  getAirlineApplicationsForNotifications,
+  getAirlineApplicationSeenState,
   isUnreadAirlineApplication,
   markAirlineApplicationsSeen,
   subscribeToAirlineApplicationsSeen,
 } from "@/lib/client-notification-state";
 import { cn } from "@/lib/utils";
-import type { LiveTenderApplication } from "@/lib/services/tender-workflow-store";
 
 export function NavLink({ href, children, badgeCount }: { href: string; children: React.ReactNode; badgeCount?: number }) {
   const pathname = usePathname();
@@ -32,30 +33,36 @@ export function NavLink({ href, children, badgeCount }: { href: string; children
 
   useEffect(() => {
     if (!isAirlineApplicationsLink) return;
+    let active = true;
 
     async function refreshApplicationBadge() {
       if (isAirlineApplicationsPage) {
-        markAirlineApplicationsSeen();
+        markAirlineApplicationsSeen().catch(() => undefined);
         setClientBadgeCount(0);
         return;
       }
 
       try {
-        const res = await fetch("/api/applications");
-        if (!res.ok) {
-          setClientBadgeCount(0);
-          return;
-        }
-        const data = await res.json();
-        const unreadCount = ((data.applications ?? []) as LiveTenderApplication[]).filter(isUnreadAirlineApplication).length;
+        const [applications, seenState] = await Promise.all([
+          getAirlineApplicationsForNotifications(),
+          getAirlineApplicationSeenState(),
+        ]);
+        if (!active) return;
+        const unreadCount = applications
+          .filter((application) => isUnreadAirlineApplication(application, seenState.lastSeenAt))
+          .length;
         setClientBadgeCount(unreadCount);
       } catch {
-        setClientBadgeCount(0);
+        if (active) setClientBadgeCount(0);
       }
     }
 
     refreshApplicationBadge();
-    return subscribeToAirlineApplicationsSeen(refreshApplicationBadge);
+    const unsubscribe = subscribeToAirlineApplicationsSeen(refreshApplicationBadge);
+    return () => {
+      active = false;
+      unsubscribe();
+    };
   }, [isAirlineApplicationsLink, isAirlineApplicationsPage, pathname]);
 
   return (

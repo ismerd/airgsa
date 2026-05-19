@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { Edit3, Plus } from "lucide-react";
-import { CampaignCard, CampaignChannelTeaser } from "@/components/dashboard/campaign-card";
+import { CampaignCard } from "@/components/dashboard/campaign-card";
 import { Topbar } from "@/components/dashboard/topbar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -19,6 +19,7 @@ type CampaignForm = {
   audience: string;
   body: string;
   scheduledFor: string;
+  bannerImageUrl: string;
 };
 
 const emptyForm: CampaignForm = {
@@ -28,6 +29,7 @@ const emptyForm: CampaignForm = {
   audience: "Local customer accounts",
   body: "",
   scheduledFor: "",
+  bannerImageUrl: "",
 };
 
 export default function GsaCampaignsPage() {
@@ -64,6 +66,7 @@ export default function GsaCampaignsPage() {
       audience: campaign.audience,
       body: campaign.body,
       scheduledFor: campaign.scheduledFor ?? "",
+      bannerImageUrl: campaign.bannerImageUrl ?? "",
     });
     setShowCreate(true);
   }
@@ -183,6 +186,11 @@ export default function GsaCampaignsPage() {
                 </Field>
                 {form.status === "scheduled" && <Field label="Scheduled for"><Input type="date" value={form.scheduledFor} onChange={(event) => setForm((current) => ({ ...current, scheduledFor: event.target.value }))} /></Field>}
                 <div className="lg:col-span-2">
+                  <Field label="Banner image URL">
+                    <Input value={form.bannerImageUrl} onChange={(event) => setForm((current) => ({ ...current, bannerImageUrl: event.target.value }))} placeholder="https://..." />
+                  </Field>
+                </div>
+                <div className="lg:col-span-2">
                   <Field label="Body"><Textarea value={form.body} onChange={(event) => setForm((current) => ({ ...current, body: event.target.value }))} /></Field>
                 </div>
                 <div className="lg:col-span-2">
@@ -206,8 +214,6 @@ export default function GsaCampaignsPage() {
             </Card>
           )}
         </section>
-
-        <CampaignChannelTeaser />
       </main>
     </>
   );
@@ -237,7 +243,7 @@ function CampaignList({
       </div>
       <div className="grid gap-4 xl:grid-cols-2">
         {campaigns.map((campaign) => (
-          <div key={campaign.id} className="relative">
+          <div key={campaign.id} className="space-y-2">
             <CampaignCard campaign={campaign} />
             <CampaignActions campaign={campaign} onEdit={onEdit} onStatus={onStatus} saving={saving} />
           </div>
@@ -249,7 +255,7 @@ function CampaignList({
 
 function CampaignActions({ campaign, onEdit, onStatus, saving }: { campaign: Campaign; onEdit: (campaign: Campaign) => void; onStatus: (campaign: Campaign, status: CampaignStatus) => void; saving: boolean }) {
   return (
-    <div className="absolute right-4 top-4 flex flex-wrap justify-end gap-1.5">
+    <div className="flex flex-wrap justify-end gap-1.5 rounded-lg border border-border-ui bg-surface p-2">
       <Button size="sm" variant="outline" disabled={saving} onClick={() => onEdit(campaign)}>
         <Edit3 className="h-3 w-3" />
         Edit

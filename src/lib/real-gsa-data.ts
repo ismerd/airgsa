@@ -1,5 +1,3 @@
-import type { GsaProfile, TenderApplication } from "./types";
-
 export type RealGsaPartner = {
   id: string;
   name: string;
@@ -381,40 +379,6 @@ export const realGsaPartners: RealGsaPartner[] = [
     summary: "Major UK wholesale air cargo partner with global network access and strong airline-compatible sales operations.",
   },
 ];
-
-export const realGsaProfiles: GsaProfile[] = realGsaPartners.map((partner) => ({
-  id: partner.id,
-  name: partner.name,
-  headquarters: partner.headquarters,
-  coverage: partner.coverage,
-  certifications: partner.certifications,
-  cargoFocus: partner.cargoFocus,
-  networkScore: partner.networkScore,
-  financialScore: partner.financialScore,
-  complianceScore: partner.complianceScore,
-  winRate: partner.winRate,
-  summary: partner.summary,
-}));
-
-export const realGsaApplications: TenderApplication[] = realGsaPartners.map((partner, index) => {
-  const tenders = ["tnd-eur-001", "tnd-iberia-002", "tnd-nordics-003"];
-  const statusCycle: TenderApplication["status"][] = ["shortlisted", "pending", "accepted", "pending", "rejected"];
-  const aiRating = Math.min(4.9, Math.max(3.2, 3.4 + (partner.networkScore + partner.complianceScore - 160) / 40));
-
-  return {
-    id: `app-${String(index + 1).padStart(3, "0")}`,
-    tenderId: tenders[index % tenders.length],
-    gsaId: partner.id,
-    gsaName: partner.name,
-    aiRating: Math.round(aiRating * 10) / 10,
-    commercialScore: Math.round((partner.financialScore + partner.winRate) / 2 + 20),
-    networkScore: partner.networkScore,
-    complianceScore: partner.complianceScore,
-    proposedCommission: `${(4.8 + (index % 7) * 0.2).toFixed(1)}% base + KPI accelerator`,
-    status: statusCycle[index % statusCycle.length],
-    submittedAt: `May ${String(1 + index).padStart(2, "0")}, 2026`,
-  };
-});
 
 export const realGsaFlightPartners = realGsaPartners.map(({ name, color, markets }) => ({
   name,

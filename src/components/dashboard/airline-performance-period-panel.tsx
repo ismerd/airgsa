@@ -7,7 +7,7 @@ import { ChartSection } from "@/components/dashboard/chart-section";
 import { CountryPerformanceWorldMap } from "@/components/dashboard/country-performance-world-map";
 import { DataTable, type Column } from "@/components/dashboard/data-table";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { type CountryPerformance, type GsaPerformance, type PeriodAveragePerformance } from "@/lib/airline-performance-data";
+import { type CountryPerformance, type GsaPerformance, type PeriodAveragePerformance } from "@/lib/performance-types";
 import { formatMoney, useCurrency } from "@/lib/currency-context";
 import type { KpiPoint } from "@/lib/types";
 import { cn } from "@/lib/utils";

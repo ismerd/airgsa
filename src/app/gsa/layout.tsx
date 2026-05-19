@@ -2,19 +2,18 @@ import { BarChart3, BellRing, Building2, CalendarDays, CheckSquare2, FileSpreads
 import { Sidebar, type NavGroup } from "@/components/dashboard/sidebar";
 import { getSession } from "@/lib/auth/session";
 import { canViewApplication, canViewTender } from "@/lib/auth/permissions";
-import { realGsaPartners } from "@/lib/real-gsa-data";
+import { resolveGsaOperationalProfile } from "@/lib/services/gsa-profile";
+import { listMandateQuotes, listWorkflowNotifications } from "@/lib/services/mandate-execution-store";
 import { listLiveApplications, listLiveTenders } from "@/lib/services/tender-workflow-store";
 
-const PENDING_QUOTES = 3;
-
-function getNav(notificationCount: number, accessRole?: string): NavGroup[] {
+function getNav(notificationCount: number, pendingQuoteCount: number, accessRole?: string): NavGroup[] {
   if (accessRole === "operator") {
     return [
       {
         heading: "Workspace",
         items: [
           { label: "My Tasks", href: "/gsa/tasks", icon: CheckSquare2 },
-          { label: "Quote Inbox", href: "/gsa/quotes", icon: Inbox, badgeCount: PENDING_QUOTES },
+          { label: "Quote Inbox", href: "/gsa/quotes", icon: Inbox, badgeCount: pendingQuoteCount },
           { label: "Capacity Alerts", href: "/gsa/capacity-alerts", icon: BellRing },
           { label: "Cargo Workspace", href: "/gsa/cargo-workspace", icon: PackageSearch },
         ],
@@ -38,16 +37,16 @@ function getNav(notificationCount: number, accessRole?: string): NavGroup[] {
 
   return [
     {
-      heading: "Market",
+      heading: "Home",
       items: [
-        { label: "Marketplace", href: "/gsa", icon: PanelLeft },
+        { label: "Operations Cockpit", href: "/gsa", icon: PanelLeft, badgeCount: notificationCount },
       ],
     },
     {
       heading: "Operations",
       items: [
         { label: "My Tasks", href: "/gsa/tasks", icon: CheckSquare2 },
-        { label: "Quote Inbox", href: "/gsa/quotes", icon: Inbox, badgeCount: PENDING_QUOTES },
+        { label: "Quote Inbox", href: "/gsa/quotes", icon: Inbox, badgeCount: pendingQuoteCount },
         { label: "Capacity Alerts", href: "/gsa/capacity-alerts", icon: BellRing },
         { label: "Cargo Workspace", href: "/gsa/cargo-workspace", icon: PackageSearch },
       ],
@@ -90,22 +89,33 @@ function getNav(notificationCount: number, accessRole?: string): NavGroup[] {
 }
 
 export default async function GsaLayout({ children }: { children: React.ReactNode }) {
-  const [session, tenders, applications] = await Promise.all([getSession(), listLiveTenders(), listLiveApplications()]);
-  const partner = realGsaPartners.find((item) => item.email === session?.email) ??
-    realGsaPartners.find((item) => item.name === session?.company);
+  const session = await getSession();
+  const [tenders, applications, quotes, notifications, partner] = session
+    ? await Promise.all([
+        listLiveTenders(),
+        listLiveApplications(),
+        listMandateQuotes(session),
+        listWorkflowNotifications(session),
+        resolveGsaOperationalProfile(session),
+      ])
+    : [[], [], [], [], null];
   const appliedTenderIds = new Set(
     session
       ? applications.filter((application) => canViewApplication(session, application, null)).map((application) => application.tenderId)
       : [],
   );
   const notificationCount = session
-    ? tenders.filter((tender) => canViewTender(session, tender) && !appliedTenderIds.has(tender.id)).length
+    ? notifications.filter((notification) => !notification.readAt).length +
+      tenders.filter((tender) => canViewTender(session, tender) && !appliedTenderIds.has(tender.id)).length
+    : 0;
+  const pendingQuoteCount = session
+    ? quotes.filter((quote) => ["airline-approved", "auto-approved", "countered"].includes(quote.status)).length
     : 0;
 
   return (
     <div className="flex min-h-screen bg-page">
       <Sidebar
-        groups={getNav(notificationCount, session?.accessRole)}
+        groups={getNav(notificationCount, pendingQuoteCount, session?.accessRole)}
         role="GSA"
         brand={{
           name: partner?.name ?? session?.company ?? "GSA",

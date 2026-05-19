@@ -23,7 +23,6 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { realGsaPartners } from "@/lib/real-gsa-data";
 import type { LiveContractRoute, LivePartnerContract } from "@/lib/services/tender-workflow-store";
 
 type RouteStatusFilter = "all" | "assigned" | "unassigned" | "eligible" | "blocked";
@@ -744,23 +743,22 @@ function getRouteOwner(routeId: string, tenderId: string, contracts: LivePartner
 }
 
 function buildPartnerProfile(contract: LivePartnerContract): PartnerProfile {
-  const partner = realGsaPartners.find((item) => item.id === contract.gsaId || item.email === contract.email || item.name === contract.gsaName);
   return {
     id: contract.gsaId,
-    name: partner?.name ?? contract.gsaName,
-    contactName: partner?.contactName ?? contract.contactName ?? "GSA contact",
-    email: partner?.email ?? contract.email ?? "",
-    headquarters: partner?.headquarters ?? contract.headquarters ?? "Not provided",
-    coverage: partner?.coverage ?? contract.coverage ?? [],
-    markets: partner?.markets ?? contract.markets ?? [],
-    certifications: partner?.certifications ?? contract.certifications ?? [],
-    cargoFocus: partner?.cargoFocus ?? contract.cargoFocus ?? "General cargo",
-    color: partner?.color ?? "#2563EB",
-    networkScore: partner?.networkScore ?? contract.networkScore ?? 50,
-    financialScore: partner?.financialScore ?? contract.financialScore ?? 50,
-    complianceScore: partner?.complianceScore ?? contract.complianceScore ?? 50,
-    winRate: partner?.winRate ?? contract.winRate ?? 0,
-    summary: partner?.summary ?? `${contract.gsaName} was accepted for ${contract.market}.`,
+    name: contract.gsaName,
+    contactName: contract.contactName ?? "GSA contact",
+    email: contract.email ?? "",
+    headquarters: contract.headquarters ?? "Not provided",
+    coverage: contract.coverage ?? [],
+    markets: contract.markets ?? [],
+    certifications: contract.certifications ?? [],
+    cargoFocus: contract.cargoFocus ?? "General cargo",
+    color: "#2563EB",
+    networkScore: contract.networkScore ?? 50,
+    financialScore: contract.financialScore ?? 50,
+    complianceScore: contract.complianceScore ?? 50,
+    winRate: contract.winRate ?? 0,
+    summary: `${contract.gsaName} was accepted for ${contract.market}.`,
   };
 }
 

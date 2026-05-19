@@ -2,14 +2,11 @@
 
 import { createContext, useContext, useMemo, useState } from "react";
 import {
-  countryPerformanceByPeriod,
-  gsaPerformanceByPeriod,
-  periodAveragePerformance,
   type CountryPerformance,
   type GsaPerformance,
   type PeriodAveragePerformance,
   type PerformancePeriod,
-} from "./airline-performance-data";
+} from "./performance-types";
 
 export type DashboardMode = "ytd" | "fy" | "daily" | "weekly" | "monthly" | "yearly" | "custom";
 export type KpiPeriod = "ytd" | "fy" | "custom";
@@ -38,7 +35,22 @@ type PeriodContextValue = {
   selectedAverage: Omit<PeriodAveragePerformance, "period">;
 };
 
-const defaultAverage = periodAveragePerformance.find((p) => p.period === "monthly")!;
+const defaultAverage: PeriodAveragePerformance = {
+  period: "monthly",
+  label: "Monthly",
+  revenue: 0,
+  yieldPerKg: 0,
+  loadFactor: 0,
+  tonnage: 0,
+  flightCount: 0,
+};
+
+const averageByPeriod: Record<PerformancePeriod, PeriodAveragePerformance> = {
+  daily: { ...defaultAverage, period: "daily", label: "Daily" },
+  weekly: { ...defaultAverage, period: "weekly", label: "Weekly" },
+  monthly: defaultAverage,
+  yearly: { ...defaultAverage, period: "yearly", label: "Yearly" },
+};
 
 const PeriodContext = createContext<PeriodContextValue>({
   dashboardMode: "fy",
@@ -48,8 +60,8 @@ const PeriodContext = createContext<PeriodContextValue>({
   setKpiCustomStart: () => {},
   kpiCustomEnd: "2026-04",
   setKpiCustomEnd: () => {},
-  countries: countryPerformanceByPeriod.monthly,
-  gsas: gsaPerformanceByPeriod.monthly,
+  countries: [],
+  gsas: [],
   selectedAverage: defaultAverage,
 });
 
@@ -60,16 +72,10 @@ export function PeriodProvider({ children }: { children: React.ReactNode }) {
 
   const { kpiPeriod, performancePeriod } = MODE_MAP[dashboardMode];
 
-  const countries = useMemo(
-    () => countryPerformanceByPeriod[performancePeriod],
-    [performancePeriod],
-  );
-  const gsas = useMemo(
-    () => gsaPerformanceByPeriod[performancePeriod],
-    [performancePeriod],
-  );
+  const countries = useMemo<CountryPerformance[]>(() => [], []);
+  const gsas = useMemo<GsaPerformance[]>(() => [], []);
   const selectedAverage = useMemo(
-    () => periodAveragePerformance.find((p) => p.period === performancePeriod)!,
+    () => averageByPeriod[performancePeriod],
     [performancePeriod],
   );
 

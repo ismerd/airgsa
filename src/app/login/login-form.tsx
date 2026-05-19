@@ -71,6 +71,8 @@ const demoGroups = [
   },
 ];
 
+const showDemoAccounts = process.env.NEXT_PUBLIC_SHOW_DEMO_ACCOUNTS === "true" || process.env.NODE_ENV !== "production";
+
 type DemoAccount = (typeof demoGroups)[number]["accounts"][number];
 
 export function LoginForm() {
@@ -141,8 +143,8 @@ export function LoginForm() {
       </div>
 
       <Card className="overflow-hidden">
-        <div className="grid gap-0 lg:grid-cols-[0.9fr_1.1fr]">
-          <div className="border-b border-border-ui p-6 lg:border-b-0 lg:border-r">
+        <div className={showDemoAccounts ? "grid gap-0 lg:grid-cols-[0.9fr_1.1fr]" : ""}>
+          <div className={showDemoAccounts ? "border-b border-border-ui p-6 lg:border-b-0 lg:border-r" : "p-6"}>
             <CardHeader className="p-0">
               <CardTitle className="text-base font-normal text-ink-muted">
                 Enter your credentials to continue
@@ -177,7 +179,7 @@ export function LoginForm() {
                   <Input
                     id="password"
                     type="password"
-                    placeholder="••••••••"
+                    placeholder="Password"
                     value={password}
                     onChange={(event) => setPassword(event.target.value)}
                     required
@@ -205,6 +207,7 @@ export function LoginForm() {
             </CardContent>
           </div>
 
+          {showDemoAccounts && (
           <div className="bg-surface2 p-6">
             <div className="flex flex-wrap items-start justify-between gap-3">
               <div>
@@ -227,6 +230,7 @@ export function LoginForm() {
               ))}
             </div>
           </div>
+          )}
         </div>
       </Card>
     </div>
@@ -282,7 +286,7 @@ function DemoGroup({
               </span>
             </div>
             <p className="mt-2 font-mono text-[11px] text-ink-muted">
-              {account.email} · {account.password}
+              {account.email} - {account.password}
             </p>
           </button>
         ))}

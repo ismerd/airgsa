@@ -1,4 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
+import {
+  RequestBodyTooLargeError,
+  bodyTooLargeResponse,
+  enforceRateLimit,
+  getClientIp,
+  readJsonWithLimit,
+} from "@/lib/api/protection";
 import { getSession } from "@/lib/auth/session";
 import { canEditContract, canViewContract } from "@/lib/auth/permissions";
 import {
@@ -9,6 +16,7 @@ import {
 import { appendMandateAuditEvent } from "@/lib/services/mandate-execution-store";
 
 const STATUS_VALUES = new Set(["pending", "active", "suspended", "closed"]);
+const CONTRACT_PATCH_BODY_LIMIT_BYTES = 24 * 1024;
 
 export async function GET(_: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const session = await getSession();
@@ -27,13 +35,27 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   const session = await getSession();
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
+  const rateLimited = enforceRateLimit({
+    key: `contract-patch:${session.companyId ?? session.company}:${session.email}:${getClientIp(req)}`,
+    limit: 60,
+    windowMs: 60_000,
+  });
+  if (rateLimited) return rateLimited;
+
   const { id } = await params;
   const existing = await getLivePartnerContract(id);
   if (!existing || !canEditContract(session, existing)) {
     return NextResponse.json({ error: "Contract not found" }, { status: 404 });
   }
 
-  const body = (await req.json()) as ContractTermsUpdateInput;
+  let body: ContractTermsUpdateInput;
+  try {
+    body = await readJsonWithLimit<ContractTermsUpdateInput>(req, CONTRACT_PATCH_BODY_LIMIT_BYTES);
+  } catch (error) {
+    if (error instanceof RequestBodyTooLargeError) return bodyTooLargeResponse(error);
+    return NextResponse.json({ error: "Invalid JSON body." }, { status: 400 });
+  }
+
   if (body.status && !STATUS_VALUES.has(body.status)) {
     return NextResponse.json({ error: "Invalid contract status" }, { status: 400 });
   }

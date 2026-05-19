@@ -8,13 +8,8 @@
  */
 
 import { unstable_cache } from "next/cache";
-import type { AirportPoint, FlightTrackerRecord, LandedAirportCluster } from "@/lib/dummy-flight-data";
+import type { AirportPoint, FlightTrackerRecord, LandedAirportCluster } from "@/lib/flight-data-types";
 import { AIRPORTS, ICAO_TO_IATA, SAUDIA_CARGO, SAUDIA_GSA_PARTNERS } from "@/lib/saudia-cargo-data";
-import {
-  generateCargoDestinations,
-  generateProductMix,
-  generateSyntheticRevenue,
-} from "@/lib/services/synthetic-revenue";
 import { getFr24Settings } from "@/lib/services/fr24-settings";
 import {
   aircraftModelLabel,
@@ -340,7 +335,6 @@ function buildRecord(
 
   const aircraftType = summary?.type ?? pos.type ?? undefined;
   const flightType = resolveFlightType(aircraftType, pos);
-  const rev = generateSyntheticRevenue(flightNumber, resolvedOrigin.airportCode, resolvedDestination.airportCode);
   const gsa = pickGsa(flightNumber);
 
   return {
@@ -359,15 +353,16 @@ function buildRecord(
     registration: summary?.reg ?? pos.reg ?? undefined,
     aircraftType,
     flightType,
-    tonnage: rev.tonnage,
-    loadFactor: rev.loadFactor,
-    revenue: rev.revenue,
-    averageYield: rev.averageYield,
-    products: generateProductMix(resolvedDestination.airportCode),
+    commercialDataSource: "unavailable",
+    tonnage: 0,
+    loadFactor: 0,
+    revenue: 0,
+    averageYield: 0,
+    products: {},
     soldBy: index % 3 === 0 ? "airline" : "gsa",
     salesTeam: gsa.name,
     responsibleGsa: gsa.name,
-    cargoDestinations: generateCargoDestinations(resolvedDestination.airportCode, resolvedDestination.countryCode),
+    cargoDestinations: [],
   };
 }
 

@@ -1,4 +1,5 @@
 import { realGsaPartners } from "@/lib/real-gsa-data";
+import { authenticateRailwayAccount } from "@/lib/auth/railway-accounts";
 import { findTeamAccountByCredentials } from "@/lib/services/team-accounts";
 import { createSupabaseAuthClient, isSupabaseConfigured } from "@/lib/supabase/client";
 import type { SessionPayload } from "./session-cookie";
@@ -77,6 +78,9 @@ export async function authenticateCredentials(email: string, password: string): 
     if (account) return account;
   }
 
+  const railwayAccount = await authenticateRailwayAccount(normalizedEmail, password);
+  if (railwayAccount) return railwayAccount;
+
   if (allowDemoAccounts()) {
     const demoAccount = validateCredentials(normalizedEmail, password);
     if (demoAccount) return demoAccount;
@@ -137,7 +141,7 @@ async function authenticateWithSupabase(email: string, password: string): Promis
 }
 
 function allowDemoAccounts() {
-  return !isSupabaseConfigured || process.env.ALLOW_DEMO_ACCOUNTS === "true" || process.env.NODE_ENV !== "production";
+  return process.env.ALLOW_DEMO_ACCOUNTS === "true" || process.env.NODE_ENV !== "production";
 }
 
 function getRole(value: unknown): SessionPayload["role"] | null {

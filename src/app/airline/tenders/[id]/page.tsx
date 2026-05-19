@@ -732,7 +732,7 @@ function ApplicationDetailPanel({ tender, application, onClose }: { tender: Live
         <DetailBlock label="Sales strategy" value={structured.salesStrategy} wide />
         <DetailBlock label="Expected monthly tonnage" value={structured.expectedMonthlyTonnage} />
         <DetailBlock label="First 90 days plan" value={structured.first90DaysPlan} wide />
-        <DetailBlock label="Uploaded documents" value={`${structured.documentsCount} document placeholder${structured.documentsCount === 1 ? "" : "s"}`} />
+        <DetailBlock label="Submitted documents" value={`${structured.documentsCount} document${structured.documentsCount === 1 ? "" : "s"} declared`} />
       </CardContent>
     </Card>
   );

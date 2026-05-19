@@ -4,7 +4,8 @@ import { Award, Globe2, ShieldCheck, TrendingUp, UserCircle, Zap } from "lucide-
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Topbar } from "@/components/dashboard/topbar";
 import { getSession, updateSession } from "@/lib/auth/session";
-import { realGsaPartners, type RealGsaPartner } from "@/lib/real-gsa-data";
+import type { RealGsaPartner } from "@/lib/real-gsa-data";
+import { resolveGsaOperationalProfile } from "@/lib/services/gsa-profile";
 
 export const dynamic = "force-dynamic";
 
@@ -169,10 +170,7 @@ function RadarChart({
 
 export default async function GsaCompanyProfilePage() {
   const session = await getSession();
-  const profile =
-    realGsaPartners.find((p) => p.email === session?.email) ??
-    realGsaPartners.find((p) => p.name === session?.company) ??
-    realGsaPartners[0];
+  const profile = await resolveGsaOperationalProfile(session);
 
   const marketDepth = Math.min(100, profile.coverage.length * 25);
   const trackRecord = Math.min(100, Math.round(profile.winRate * 2.5));

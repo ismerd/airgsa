@@ -1,6 +1,6 @@
 import { canViewContract } from "@/lib/auth/permissions";
 import type { SessionPayload } from "@/lib/auth/session";
-import type { CountryPerformance, GsaPerformance, PeriodAveragePerformance, RouteBreakdown } from "@/lib/airline-performance-data";
+import type { CountryPerformance, GsaPerformance, PeriodAveragePerformance, RouteBreakdown } from "@/lib/performance-types";
 import type { KpiPoint } from "@/lib/types";
 import {
   listContractPerformance,

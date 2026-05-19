@@ -15,7 +15,7 @@ export default async function LinkedinSourcesPage() {
           <Link href="/news" className="text-sm font-semibold uppercase tracking-[0.24em] text-brand">
             Cargo intelligence
           </Link>
-          <Link href="/admin" className={buttonVariants({ variant: "outline" })}>Admin console</Link>
+          <Link href="/news" className={buttonVariants({ variant: "outline" })}>Back to news</Link>
         </div>
         <div className="mt-10">
           <LinkedinSourceManager canManage={false} categories={newsCategories} initialSources={sources} />

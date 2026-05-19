@@ -107,7 +107,7 @@ export default function GsaCapacityAlertsPage() {
                             {route.destination}
                           </div>
                           <p className="mt-1 text-xs text-ink-muted">
-                            {route.frequencyPerWeek}/week · {route.aircraft ?? "Aircraft TBC"} · {route.operatingDays ?? route.weekday ?? "days TBC"}
+                            {route.frequencyPerWeek}/week - {route.aircraft ?? "Aircraft TBC"} - {route.operatingDays ?? route.weekday ?? "days TBC"}
                           </p>
                         </div>
                       ))}
