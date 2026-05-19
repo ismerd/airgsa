@@ -20,7 +20,7 @@ export type NavGroup = {
 export type SidebarBrand = {
   name: string;
   color: string;
-  iata: string;
+  subtitle?: string;
   logoSrc?: string;
   profileHref: string;
   userName: string;
@@ -87,7 +87,7 @@ export function Sidebar({
             </span>
             <div className="min-w-0">
               <p className="truncate text-xs font-semibold text-white">{brand.name}</p>
-              <p className="text-[10px] font-mono text-white/40">{brand.iata}</p>
+              {brand.subtitle && <p className="truncate text-[10px] text-white/40">{brand.subtitle}</p>}
             </div>
           </div>
           {/* User profile link */}

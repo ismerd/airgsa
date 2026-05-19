@@ -17,7 +17,6 @@ import { canViewApplication } from "@/lib/auth/permissions";
 import { getAirlineProfile } from "@/lib/services/airline-profile";
 import { listMandateQuotes, listMonthlyReports, listWorkflowNotifications } from "@/lib/services/mandate-execution-store";
 import { listLiveApplications, listLiveTenders } from "@/lib/services/tender-workflow-store";
-import { SAUDIA_CARGO } from "@/lib/saudia-cargo-data";
 
 function getNav(pendingApplications: number, controlQueueCount: number, accessRole?: string): NavGroup[] {
   if (accessRole === "operator") {
@@ -113,9 +112,9 @@ export default async function AirlineLayout({ children }: { children: React.Reac
         groups={getNav(pendingApplications, controlQueueCount, session?.accessRole)}
         role="Airline"
         brand={{
-          name: SAUDIA_CARGO.name,
-          color: SAUDIA_CARGO.color,
-          iata: SAUDIA_CARGO.iata,
+          name: session?.company ?? "Airline",
+          color: "#0B7A52",
+          subtitle: "Airline workspace",
           logoSrc: profile.logoPath,
           profileHref: "/airline/profile",
           userName: session?.name ?? "-",

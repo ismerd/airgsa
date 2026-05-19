@@ -120,7 +120,7 @@ export default async function GsaLayout({ children }: { children: React.ReactNod
         brand={{
           name: partner?.name ?? session?.company ?? "GSA",
           color: partner?.color ?? "#2563EB",
-          iata: partner?.country ?? "GSA",
+          subtitle: partner?.country ?? "GSA workspace",
           profileHref: "/gsa/profile",
           userName: session?.name ?? partner?.contactName ?? "GSA user",
         }}
