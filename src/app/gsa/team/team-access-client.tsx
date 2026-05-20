@@ -10,6 +10,11 @@ import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import type { TeamAccount } from "@/lib/services/team-accounts";
 
+type CreatedTeamAccount = TeamAccount & {
+  localInviteUrl?: string;
+  inviteError?: string;
+};
+
 const accessProfiles = [
   {
     name: "Operator",
@@ -46,7 +51,7 @@ export function TeamAccessClient({
   const [email, setEmail] = useState("");
   const [title, setTitle] = useState("Cargo operator");
   const [accessRole, setAccessRole] = useState("operator");
-  const [created, setCreated] = useState<TeamAccount | null>(null);
+  const [created, setCreated] = useState<CreatedTeamAccount | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
@@ -95,6 +100,10 @@ export function TeamAccessClient({
   async function copyCredentials(account: TeamAccount) {
     if (!account.password) return;
     await navigator.clipboard.writeText(`${account.email} / ${account.password}`);
+  }
+
+  async function copySetupLink(url: string) {
+    await navigator.clipboard.writeText(url);
   }
 
   return (
@@ -164,19 +173,42 @@ export function TeamAccessClient({
           {error && <p className="mt-4 rounded-lg bg-danger-bg px-3 py-2 text-sm text-danger">{error}</p>}
           {created && (
             <div className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-success/20 bg-success-bg p-4">
-              <div>
+              <div className="min-w-0 flex-1">
                 <p className="flex items-center gap-2 text-sm font-bold text-success">
                   <CheckCircle2 className="h-4 w-4" />
                   Employee account created
                 </p>
-                <p className="mt-1 font-mono text-sm text-ink">{created.email}{created.password ? ` / ${created.password}` : " / invite sent"}</p>
+                <p className="mt-1 font-mono text-sm text-ink">
+                  {created.email}
+                  {created.password ? ` / ${created.password}` : created.localInviteUrl ? " / setup link ready" : " / invite sent"}
+                </p>
+                {created.inviteError && (
+                  <p className="mt-2 text-xs font-semibold text-amber-700">
+                    Email delivery could not complete. Use the setup link below for now.
+                  </p>
+                )}
+                {created.localInviteUrl && (
+                  <a
+                    href={created.localInviteUrl}
+                    className="mt-2 block truncate font-mono text-xs font-semibold text-brand hover:underline"
+                    target="_blank"
+                    rel="noreferrer"
+                  >
+                    {created.localInviteUrl}
+                  </a>
+                )}
               </div>
-              {created.password && (
+              {created.localInviteUrl ? (
+                <Button type="button" variant="outline" onClick={() => copySetupLink(created.localInviteUrl!)}>
+                  <Copy className="h-4 w-4" />
+                  Copy setup link
+                </Button>
+              ) : created.password ? (
                 <Button type="button" variant="outline" onClick={() => copyCredentials(created)}>
                   <Copy className="h-4 w-4" />
                   Copy credentials
                 </Button>
-              )}
+              ) : null}
             </div>
           )}
         </Card>

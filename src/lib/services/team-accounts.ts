@@ -10,6 +10,7 @@ export type TeamAccount = {
   email: string;
   password?: string;
   authUserId?: string;
+  localInviteUrl?: string;
   role: "airline" | "gsa";
   accessRole: NonNullable<SessionPayload["accessRole"]>;
   name: string;
@@ -104,7 +105,7 @@ export async function createTeamAccount(input: {
   if (!provisioning.enabled && !issueImmediatePassword) {
     throw new Error("Team invites require Railway Postgres and a configured email provider.");
   }
-  const invitedAt = provisioning.enabled && provisioning.invited ? new Date().toISOString() : undefined;
+  const invitedAt = provisioning.enabled && (provisioning.invited || provisioning.localInviteUrl) ? new Date().toISOString() : undefined;
 
   const account: TeamAccount = {
     id: createId("team"),
@@ -117,17 +118,18 @@ export async function createTeamAccount(input: {
     company: input.company,
     companyId: provisioning.enabled ? provisioning.companyId : input.companyId,
     title: input.title.trim() || "Operator",
-    status: provisioning.enabled ? (provisioning.invited ? "invited" : "active") : issueImmediatePassword ? "active" : "invited",
+    status: provisioning.enabled ? (provisioning.invited || provisioning.localInviteUrl ? "invited" : "active") : issueImmediatePassword ? "active" : "invited",
     quotes: 0,
     bookings: 0,
     responseTime: "-",
     createdAt: new Date().toISOString(),
     createdBy: input.createdBy,
     invitedAt,
+    inviteError: provisioning.enabled ? provisioning.inviteError : undefined,
   };
   const next = [...accounts, account];
   await writeTeamAccounts(next);
-  return account;
+  return provisioning.enabled ? { ...account, localInviteUrl: provisioning.localInviteUrl } : account;
 }
 
 async function readTeamAccounts(): Promise<TeamAccount[]> {
