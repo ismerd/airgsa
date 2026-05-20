@@ -1,0 +1,120 @@
+
+> airgsa@0.1.0 dev
+> next dev
+
+   ▲ Next.js 15.5.18
+   - Local:        http://localhost:3000
+   - Network:      http://192.168.1.117:3000
+   - Environments: .env.local
+
+ ✓ Starting...
+ ✓ Ready in 2.6s
+ ✓ Compiled /middleware in 124ms (116 modules)
+ ○ Compiling / ...
+ ✓ Compiled / in 1169ms (693 modules)
+ GET / 200 in 1759ms
+ ✓ Compiled /login in 387ms (705 modules)
+ GET /login 200 in 472ms
+ GET /login 200 in 25ms
+ ✓ Compiled /api/tenders in 481ms (725 modules)
+ GET /api/contracts 200 in 21595ms
+ ✓ Compiled /api/contracts/[id] in 297ms (731 modules)
+ GET /login 200 in 60ms
+ POST /api/tenders 201 in 35114ms
+ ✓ Compiled /api/tenders/[id]/applications in 153ms (735 modules)
+ GET /api/contracts/ctr-app-mp9mxpw4 404 in 17093ms
+ GET /api/contracts 200 in 2709ms
+ ✓ Compiled /api/gsa/routes in 115ms (737 modules)
+ GET /api/gsa/routes 200 in 6419ms
+ GET /api/contracts 200 in 841ms
+ PATCH /api/contracts/ctr-app-mp9mxpw4 404 in 776ms
+ POST /api/tenders/tnd-4749bb37-c9b2-47eb-a11b-8f42f4bcdb7e/applications 201 in 25748ms
+ ✓ Compiled /api/applications/[id] in 165ms (739 modules)
+ PATCH /api/applications/app-05efa86d-731b-4571-bca1-6a2cde67474e 200 in 30258ms
+ GET /api/contracts 200 in 840ms
+ ✓ Compiled /api/contracts/[id]/routes in 153ms (739 modules)
+ POST /api/contracts/ctr-app-05efa86d-731b-4571-bca1-6a2cde67474e/routes 200 in 33812ms
+ GET /api/gsa/routes 200 in 856ms
+ ✓ Compiled /api/tenders/[id] in 154ms (733 modules)
+ ✓ Compiled /api/tenders in 77ms (487 modules)
+ DELETE /api/tenders/tnd-4749bb37-c9b2-47eb-a11b-8f42f4bcdb7e 200 in 20274ms
+ POST /api/tenders 201 in 36125ms
+ ✓ Compiled /api/tenders/[id]/applications in 74ms (483 modules)
+ POST /api/tenders/tnd-e5df13dc-66a3-4afd-9dff-d51c8290c896/applications 201 in 25113ms
+ ✓ Compiled /api/applications/[id] in 78ms (479 modules)
+ PATCH /api/applications/app-086a749a-7991-42b5-b71b-175095645838 200 in 28321ms
+ ✓ Compiled /api/contracts in 77ms (481 modules)
+ GET /api/contracts 200 in 8278ms
+ ✓ Compiled /api/contracts/[id]/routes in 67ms (487 modules)
+ POST /api/contracts/ctr-app-086a749a-7991-42b5-b71b-175095645838/routes 200 in 30459ms
+ ✓ Compiled /api/gsa/routes in 77ms (483 modules)
+ GET /api/gsa/routes 200 in 5894ms
+ ✓ Compiled /api/tenders/[id] in 75ms (485 modules)
+ DELETE /api/tenders/tnd-e5df13dc-66a3-4afd-9dff-d51c8290c896 200 in 23339ms
+ GET /login 200 in 169ms
+   Reload env: .env.local
+ ✓ Compiled in 244ms (803 modules)
+ GET /login 200 in 116ms
+   Reload env: .env.local
+ ✓ Compiled in 106ms (803 modules)
+ GET /login 200 in 82ms
+ ✓ Compiled /api/auth/login in 224ms (729 modules)
+ POST /api/auth/login 200 in 2561ms
+ ✓ Compiled /api/auth/register in 172ms (732 modules)
+ POST /api/auth/register 201 in 2344ms
+ ✓ Compiled /api/admin/registrations/[id] in 145ms (734 modules)
+ PATCH /api/admin/registrations/reg-833ddab6-29e5-4468-8721-8135f100e502 500 in 4001ms
+ ✓ Compiled in 250ms (752 modules)
+ GET /login 200 in 75ms
+ ✓ Compiled in 189ms (752 modules)
+ GET /login 200 in 73ms
+ POST /api/auth/login 200 in 2011ms
+ POST /api/auth/register 201 in 436ms
+ PATCH /api/admin/registrations/reg-03b183fa-2bd3-4d51-88bb-c9769be8322b 200 in 1942ms
+ ✓ Compiled /api/auth/password-reset/confirm in 241ms (736 modules)
+ POST /api/auth/password-reset/confirm 200 in 2995ms
+ ✓ Compiled /api/auth/profile-setup in 125ms (738 modules)
+ PATCH /api/auth/profile-setup 200 in 2307ms
+ POST /api/auth/register 201 in 425ms
+ PATCH /api/admin/registrations/reg-798732b1-9f8f-4f8b-8d10-c34b292c5d81 200 in 1884ms
+ POST /api/auth/password-reset/confirm 200 in 866ms
+ PATCH /api/auth/profile-setup 200 in 423ms
+ ✓ Compiled /api/tenders in 171ms (496 modules)
+ POST /api/tenders 201 in 13669ms
+ GET /api/tenders 200 in 2193ms
+ ✓ Compiled /api/tenders/[id]/applications in 111ms (499 modules)
+ POST /api/tenders/tnd-3a541822-b561-42bd-9db8-eed26d48c378/applications 201 in 16060ms
+ ✓ Compiled /api/applications in 191ms (749 modules)
+ GET /api/applications 200 in 4013ms
+ ✓ Compiled /api/applications/[id] in 151ms (503 modules)
+ PATCH /api/applications/app-be0eae1d-c006-4527-8393-48e21d5d8846 200 in 17396ms
+ ✓ Compiled /api/contracts in 99ms (503 modules)
+ GET /api/contracts 200 in 3842ms
+ ✓ Compiled /api/contracts/[id]/routes in 110ms (506 modules)
+ POST /api/contracts/ctr-app-be0eae1d-c006-4527-8393-48e21d5d8846/routes 200 in 20298ms
+ ✓ Compiled /api/gsa/routes in 80ms (487 modules)
+ GET /api/gsa/routes 200 in 4215ms
+ ✓ Compiled /gsa in 455ms (846 modules)
+ GET /gsa 200 in 5416ms
+ ✓ Compiled /gsa/quotes in 452ms (877 modules)
+ GET /gsa/quotes 200 in 5218ms
+ ✓ Compiled /gsa/tasks in 220ms (881 modules)
+ GET /gsa/tasks 200 in 4964ms
+ ○ Compiling /airline ...
+ ✓ Compiled /airline in 799ms (1027 modules)
+ GET /airline 200 in 7211ms
+ ✓ Compiled /airline/applications in 486ms (1048 modules)
+ GET /airline/applications 200 in 5043ms
+ ✓ Compiled /airline/gsa/overview in 341ms (1067 modules)
+ GET /airline/gsa/overview 200 in 5121ms
+ ✓ Compiled /admin/accounts in 472ms (1097 modules)
+ GET /admin/accounts 200 in 627ms
+ ✓ Compiled in 423ms (961 modules)
+ GET /login 200 in 122ms
+ ✓ Compiled in 226ms (839 modules)
+ GET /login 200 in 137ms
+ ○ Compiling /_error ...
+ ✓ Compiled /_error in 1034ms (1168 modules)
+ GET /login 200 in 473ms
+ GET /login 200 in 28ms
+ GET /login 500 in 3098ms
