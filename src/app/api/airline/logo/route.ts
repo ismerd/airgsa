@@ -50,3 +50,13 @@ export async function POST(req: NextRequest) {
 
   return NextResponse.json({ logoPath: profile.logoPath });
 }
+
+export async function DELETE() {
+  const session = await getSession();
+  if (!session || (session.role !== "airline" && session.role !== "admin")) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
+  }
+
+  const profile = await saveAirlineProfile(session, {});
+  return NextResponse.json({ logoPath: profile.logoPath ?? null });
+}

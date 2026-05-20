@@ -3,8 +3,8 @@ import { getSession } from "@/lib/auth/session";
 import { seedSalesDemoFlow } from "@/lib/services/demo-seed";
 
 export async function POST() {
-  if (process.env.NODE_ENV === "production" && process.env.ALLOW_WORKFLOW_SEED !== "true") {
-    return NextResponse.json({ error: "Workflow seed is disabled in production" }, { status: 404 });
+  if (process.env.ALLOW_WORKFLOW_SEED !== "true") {
+    return NextResponse.json({ error: "Workflow seed is disabled" }, { status: 404 });
   }
 
   const session = await getSession();

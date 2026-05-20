@@ -43,8 +43,15 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Invalid JSON body." }, { status: 400 });
   }
 
+  const title = typeof input.title === "string" ? input.title.trim() : "";
+  const countryScope = typeof input.countryScope === "string" ? input.countryScope.trim() : "";
+  if (!title) return NextResponse.json({ error: "Tender title is required." }, { status: 400 });
+  if (!countryScope) return NextResponse.json({ error: "Tender market scope is required." }, { status: 400 });
+
   const tender = await createLiveTender({
     ...input,
+    title,
+    countryScope,
     airline: session.company,
     airlineEmail: session.email,
     airlineCompanyId: session.companyId,

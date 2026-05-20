@@ -178,8 +178,8 @@ function getAwardLabel(tender: LiveTender) {
 }
 
 function getAwardHelper(tender: LiveTender) {
-  if (tender.awardMode === "multi") return "Saudia may select more than one GSA for this mandate.";
-  return "Saudia expects to select one GSA; once awarded, the tender is effectively closed.";
+  if (tender.awardMode === "multi") return "The airline may select more than one GSA for this mandate.";
+  return "The airline expects to select one GSA; once awarded, the tender is effectively closed.";
 }
 
 function getCommercialLabel(tender: LiveTender) {

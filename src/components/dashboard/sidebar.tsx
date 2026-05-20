@@ -76,11 +76,13 @@ export function Sidebar({
           {/* Airline chip */}
           <div className="mb-2 flex items-center gap-2.5 rounded-lg px-2 py-2">
             <span
-              className="relative flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-lg shadow-sm"
-              style={{ backgroundColor: brand.color }}
+              className={`relative flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-lg shadow-sm ${
+                brand.logoSrc ? "border border-white/15 bg-white" : ""
+              }`}
+              style={{ backgroundColor: brand.logoSrc ? "#ffffff" : brand.color }}
             >
               {brand.logoSrc ? (
-                <Image src={brand.logoSrc} alt={brand.name} fill className="object-contain p-0.5" unoptimized />
+                <Image src={brand.logoSrc} alt={brand.name} fill className="object-contain p-1.5" unoptimized />
               ) : (
                 <span className="text-xs font-bold text-white">{brand.name.charAt(0).toUpperCase()}</span>
               )}

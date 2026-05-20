@@ -79,7 +79,7 @@ type TrackForm = {
 
 const PRODUCT_TYPES = ["General", "Pharma", "Express", "Perishables", "Automotive", "Fashion & Apparel", "Electronics", "Dangerous Goods"];
 
-const emptyRate: RateForm = { contractId: "", routeId: "", customer: "", contactName: "", contactEmail: "", requestedRatePerKg: "", origin: "", destination: "", carrier: "SV", productType: "General", grossWeight: "", pieces: "", flightDate: "2026-06-01" };
+const emptyRate: RateForm = { contractId: "", routeId: "", customer: "", contactName: "", contactEmail: "", requestedRatePerKg: "", origin: "", destination: "", carrier: "", productType: "General", grossWeight: "", pieces: "", flightDate: "2026-06-01" };
 const emptyBooking: BookingForm = { awbNo: "", customerName: "", iataNo: "", origin: "", destination: "", flight: "", flightDate: "2026-06-01", grossWeight: "", chargeWeight: "", pieces: "", productType: "GENERAL", commodity: "", stackable: "Y", cancelReturn: "GSA", searchFromDate: "2026-06-01", searchToDate: "2026-06-30" };
 const emptyTrack: TrackForm = { awbNo: "", awbNos: "" };
 
@@ -373,12 +373,12 @@ export function CargoWorkspaceClient({ operations }: { operations: EcargowareOpe
                   <Input value={rateForm.origin} onChange={(e) => setRateForm((f) => ({ ...f, origin: e.target.value.toUpperCase() }))} placeholder="FRA" maxLength={3} className="font-mono uppercase" />
                 </Field>
                 <Field label="Destination (IATA)">
-                  <Input value={rateForm.destination} onChange={(e) => setRateForm((f) => ({ ...f, destination: e.target.value.toUpperCase() }))} placeholder="JED" maxLength={3} className="font-mono uppercase" />
+                  <Input value={rateForm.destination} onChange={(e) => setRateForm((f) => ({ ...f, destination: e.target.value.toUpperCase() }))} placeholder="AMS" maxLength={3} className="font-mono uppercase" />
                 </Field>
               </div>
               <div className="grid gap-4 sm:grid-cols-3">
                 <Field label="Carrier">
-                  <Input value={rateForm.carrier} onChange={(e) => setRateForm((f) => ({ ...f, carrier: e.target.value.toUpperCase() }))} placeholder="SV" maxLength={2} />
+                  <Input value={rateForm.carrier} onChange={(e) => setRateForm((f) => ({ ...f, carrier: e.target.value.toUpperCase() }))} placeholder="XX" maxLength={2} />
                 </Field>
                 <Field label="Gross weight (kg)">
                   <Input type="number" value={rateForm.grossWeight} onChange={(e) => setRateForm((f) => ({ ...f, grossWeight: e.target.value }))} placeholder="840" />
@@ -498,12 +498,12 @@ export function CargoWorkspaceClient({ operations }: { operations: EcargowareOpe
                       <Input value={bookingForm.origin} onChange={(e) => setBookingForm((f) => ({ ...f, origin: e.target.value.toUpperCase() }))} placeholder="FRA" maxLength={3} className="font-mono uppercase" />
                     </Field>
                     <Field label="Destination">
-                      <Input value={bookingForm.destination} onChange={(e) => setBookingForm((f) => ({ ...f, destination: e.target.value.toUpperCase() }))} placeholder="JED" maxLength={3} className="font-mono uppercase" />
+                      <Input value={bookingForm.destination} onChange={(e) => setBookingForm((f) => ({ ...f, destination: e.target.value.toUpperCase() }))} placeholder="AMS" maxLength={3} className="font-mono uppercase" />
                     </Field>
                   </div>
                   <div className="grid gap-4 sm:grid-cols-2">
                     <Field label="Flight number">
-                      <Input value={bookingForm.flight} onChange={(e) => setBookingForm((f) => ({ ...f, flight: e.target.value.toUpperCase() }))} placeholder="SV170" />
+                      <Input value={bookingForm.flight} onChange={(e) => setBookingForm((f) => ({ ...f, flight: e.target.value.toUpperCase() }))} placeholder="XX170" />
                     </Field>
                     <Field label="Flight date">
                       <Input type="date" value={bookingForm.flightDate} onChange={(e) => setBookingForm((f) => ({ ...f, flightDate: e.target.value }))} />
@@ -554,7 +554,7 @@ export function CargoWorkspaceClient({ operations }: { operations: EcargowareOpe
                       <Input value={bookingForm.origin} onChange={(e) => setBookingForm((f) => ({ ...f, origin: e.target.value.toUpperCase() }))} placeholder="FRA" maxLength={3} className="font-mono uppercase" />
                     </Field>
                     <Field label="Destination">
-                      <Input value={bookingForm.destination} onChange={(e) => setBookingForm((f) => ({ ...f, destination: e.target.value.toUpperCase() }))} placeholder="JED" maxLength={3} className="font-mono uppercase" />
+                      <Input value={bookingForm.destination} onChange={(e) => setBookingForm((f) => ({ ...f, destination: e.target.value.toUpperCase() }))} placeholder="AMS" maxLength={3} className="font-mono uppercase" />
                     </Field>
                   </div>
                   <div className="grid gap-4 sm:grid-cols-2">
@@ -584,7 +584,7 @@ export function CargoWorkspaceClient({ operations }: { operations: EcargowareOpe
                   <p className="text-xs text-ink-muted">Only fill in the fields you want to update — empty fields are ignored.</p>
                   <div className="grid gap-4 sm:grid-cols-2">
                     <Field label="New flight number">
-                      <Input value={bookingForm.flight} onChange={(e) => setBookingForm((f) => ({ ...f, flight: e.target.value.toUpperCase() }))} placeholder="SV170" />
+                      <Input value={bookingForm.flight} onChange={(e) => setBookingForm((f) => ({ ...f, flight: e.target.value.toUpperCase() }))} placeholder="XX170" />
                     </Field>
                     <Field label="New flight date">
                       <Input type="date" value={bookingForm.flightDate} onChange={(e) => setBookingForm((f) => ({ ...f, flightDate: e.target.value }))} />
@@ -750,15 +750,15 @@ export function CargoWorkspaceClient({ operations }: { operations: EcargowareOpe
                       <p className="font-mono text-sm font-bold text-ink">AWB {trackForm.awbNo}</p>
                       <Badge variant="default">In Transit</Badge>
                     </div>
-                    <span className="text-xs text-ink-muted">via Saudia Cargo</span>
+                    <span className="text-xs text-ink-muted">via selected airline contract</span>
                   </div>
                   <div className="space-y-0">
                     {[
                       { done: true, time: "12 May 10:00", location: "FRA", event: "Received from agent" },
                       { done: true, time: "13 May 14:30", location: "FRA", event: "Flight departed" },
-                      { done: true, time: "14 May 02:15", location: "RUH", event: "Arrived at transit hub" },
-                      { done: false, time: "14 May 04:00", location: "RUH", event: "Departed transit hub" },
-                      { done: false, time: "14 May 11:00", location: "JED", event: "Expected arrival" },
+                      { done: true, time: "14 May 02:15", location: "AMS", event: "Arrived at transit hub" },
+                      { done: false, time: "14 May 04:00", location: "AMS", event: "Departed transit hub" },
+                      { done: false, time: "14 May 11:00", location: "BCN", event: "Expected arrival" },
                     ].map((m, i, arr) => (
                       <div key={i} className="flex gap-3">
                         <div className="flex flex-col items-center">

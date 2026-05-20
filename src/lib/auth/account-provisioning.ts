@@ -11,6 +11,8 @@ export type ProvisioningResult =
       companyId: string;
       invited: boolean;
       provider: "postgres";
+      localInviteUrl?: string;
+      inviteError?: string;
     };
 
 export async function provisionApprovedRegistration(registration: Registration): Promise<ProvisioningResult> {
@@ -23,14 +25,14 @@ export async function provisionApprovedRegistration(registration: Registration):
   });
   if (!result.enabled) return result;
 
-  await sendAccountInvite({
+  const invite = await sendAccountInvite({
     email: registration.email,
     name: registration.name,
     company: registration.company,
     role: registration.role,
   });
 
-  return { ...result, invited: true };
+  return { ...result, invited: invite.sent, localInviteUrl: invite.localInviteUrl, inviteError: invite.error };
 }
 
 export async function provisionTeamAccount(input: {
@@ -44,14 +46,14 @@ export async function provisionTeamAccount(input: {
   const result = await provisionRailwayAccount(input);
   if (!result.enabled) return result;
 
-  await sendAccountInvite({
+  const invite = await sendAccountInvite({
     email: input.email,
     name: input.name,
     company: input.company,
     role: input.role,
   });
 
-  return { ...result, invited: true };
+  return { ...result, invited: invite.sent, localInviteUrl: invite.localInviteUrl, inviteError: invite.error };
 }
 
 async function sendAccountInvite(input: {
@@ -59,7 +61,7 @@ async function sendAccountInvite(input: {
   name: string;
   company: string;
   role: "airline" | "gsa";
-}) {
+}): Promise<{ sent: boolean; localInviteUrl?: string; error?: string }> {
   if (!hasTransactionalEmailProvider()) {
     throw new Error("Invite email delivery is not configured. Set RESEND_API_KEY, SMTP_HOST, or WORKFLOW_EMAIL_WEBHOOK_URL.");
   }
@@ -87,8 +89,16 @@ async function sendAccountInvite(input: {
   });
 
   if (result.status === "failed" || result.status === "skipped") {
-    throw new Error(result.error ?? "Invite email could not be sent.");
+    const message = result.error ?? "Invite email could not be sent.";
+    if (allowLocalInviteFallback()) return { sent: false, localInviteUrl: setupUrl, error: message };
+    throw new Error(message);
   }
+
+  return { sent: true };
+}
+
+function allowLocalInviteFallback() {
+  return process.env.NODE_ENV !== "production" || process.env.ALLOW_LOCAL_INVITE_LINKS === "true";
 }
 
 function escapeHtml(value: string) {

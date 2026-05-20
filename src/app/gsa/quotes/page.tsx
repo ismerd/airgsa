@@ -785,7 +785,7 @@ We have a healthcare shipment requiring temperature-controlled handling. Please 
 
 Shipment Details
 - Origin: Basel (BSL)
-- Destination: Riyadh (RUH)
+- Destination: Copenhagen (CPH)
 - Commodity: Healthcare Products
 - Product: Temp Control (+2 to +8°C)
 - Chargeable Weight: 2,950 kg

@@ -47,13 +47,21 @@ export async function PATCH(
   }
 
   let provisioningNote = "";
+  let localInviteUrl: string | undefined;
   if (action === "approve") {
     try {
       const result = await provisionApprovedRegistration(current);
       if (result.enabled) {
-        provisioningNote = result.invited
-          ? `Railway Postgres account ready. Invite link sent to ${current.email}. User ${result.userId}, company ${result.companyId}.`
-          : `Railway Postgres account linked. User ${result.userId}, company ${result.companyId}.`;
+        localInviteUrl = result.localInviteUrl;
+        const inviteStatus = result.invited
+          ? `Invite link sent to ${current.email}.`
+          : result.localInviteUrl
+            ? "Invite email was not delivered locally; use the returned setup link."
+            : "Invite email was not sent.";
+        provisioningNote = [
+          `Railway Postgres account ready. ${inviteStatus} User ${result.userId}, company ${result.companyId}.`,
+          result.inviteError ? `Invite delivery error: ${result.inviteError}` : "",
+        ].filter(Boolean).join("\n");
       } else {
         provisioningNote = "No auth provider configured; registration approved without provisioning.";
       }
@@ -72,5 +80,5 @@ export async function PATCH(
     return NextResponse.json({ error: "Registration not found" }, { status: 404 });
   }
 
-  return NextResponse.json(updated);
+  return NextResponse.json({ registration: updated, localInviteUrl });
 }

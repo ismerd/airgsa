@@ -30,14 +30,21 @@ export default async function AdminPage() {
   const pendingCount = pending.length;
   const openTenders = tenders.filter((tender) => tender.status === "open").length;
   const activeContracts = contracts.filter((contract) => contract.status === "active").length;
-  const pendingWorkflowItems = applications.filter((application) => application.status === "pending").length +
-    actions.filter((action) => action.status === "open" || action.status === "in-progress").length +
-    reports.filter((report) => report.status === "submitted" || report.status === "changes-requested").length +
-    pendingCount;
+  const pendingApplications = applications.filter((application) => application.status === "pending").length;
+  const pendingControlActions = actions.filter((action) => action.status === "open" || action.status === "in-progress").length;
+  const pendingReports = reports.filter((report) => report.status === "submitted" || report.status === "changes-requested").length;
+  const pendingWorkflowItems = pendingApplications + pendingControlActions + pendingReports + pendingCount;
+  const pendingBreakdown = [
+    { label: "Access requests", value: pendingCount },
+    { label: "GSA applications", value: pendingApplications },
+    { label: "Control actions", value: pendingControlActions },
+    { label: "Monthly reports", value: pendingReports },
+  ];
+  const showWorkflowSeed = process.env.ALLOW_WORKFLOW_SEED === "true";
 
   const stats = [
     { label: "Approved accounts", value: String(registrations.filter((registration) => registration.status === "approved").length), icon: Users },
-    { label: "Pending work", value: String(pendingWorkflowItems), icon: ShieldCheck, alert: pendingWorkflowItems > 0 },
+    { label: "Action queue", value: String(pendingWorkflowItems), icon: ShieldCheck, alert: pendingWorkflowItems > 0 },
     { label: "Active contracts", value: String(activeContracts), icon: ClipboardList },
     { label: "Bookings logged", value: String(bookings.length), icon: Database },
   ];
@@ -76,6 +83,29 @@ export default async function AdminPage() {
             ))}
           </div>
 
+          {pendingWorkflowItems > 0 && (
+            <Card className="border-amber-500/40 bg-amber-500/5">
+              <CardContent className="p-5">
+                <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+                  <div>
+                    <p className="font-semibold text-amber-300">Action queue breakdown</p>
+                    <p className="mt-0.5 text-sm text-ink-muted">
+                      These are real workflow items that need review or follow-up.
+                    </p>
+                  </div>
+                  <div className="grid gap-2 sm:grid-cols-4">
+                    {pendingBreakdown.map((item) => (
+                      <div key={item.label} className="rounded-lg border border-amber-500/20 bg-surface px-3 py-2">
+                        <p className="text-lg font-bold text-ink">{item.value}</p>
+                        <p className="text-[11px] text-ink-muted">{item.label}</p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
           {/* Pending CTA */}
           {pendingCount > 0 && (
             <Card className="border-amber-500/40 bg-amber-500/5">
@@ -98,7 +128,7 @@ export default async function AdminPage() {
             </Card>
           )}
 
-          {process.env.NODE_ENV !== "production" && (
+          {showWorkflowSeed && (
             <Card>
               <CardContent className="p-5">
                 <DemoSeedButton />
