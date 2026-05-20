@@ -56,23 +56,35 @@ export async function provisionTeamAccount(input: {
   return { ...result, invited: invite.sent, localInviteUrl: invite.localInviteUrl, inviteError: invite.error };
 }
 
+export async function createAdminInviteLink(input: {
+  email: string;
+}): Promise<{ localInviteUrl: string; error?: string }> {
+  if (!allowLocalInviteFallback()) {
+    throw new Error("Admin setup links are disabled. Set ALLOW_LOCAL_INVITE_LINKS=true to show setup links in admin.");
+  }
+  const setupUrl = await createSetupUrl(input.email);
+  return { localInviteUrl: setupUrl, error: "Email delivery bypassed by admin setup-link fallback." };
+}
+
 async function sendAccountInvite(input: {
   email: string;
   name: string;
   company: string;
   role: "airline" | "gsa";
 }): Promise<{ sent: boolean; localInviteUrl?: string; error?: string }> {
+  const setupUrl = await createSetupUrl(input.email);
+
   if (!hasTransactionalEmailProvider()) {
+    if (allowLocalInviteFallback()) {
+      return {
+        sent: false,
+        localInviteUrl: setupUrl,
+        error: "Invite email delivery is not configured. Admin setup-link fallback is enabled.",
+      };
+    }
     throw new Error("Invite email delivery is not configured. Set RESEND_API_KEY, SMTP_HOST, or WORKFLOW_EMAIL_WEBHOOK_URL.");
   }
 
-  const token = await createRailwayInviteToken(input.email);
-  if (!token) throw new Error("Could not create account invite token.");
-
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL || process.env.APP_URL;
-  if (!appUrl) throw new Error("NEXT_PUBLIC_APP_URL is required to send invite links.");
-
-  const setupUrl = new URL(`/reset-password?token=${encodeURIComponent(token)}&mode=invite`, appUrl).toString();
   const result = await sendTransactionalEmail({
     to: input.email,
     subject: "Set up your AirGSA account",
@@ -95,6 +107,16 @@ async function sendAccountInvite(input: {
   }
 
   return { sent: true };
+}
+
+async function createSetupUrl(email: string) {
+  const token = await createRailwayInviteToken(email);
+  if (!token) throw new Error("Could not create account invite token.");
+
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL || process.env.APP_URL;
+  if (!appUrl) throw new Error("NEXT_PUBLIC_APP_URL is required to send invite links.");
+
+  return new URL(`/reset-password?token=${encodeURIComponent(token)}&mode=invite`, appUrl).toString();
 }
 
 function allowLocalInviteFallback() {
