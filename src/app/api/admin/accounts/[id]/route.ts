@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { createAdminInviteLink } from "@/lib/auth/account-provisioning";
 import { getSession } from "@/lib/auth/session";
 import { deleteRailwayAccount, getRailwayAccountById, setRailwayAccountStatus } from "@/lib/auth/railway-accounts";
 
@@ -19,6 +20,11 @@ export async function PATCH(request: Request, { params }: Params) {
   }
 
   const body = (await request.json().catch(() => ({}))) as { action?: string };
+  if (body.action === "setup-link") {
+    const invite = await createAdminInviteLink({ email: account.email });
+    return NextResponse.json({ account, localInviteUrl: invite.localInviteUrl, error: invite.error });
+  }
+
   const nextStatus = body.action === "enable" ? "active" : body.action === "disable" ? "disabled" : null;
   if (!nextStatus) return NextResponse.json({ error: "Unsupported account action" }, { status: 400 });
 

@@ -6,6 +6,7 @@ import {
   Ban,
   Building2,
   CheckCircle2,
+  KeyRound,
   MessageSquare,
   PlaneTakeoff,
   RefreshCw,
@@ -138,6 +139,29 @@ export default function AccountsPage() {
       });
     } finally {
       setAccountActionLoading(false);
+    }
+  }
+
+  async function createSetupLink(account: AdminAccount) {
+    setFeedback(null);
+    try {
+      const response = await fetch(`/api/admin/accounts/${encodeURIComponent(account.id)}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "setup-link" }),
+      });
+      const data = (await response.json().catch(() => ({}))) as { error?: string; localInviteUrl?: string };
+      if (!response.ok || !data.localInviteUrl) throw new Error(data.error || "Setup link could not be created");
+      setFeedback({
+        tone: "success",
+        message: `Setup link created for ${account.email}. It expires in 7 days and can be used once.`,
+        href: data.localInviteUrl,
+      });
+    } catch (error) {
+      setFeedback({
+        tone: "error",
+        message: error instanceof Error ? error.message : "Setup link could not be created",
+      });
     }
   }
 
@@ -366,6 +390,10 @@ export default function AccountsPage() {
                                     Enable
                                   </Button>
                                 )}
+                                <Button size="sm" variant="outline" onClick={() => createSetupLink(acc)}>
+                                  <KeyRound className="h-3.5 w-3.5" />
+                                  Setup link
+                                </Button>
                                 <Button size="sm" variant="destructive" onClick={() => setAccountAction({ account: acc, action: "delete" })}>
                                   <Trash2 className="h-3.5 w-3.5" />
                                   Delete
