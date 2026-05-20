@@ -14,6 +14,8 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
         "content-type": result.attachment.mimeType,
         "content-length": String(result.buffer.byteLength),
         "content-disposition": `inline; filename="${result.attachment.fileName.replace(/"/g, "")}"`,
+        "cache-control": "private, no-store",
+        "x-content-type-options": "nosniff",
       },
     });
   } catch (error) {
