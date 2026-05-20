@@ -33,6 +33,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { Select } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 
 type WizardStep = 0 | 1 | 2 | 3 | 4;
@@ -264,7 +265,14 @@ export function CreateTenderClient({ airlineName }: { airlineName: string }) {
                     <Input value={form.expectedMonthlyTonnage} onChange={(event) => update("expectedMonthlyTonnage", event.target.value)} type="number" placeholder="1500" />
                   </Field>
                   <Field label="contract_duration">
-                    <Input value={form.contractDuration} onChange={(event) => update("contractDuration", event.target.value)} placeholder="24 months with 12-month extension option" />
+                    <Select value={form.contractDuration} onChange={(event) => update("contractDuration", event.target.value)}>
+                      <option value="">Select contract duration</option>
+                      <option value="6 months pilot">6 months pilot</option>
+                      <option value="12 months">12 months</option>
+                      <option value="24 months">24 months</option>
+                      <option value="24 months with 12-month extension option">24 months with 12-month extension option</option>
+                      <option value="36 months">36 months</option>
+                    </Select>
                   </Field>
                   <Field label="application_deadline">
                     <Input value={form.applicationDeadline} onChange={(event) => update("applicationDeadline", event.target.value)} type="date" />

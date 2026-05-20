@@ -15,6 +15,7 @@ import {
   X,
   Zap,
 } from "lucide-react";
+import { AirportCodePicker, CargoProductSelect } from "@/components/dashboard/freight-field-selects";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -77,10 +78,8 @@ type TrackForm = {
   awbNos: string;
 };
 
-const PRODUCT_TYPES = ["General", "Pharma", "Express", "Perishables", "Automotive", "Fashion & Apparel", "Electronics", "Dangerous Goods"];
-
-const emptyRate: RateForm = { contractId: "", routeId: "", customer: "", contactName: "", contactEmail: "", requestedRatePerKg: "", origin: "", destination: "", carrier: "", productType: "General", grossWeight: "", pieces: "", flightDate: "2026-06-01" };
-const emptyBooking: BookingForm = { awbNo: "", customerName: "", iataNo: "", origin: "", destination: "", flight: "", flightDate: "2026-06-01", grossWeight: "", chargeWeight: "", pieces: "", productType: "GENERAL", commodity: "", stackable: "Y", cancelReturn: "GSA", searchFromDate: "2026-06-01", searchToDate: "2026-06-30" };
+const emptyRate: RateForm = { contractId: "", routeId: "", customer: "", contactName: "", contactEmail: "", requestedRatePerKg: "", origin: "", destination: "", carrier: "", productType: "General cargo", grossWeight: "", pieces: "", flightDate: "2026-06-01" };
+const emptyBooking: BookingForm = { awbNo: "", customerName: "", iataNo: "", origin: "", destination: "", flight: "", flightDate: "2026-06-01", grossWeight: "", chargeWeight: "", pieces: "", productType: "General cargo", commodity: "", stackable: "Y", cancelReturn: "GSA", searchFromDate: "2026-06-01", searchToDate: "2026-06-30" };
 const emptyTrack: TrackForm = { awbNo: "", awbNos: "" };
 
 export function CargoWorkspaceClient({ operations }: { operations: EcargowareOperation[] }) {
@@ -370,10 +369,10 @@ export function CargoWorkspaceClient({ operations }: { operations: EcargowareOpe
             <CardContent className="space-y-4">
               <div className="grid gap-4 sm:grid-cols-2">
                 <Field label="Origin (IATA)">
-                  <Input value={rateForm.origin} onChange={(e) => setRateForm((f) => ({ ...f, origin: e.target.value.toUpperCase() }))} placeholder="FRA" maxLength={3} className="font-mono uppercase" />
+                  <AirportCodePicker value={rateForm.origin} onChange={(value) => setRateForm((f) => ({ ...f, origin: value }))} />
                 </Field>
                 <Field label="Destination (IATA)">
-                  <Input value={rateForm.destination} onChange={(e) => setRateForm((f) => ({ ...f, destination: e.target.value.toUpperCase() }))} placeholder="AMS" maxLength={3} className="font-mono uppercase" />
+                  <AirportCodePicker value={rateForm.destination} onChange={(value) => setRateForm((f) => ({ ...f, destination: value }))} />
                 </Field>
               </div>
               <div className="grid gap-4 sm:grid-cols-3">
@@ -389,13 +388,7 @@ export function CargoWorkspaceClient({ operations }: { operations: EcargowareOpe
               </div>
               <div className="grid gap-4 sm:grid-cols-2">
                 <Field label="Product type">
-                  <select
-                    value={rateForm.productType}
-                    onChange={(e) => setRateForm((f) => ({ ...f, productType: e.target.value }))}
-                    className="h-10 w-full rounded-md border border-border-ui bg-surface px-3 text-sm text-ink outline-none focus:border-brand"
-                  >
-                    {PRODUCT_TYPES.map((p) => <option key={p}>{p}</option>)}
-                  </select>
+                  <CargoProductSelect value={rateForm.productType} onChange={(value) => setRateForm((f) => ({ ...f, productType: value }))} />
                 </Field>
                 <Field label="Flight date">
                   <Input type="date" value={rateForm.flightDate} onChange={(e) => setRateForm((f) => ({ ...f, flightDate: e.target.value }))} />
@@ -428,7 +421,7 @@ export function CargoWorkspaceClient({ operations }: { operations: EcargowareOpe
                     {[
                       { product: "General", rate: 1.85, min: "45 kg" },
                       { product: "Express", rate: 2.40, min: "100 kg" },
-                      { product: rateForm.productType !== "General" ? rateForm.productType : "Pharma", rate: 3.20, min: "45 kg" },
+                      { product: rateForm.productType !== "General cargo" ? rateForm.productType : "Pharmaceuticals", rate: 3.20, min: "45 kg" },
                     ].map((r) => (
                       <div key={r.product} className="flex items-center justify-between gap-3 rounded-lg border border-border-ui bg-surface2 px-3 py-2">
                         <div>
@@ -495,10 +488,10 @@ export function CargoWorkspaceClient({ operations }: { operations: EcargowareOpe
                   </div>
                   <div className="grid gap-4 sm:grid-cols-2">
                     <Field label="Origin">
-                      <Input value={bookingForm.origin} onChange={(e) => setBookingForm((f) => ({ ...f, origin: e.target.value.toUpperCase() }))} placeholder="FRA" maxLength={3} className="font-mono uppercase" />
+                      <AirportCodePicker value={bookingForm.origin} onChange={(value) => setBookingForm((f) => ({ ...f, origin: value }))} />
                     </Field>
                     <Field label="Destination">
-                      <Input value={bookingForm.destination} onChange={(e) => setBookingForm((f) => ({ ...f, destination: e.target.value.toUpperCase() }))} placeholder="AMS" maxLength={3} className="font-mono uppercase" />
+                      <AirportCodePicker value={bookingForm.destination} onChange={(value) => setBookingForm((f) => ({ ...f, destination: value }))} />
                     </Field>
                   </div>
                   <div className="grid gap-4 sm:grid-cols-2">
@@ -522,9 +515,7 @@ export function CargoWorkspaceClient({ operations }: { operations: EcargowareOpe
                   </div>
                   <div className="grid gap-4 sm:grid-cols-2">
                     <Field label="Product type">
-                      <select value={bookingForm.productType} onChange={(e) => setBookingForm((f) => ({ ...f, productType: e.target.value }))} className="h-10 w-full rounded-md border border-border-ui bg-surface px-3 text-sm text-ink outline-none focus:border-brand">
-                        {PRODUCT_TYPES.map((p) => <option key={p}>{p}</option>)}
-                      </select>
+                      <CargoProductSelect value={bookingForm.productType} onChange={(value) => setBookingForm((f) => ({ ...f, productType: value }))} />
                     </Field>
                     <Field label="Stackable">
                       <select value={bookingForm.stackable} onChange={(e) => setBookingForm((f) => ({ ...f, stackable: e.target.value }))} className="h-10 w-full rounded-md border border-border-ui bg-surface px-3 text-sm text-ink outline-none focus:border-brand">
@@ -551,10 +542,10 @@ export function CargoWorkspaceClient({ operations }: { operations: EcargowareOpe
                   </Field>
                   <div className="grid gap-4 sm:grid-cols-2">
                     <Field label="Origin">
-                      <Input value={bookingForm.origin} onChange={(e) => setBookingForm((f) => ({ ...f, origin: e.target.value.toUpperCase() }))} placeholder="FRA" maxLength={3} className="font-mono uppercase" />
+                      <AirportCodePicker value={bookingForm.origin} onChange={(value) => setBookingForm((f) => ({ ...f, origin: value }))} />
                     </Field>
                     <Field label="Destination">
-                      <Input value={bookingForm.destination} onChange={(e) => setBookingForm((f) => ({ ...f, destination: e.target.value.toUpperCase() }))} placeholder="AMS" maxLength={3} className="font-mono uppercase" />
+                      <AirportCodePicker value={bookingForm.destination} onChange={(value) => setBookingForm((f) => ({ ...f, destination: value }))} />
                     </Field>
                   </div>
                   <div className="grid gap-4 sm:grid-cols-2">
