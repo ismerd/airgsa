@@ -15,7 +15,8 @@
     "test:permissions": "node scripts/check-permissions.mjs",
     "test:workflow": "node scripts/check-workflow-smoke.mjs",
     "start": "node scripts/start.mjs",
-    "lint": "eslint"
+    "lint": "eslint",
+    "check:ci": "npm run lint && npx tsc --noEmit && npm run build"
   },
   "engines": {
     "node": ">=20 <23"
