@@ -113,7 +113,7 @@ export default async function AirlineLayout({ children }: { children: React.Reac
         role="Airline"
         brand={{
           name: session?.company ?? "Airline",
-          color: "#0B7A52",
+          color: "#1a5aff",
           subtitle: "Airline workspace",
           logoSrc: profile.logoPath,
           profileHref: "/airline/profile",

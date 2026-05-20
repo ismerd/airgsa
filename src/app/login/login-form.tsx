@@ -11,18 +11,18 @@ import { Input } from "@/components/ui/input";
 const demoGroups = [
   {
     title: "Airline",
-    company: "Saudia Cargo",
+    company: "AeroNova Cargo",
     accounts: [
       {
         label: "Company admin",
         description: "Tender, applications, partner profiles",
-        email: "saudia@airgsa.demo",
+        email: "airline@airgsa.demo",
         password: "demo2026",
       },
       {
         label: "Employee",
         description: "Restricted airline operations view",
-        email: "fatima.ops@saudia.example",
+        email: "ops@aeronova.example",
         password: "demo2026",
       },
     ],

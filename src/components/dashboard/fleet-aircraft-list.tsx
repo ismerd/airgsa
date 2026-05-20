@@ -121,7 +121,7 @@ export function FleetAircraftList({ aircraft }: { aircraft: FleetAircraftListIte
             </p>
             <p className="max-w-sm text-xs text-ink-muted">
               {aircraft.length === 0
-                ? "Enable FR24 and open the dashboard worldmap. Each live Saudia aircraft with a registration will be stored here once."
+                ? "Enable airline tracking and open the dashboard worldmap. Each live aircraft with a registration will be stored here once."
                 : "Adjust the filters above to show more stored aircraft."}
             </p>
           </div>

@@ -19,8 +19,10 @@ const palette = ["#1a5aff", "#06b6d4", "#16a34a", "#f59e0b", "#7c3aed", "#ef4444
 
 export default async function AirlineDashboardPage() {
   const session = await getSession();
+  const companyName = session?.company?.trim() || "Airline";
+  const useLegacySaudiaTracker = isLegacySaudiaCompany(companyName);
   const [{ flights: trackedFlights }, performance, quotes, reports, notifications] = await Promise.all([
-    getSaudiaFlights(),
+    useLegacySaudiaTracker ? getSaudiaFlights() : Promise.resolve({ flights: [] }),
     session ? getAirlineOperationalPerformanceDashboard(session) : null,
     session ? listMandateQuotes(session) : [],
     session ? listMonthlyReports(session) : [],
@@ -75,11 +77,13 @@ export default async function AirlineDashboardPage() {
 
   return (
     <>
-      <Topbar title="Sales overview" subtitle="Saudia Cargo" />
+      <Topbar title="Sales overview" subtitle={companyName} />
       <main className="space-y-6 p-5">
         <FlightWorldMap
           title="Live flight tracker"
-          subtitle="Active Saudia flights worldwide. Commercial performance below is calculated from recorded contract bookings."
+          subtitle={useLegacySaudiaTracker
+            ? "Live tracked flights worldwide. Commercial performance below is calculated from recorded contract bookings."
+            : "Connect airline tracking to populate live aircraft. Commercial performance below is calculated from recorded contract bookings."}
           flights={trackedFlights}
           markerColorMode="seller"
           enableFlightTypeFilter
@@ -379,4 +383,8 @@ function formatEur(value: number) {
     currency: "EUR",
     maximumFractionDigits: 0,
   }).format(value);
+}
+
+function isLegacySaudiaCompany(companyName: string) {
+  return /\bsaudia\b|\bsaudi\b/i.test(companyName);
 }

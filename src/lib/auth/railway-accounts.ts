@@ -23,6 +23,20 @@ type StoredRailwayAccount = RailwayAccountInput & {
   updatedAt: string;
 };
 
+export type AdminRailwayAccount = {
+  id: string;
+  email: string;
+  name: string;
+  role: "airline" | "gsa" | "admin";
+  accessRole?: SessionPayload["accessRole"];
+  company: string;
+  companyId?: string;
+  status: "active" | "disabled";
+  mustChangePassword: boolean;
+  createdAt: string;
+  updatedAt: string;
+};
+
 export type RailwayProvisioningResult =
   | { enabled: false }
   | {
@@ -156,6 +170,63 @@ export async function authenticateRailwayAccount(email: string, password: string
   };
 }
 
+export async function listRailwayAccounts(): Promise<AdminRailwayAccount[]> {
+  if (!hasPostgres()) return [];
+
+  const accounts = await withPostgres(async (client) => {
+    const result = await client.query("select data from auth_accounts order by updated_at desc");
+    return result.rows.map((row) => accountToAdminAccount(normalizeAccount(rowData<StoredRailwayAccount>(row))));
+  });
+
+  return accounts ?? [];
+}
+
+export async function getRailwayAccountById(id: string): Promise<AdminRailwayAccount | null> {
+  if (!hasPostgres()) return null;
+  const account = await getStoredRailwayAccountById(id);
+  return account ? accountToAdminAccount(account) : null;
+}
+
+export async function setRailwayAccountStatus(id: string, status: "active" | "disabled"): Promise<AdminRailwayAccount | null> {
+  if (!hasPostgres()) return null;
+  const existing = await getStoredRailwayAccountById(id);
+  if (!existing) return null;
+
+  const now = new Date().toISOString();
+  const data: StoredRailwayAccount = {
+    ...existing,
+    status,
+    updatedAt: now,
+  };
+
+  const saved = await withPostgres(async (client) => {
+    const result = await client.query(
+      `update auth_accounts
+       set status = $2,
+           updated_at = $3,
+           data = $4::jsonb
+       where id = $1
+       returning data`,
+      [id, data.status, data.updatedAt, JSON.stringify(data)],
+    );
+    return result.rows[0] ? normalizeAccount(rowData<StoredRailwayAccount>(result.rows[0])) : null;
+  });
+
+  return saved ? accountToAdminAccount(saved) : null;
+}
+
+export async function deleteRailwayAccount(id: string): Promise<boolean> {
+  if (!hasPostgres()) return false;
+
+  const deleted = await withPostgres(async (client) => {
+    await client.query("delete from auth_password_reset_tokens where account_id = $1", [id]);
+    const result = await client.query("delete from auth_accounts where id = $1", [id]);
+    return (result.rowCount ?? 0) > 0;
+  });
+
+  return Boolean(deleted);
+}
+
 export async function createRailwayPasswordReset(email: string) {
   return createRailwayPasswordToken(email, "reset", 1000 * 60 * 30);
 }
@@ -281,6 +352,14 @@ async function getRailwayAccountByEmail(email: string): Promise<StoredRailwayAcc
   return account ?? null;
 }
 
+async function getStoredRailwayAccountById(id: string): Promise<StoredRailwayAccount | null> {
+  const account = await withPostgres(async (client) => {
+    const result = await client.query("select data from auth_accounts where id = $1 limit 1", [id]);
+    return result.rows[0] ? normalizeAccount(rowData<StoredRailwayAccount>(result.rows[0])) : null;
+  });
+  return account ?? null;
+}
+
 function normalizeAccount(account: StoredRailwayAccount): StoredRailwayAccount {
   return {
     ...account,
@@ -301,6 +380,22 @@ function accountToSession(account: StoredRailwayAccount): SessionPayload {
     name: account.name,
     company: account.company,
     companyId: account.companyId,
+  };
+}
+
+function accountToAdminAccount(account: StoredRailwayAccount): AdminRailwayAccount {
+  return {
+    id: account.id,
+    email: account.email,
+    name: account.name,
+    role: account.role,
+    accessRole: account.accessRole,
+    company: account.company,
+    companyId: account.companyId,
+    status: account.status,
+    mustChangePassword: account.mustChangePassword,
+    createdAt: account.createdAt,
+    updatedAt: account.updatedAt,
   };
 }
 

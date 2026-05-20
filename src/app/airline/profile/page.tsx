@@ -8,10 +8,11 @@ import { LogoUploader } from "@/components/dashboard/logo-uploader";
 import { getSession, updateSession } from "@/lib/auth/session";
 import { canViewContract, canViewTender } from "@/lib/auth/permissions";
 import { getAirlineProfile } from "@/lib/services/airline-profile";
-import { SAUDIA_CARGO } from "@/lib/saudia-cargo-data";
 import { listLivePartnerContracts, listLiveTenders } from "@/lib/services/tender-workflow-store";
 
 export const dynamic = "force-dynamic";
+
+const DEFAULT_AIRLINE_COLOR = "#1a5aff";
 
 async function updateContactName(formData: FormData) {
   "use server";
@@ -29,6 +30,8 @@ export default async function AirlineProfilePage() {
   ]);
   const profile = await getAirlineProfile(session);
 
+  const companyName = session?.company?.trim() || "Your airline";
+  const initials = getInitials(companyName);
   const visibleTenders = session ? tenders.filter((tender) => canViewTender(session, tender)) : [];
   const visibleContracts = session ? contracts.filter((contract) => canViewContract(session, contract)) : [];
   const activeTenders = visibleTenders.filter((t) => t.status === "open").length;
@@ -37,13 +40,11 @@ export default async function AirlineProfilePage() {
 
   return (
     <>
-      <Topbar title="Airline profile" subtitle="Saudia Cargo" />
+      <Topbar title="Airline profile" subtitle={companyName} />
       <main className="space-y-5 p-5">
-
-        {/* ── Hero Banner ── */}
         <div
           className="relative overflow-hidden rounded-2xl p-6 text-white shadow-sm"
-          style={{ background: `linear-gradient(135deg, ${SAUDIA_CARGO.color}dd 0%, ${SAUDIA_CARGO.color} 100%)` }}
+          style={{ background: `linear-gradient(135deg, ${DEFAULT_AIRLINE_COLOR}dd 0%, ${DEFAULT_AIRLINE_COLOR} 100%)` }}
         >
           <div
             className="pointer-events-none absolute inset-0 opacity-[0.05]"
@@ -55,31 +56,25 @@ export default async function AirlineProfilePage() {
           <div className="relative flex flex-col gap-6 md:flex-row md:items-center md:justify-between">
             <div className="flex items-center gap-5">
               <div
-                className="relative flex shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-white/20 text-3xl font-black shadow-xl backdrop-blur-sm"
+                className={`relative flex shrink-0 items-center justify-center overflow-hidden rounded-2xl text-3xl font-black shadow-xl ${
+                  profile.logoPath ? "border border-white/30 bg-white" : "bg-white/20 backdrop-blur-sm"
+                }`}
                 style={{ height: "4.5rem", width: "4.5rem" }}
               >
                 {profile.logoPath ? (
-                  <Image src={profile.logoPath} alt="Saudia Cargo" fill className="object-contain p-1" unoptimized />
+                  <Image src={profile.logoPath} alt={`${companyName} logo`} fill className="object-contain p-2" unoptimized />
                 ) : (
-                  <span>S</span>
+                  <span>{initials}</span>
                 )}
               </div>
               <div>
-                <h1 className="text-2xl font-black tracking-tight">{SAUDIA_CARGO.name}</h1>
-                <p className="mt-0.5 text-sm opacity-80">Member of the Saudia Group · Saudi Arabia</p>
+                <h1 className="text-2xl font-black tracking-tight">{companyName}</h1>
+                <p className="mt-0.5 text-sm opacity-80">Cargo partner network profile</p>
                 <div className="mt-2 flex flex-wrap gap-3 text-xs">
-                  <span className="rounded-full bg-white/20 px-2.5 py-0.5 font-mono font-bold">
-                    IATA {SAUDIA_CARGO.iata}
-                  </span>
-                  <span className="rounded-full bg-white/20 px-2.5 py-0.5 font-mono font-bold">
-                    ICAO {SAUDIA_CARGO.icao}
-                  </span>
-                  <span className="rounded-full bg-white/20 px-2.5 py-0.5 font-semibold">
-                    Hub {SAUDIA_CARGO.hub} · {SAUDIA_CARGO.secondaryHub}
-                  </span>
-                  <span className="rounded-full bg-white/20 px-2.5 py-0.5 font-semibold">
-                    SkyTeam Cargo
-                  </span>
+                  <ProfilePill>IATA not set</ProfilePill>
+                  <ProfilePill>ICAO not set</ProfilePill>
+                  <ProfilePill>Hub not set</ProfilePill>
+                  <ProfilePill>Network profile</ProfilePill>
                 </div>
               </div>
             </div>
@@ -91,7 +86,6 @@ export default async function AirlineProfilePage() {
           </div>
         </div>
 
-        {/* ── Fleet & Network ── */}
         <div className="grid gap-5 xl:grid-cols-[1fr_1fr]">
           <Card>
             <CardHeader>
@@ -100,9 +94,11 @@ export default async function AirlineProfilePage() {
                 Fleet
               </CardTitle>
             </CardHeader>
-            <CardContent className="grid gap-3 sm:grid-cols-2">
-              <FleetCard type="Boeing 777F" role="Long-haul freighter" capacity="103 t" note="Primary workhorse for intercontinental routes" />
-              <FleetCard type="Boeing 747-8F" role="High-capacity freighter" capacity="140 t" note="Heavy-lift for high-density lanes" />
+            <CardContent>
+              <EmptyConfig
+                title="Fleet not configured yet"
+                detail="Add aircraft and tracking settings before fleet data appears in this workspace."
+              />
             </CardContent>
           </Card>
 
@@ -114,17 +110,16 @@ export default async function AirlineProfilePage() {
               </CardTitle>
             </CardHeader>
             <CardContent className="grid gap-3 sm:grid-cols-2">
-              <InfoCell label="Primary hub" value="Jeddah (JED)" />
-              <InfoCell label="Secondary hub" value="Riyadh (RUH)" />
-              <InfoCell label="Headquarters" value="Jeddah, Saudi Arabia" />
-              <InfoCell label="Alliance" value="SkyTeam Cargo" />
-              <InfoCell label="Parent group" value="Saudia Airlines" />
-              <InfoCell label="Key lanes" value="Europe · Asia · Americas" />
+              <InfoCell label="Primary hub" value="Not configured" />
+              <InfoCell label="Secondary hub" value="Not configured" />
+              <InfoCell label="Headquarters" value="Not configured" />
+              <InfoCell label="Alliance" value="Not configured" />
+              <InfoCell label="Parent group" value="Not configured" />
+              <InfoCell label="Key lanes" value="Not configured" />
             </CardContent>
           </Card>
         </div>
 
-        {/* ── Mandate highlights ── */}
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           <HighlightCard
             icon={<BarChart3 className="h-5 w-5" />}
@@ -141,18 +136,17 @@ export default async function AirlineProfilePage() {
           <HighlightCard
             icon={<Package className="h-5 w-5" />}
             label="Cargo focus"
-            value="General + Pharma"
-            detail="GDP-certified handling available"
+            value="Not configured"
+            detail="Set products during airline onboarding"
           />
           <HighlightCard
             icon={<Shield className="h-5 w-5" />}
             label="Compliance"
-            value="IATA · CASS"
-            detail="Full certification stack"
+            value="Not configured"
+            detail="Add certifications before publishing tenders"
           />
         </div>
 
-        {/* ── Account ── */}
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
@@ -162,15 +156,15 @@ export default async function AirlineProfilePage() {
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="flex items-start gap-5 rounded-xl border border-border-ui bg-surface2 p-4">
-              <LogoUploader currentLogo={profile.logoPath} brandColor={SAUDIA_CARGO.color} />
+              <LogoUploader currentLogo={profile.logoPath} brandColor={DEFAULT_AIRLINE_COLOR} />
               <div className="min-w-0 pt-1">
-                <p className="font-semibold text-ink">{SAUDIA_CARGO.name}</p>
-                <p className="mt-0.5 text-sm text-ink-muted">Upload your airline logo — shown to GSA partners throughout the platform.</p>
+                <p className="font-semibold text-ink">{companyName}</p>
+                <p className="mt-0.5 text-sm text-ink-muted">Upload your airline logo. It is shown to your team and partner-facing surfaces.</p>
               </div>
             </div>
             <div className="grid gap-3 sm:grid-cols-3">
-              <InfoCell label="Email" value={session?.email ?? "—"} />
-              <InfoCell label="Company" value={session?.company ?? "Saudia Cargo"} />
+              <InfoCell label="Email" value={session?.email ?? "-"} />
+              <InfoCell label="Company" value={companyName} />
               <InfoCell label="Role" value="Airline" />
             </div>
             <form action={updateContactName} className="rounded-xl border border-border-ui p-4">
@@ -199,6 +193,10 @@ export default async function AirlineProfilePage() {
   );
 }
 
+function ProfilePill({ children }: { children: ReactNode }) {
+  return <span className="rounded-full bg-white/20 px-2.5 py-0.5 font-semibold">{children}</span>;
+}
+
 function HeroKpi({ label, value }: { label: string; value: number }) {
   return (
     <div className="text-center">
@@ -208,19 +206,11 @@ function HeroKpi({ label, value }: { label: string; value: number }) {
   );
 }
 
-function FleetCard({ type, role, capacity, note }: { type: string; role: string; capacity: string; note: string }) {
+function EmptyConfig({ title, detail }: { title: string; detail: string }) {
   return (
-    <div className="rounded-xl border border-border-ui bg-surface2 p-4">
-      <div className="flex items-start justify-between gap-2">
-        <div>
-          <p className="font-bold text-ink">{type}</p>
-          <p className="text-xs text-ink-muted">{role}</p>
-        </div>
-        <span className="shrink-0 rounded-lg border border-brand/20 bg-brand-light px-2 py-0.5 text-xs font-semibold text-brand">
-          {capacity}
-        </span>
-      </div>
-      <p className="mt-2 text-xs leading-5 text-ink-muted">{note}</p>
+    <div className="rounded-xl border border-dashed border-border-ui bg-surface2 p-5">
+      <p className="font-semibold text-ink">{title}</p>
+      <p className="mt-1 max-w-lg text-sm leading-6 text-ink-muted">{detail}</p>
     </div>
   );
 }
@@ -245,4 +235,14 @@ function InfoCell({ label, value }: { label: string; value: string }) {
       <p className="mt-1 text-sm font-medium text-ink">{value}</p>
     </div>
   );
+}
+
+function getInitials(companyName: string) {
+  return companyName
+    .split(/\s+/)
+    .map((part) => part[0])
+    .filter(Boolean)
+    .slice(0, 2)
+    .join("")
+    .toUpperCase() || "A";
 }

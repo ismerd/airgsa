@@ -88,7 +88,7 @@ export default function Home() {
           <div className="rounded-xl bg-surface2 p-5">
             <div className="flex items-center justify-between border-b border-border-ui pb-4">
               <div>
-                <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-brand">Saudia Cargo · Live desk</p>
+                <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-brand">AeroNova Cargo - Live desk</p>
                 <h2 className="mt-0.5 text-lg font-bold text-ink">Tender control tower</h2>
               </div>
               <Radar className="h-7 w-7 text-brand" />
@@ -258,8 +258,8 @@ function FeatureItem({ text }: { text: string }) {
 }
 
 const PREVIEW_TENDERS = [
-  { title: "DACH & Benelux GSA representation", lanes: "FRA, MUC, AMS → JED, RUH", deadline: "May 24" },
-  { title: "Iberia & France belly capacity", lanes: "MAD, BCN, CDG → JED, RUH", deadline: "Jun 3" },
+  { title: "Central Europe GSA representation", lanes: "FRA, MUC, VIE -> BCN, MXP", deadline: "May 24" },
+  { title: "Nordics belly capacity growth", lanes: "CPH, ARN, OSL -> FRA, AMS", deadline: "Jun 3" },
 ];
 
 const AIRLINE_FEATURES = [

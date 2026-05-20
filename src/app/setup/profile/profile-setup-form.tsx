@@ -59,7 +59,7 @@ export function ProfileSetupForm({
       <CardContent className="space-y-5">
         {session.role === "airline" && (
           <div className="flex items-start gap-4 rounded-xl border border-border-ui bg-surface2 p-4">
-            <LogoUploader currentLogo={airlineLogoPath} brandColor="#0B7A52" />
+            <LogoUploader currentLogo={airlineLogoPath} brandColor="#1a5aff" />
             <div className="pt-1">
               <p className="font-semibold text-ink">Airline logo</p>
               <p className="mt-1 text-sm leading-5 text-ink-muted">

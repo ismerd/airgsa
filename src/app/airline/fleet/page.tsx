@@ -5,13 +5,17 @@ import { Topbar } from "@/components/dashboard/topbar";
 import { Card, CardContent } from "@/components/ui/card";
 import { getSaudiaFlights } from "@/lib/services/fr24";
 import { getStoredFleetAircraft, isFreighterAircraft, type StoredFleetAircraft } from "@/lib/services/fleet-store";
+import { getSession } from "@/lib/auth/session";
 
 export const dynamic = "force-dynamic";
 const ENABLE_FLEET_MAP = false;
 
 export default async function FleetPage() {
-  await getSaudiaFlights();
-  const fleet = await getStoredFleetAircraft();
+  const session = await getSession();
+  const companyName = session?.company?.trim() || "Airline";
+  const useLegacySaudiaTracker = isLegacySaudiaCompany(companyName);
+  if (useLegacySaudiaTracker) await getSaudiaFlights();
+  const fleet = useLegacySaudiaTracker ? await getStoredFleetAircraft() : [];
 
   const freighters = fleet.filter(isStoredFreighterAircraft);
   const belly = fleet.filter((aircraft) => !isStoredFreighterAircraft(aircraft));
@@ -21,7 +25,7 @@ export default async function FleetPage() {
 
   return (
     <>
-      <Topbar title="Fleet overview" subtitle="Saudia Cargo" />
+      <Topbar title="Fleet overview" subtitle={companyName} />
       <main className="space-y-6 p-5">
         <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
           {[
@@ -51,7 +55,7 @@ export default async function FleetPage() {
         {ENABLE_FLEET_MAP && (
           <FlightWorldMap
             title="Live fleet positions"
-            subtitle="All active Saudia aircraft currently visible on the worldmap."
+            subtitle="Live aircraft currently visible on the worldmap."
             flights={[]}
             markerColorMode="airline"
             enableFlightTypeFilter
@@ -129,4 +133,8 @@ function getRawValue(aircraft: StoredFleetAircraft, path: string[]) {
     current = (current as Record<string, unknown>)[segment];
   }
   return current;
+}
+
+function isLegacySaudiaCompany(companyName: string) {
+  return /\bsaudia\b|\bsaudi\b/i.test(companyName);
 }
