@@ -20,6 +20,7 @@ import { Topbar } from "@/components/dashboard/topbar";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { Select } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import type { RealGsaPartner } from "@/lib/real-gsa-data";
 import type { LiveTender, LiveTenderApplication, TenderRouteFrequency } from "@/lib/services/tender-workflow-store";
@@ -253,7 +254,11 @@ export function ApplyTenderClient({ tenderId, gsa }: { tenderId: string; gsa: Re
                   <div className="md:col-span-2 space-y-1.5">
                     <Input
                       disabled={!canEdit}
-                      placeholder={tender ? getCommercialPlaceholder(tender) : "Proposed commission or commercial terms"}
+                      type="number"
+                      step="0.1"
+                      min="0"
+                      max="100"
+                      placeholder={tender ? getCommercialPlaceholder(tender) : "Commission %"}
                       value={form.proposedCommission}
                       onChange={(e) => setForm({ ...form, proposedCommission: e.target.value })}
                     />
@@ -264,15 +269,23 @@ export function ApplyTenderClient({ tenderId, gsa }: { tenderId: string; gsa: Re
                       </p>
                     )}
                   </div>
-                  <Input
+                  <Select
                     disabled={!canEdit}
-                    placeholder="Launch timeline, e.g. 6 weeks from award"
                     value={form.launchTimeline}
                     onChange={(e) => setForm({ ...form, launchTimeline: e.target.value })}
-                  />
+                  >
+                    <option value="">Select launch timeline</option>
+                    <option value="2 weeks from award">2 weeks from award</option>
+                    <option value="4 weeks from award">4 weeks from award</option>
+                    <option value="6 weeks from award">6 weeks from award</option>
+                    <option value="8 weeks from award">8 weeks from award</option>
+                    <option value="12 weeks from award">12 weeks from award</option>
+                  </Select>
                   <Input
                     disabled={!canEdit}
-                    placeholder="Monthly sales target, e.g. 120 t/month"
+                    type="number"
+                    min="0"
+                    placeholder="Monthly sales target in tons"
                     value={form.monthlySalesTarget}
                     onChange={(e) => setForm({ ...form, monthlySalesTarget: e.target.value })}
                   />

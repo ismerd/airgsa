@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { AlertTriangle, CheckCircle2, Inbox, Mail, PackageCheck, Plus, Send, ShieldCheck, Sparkles, X } from "lucide-react";
 import { Topbar } from "@/components/dashboard/topbar";
+import { AirportCodePicker, CargoProductSelect } from "@/components/dashboard/freight-field-selects";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -10,6 +11,7 @@ import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import type { CustomerEmailExtraction } from "@/lib/services/customer-email-parser";
+import { normalizeCargoProduct } from "@/lib/constants/cargo-products";
 import type { MandateBooking, MandateQuote, MandateQuoteStatus } from "@/lib/services/mandate-execution-store";
 import type { LiveContractRoute, LivePartnerContract } from "@/lib/services/tender-workflow-store";
 
@@ -209,7 +211,7 @@ export default function QuotesPage() {
         customer: extracted.customer,
         contactName: extracted.contactName,
         contactEmail: extracted.contactEmail,
-        cargoType: extracted.commodity,
+        cargoType: normalizeCargoProduct(extracted.product || extracted.commodity),
         weightKg: extracted.chargeableWeightKg ? String(extracted.chargeableWeightKg) : "",
         pieces: extracted.pieces ? String(extracted.pieces) : "1",
         flightDate,
@@ -418,12 +420,12 @@ export default function QuotesPage() {
                   )}
 
                   <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-                    <Field label="Origin"><Input value={form.origin} onChange={(event) => setForm((current) => ({ ...current, origin: event.target.value.toUpperCase() }))} /></Field>
-                    <Field label="Destination"><Input value={form.destination} onChange={(event) => setForm((current) => ({ ...current, destination: event.target.value.toUpperCase() }))} /></Field>
+                    <Field label="Origin"><AirportCodePicker value={form.origin} onChange={(value) => setForm((current) => ({ ...current, origin: value }))} /></Field>
+                    <Field label="Destination"><AirportCodePicker value={form.destination} onChange={(value) => setForm((current) => ({ ...current, destination: value }))} /></Field>
                     <Field label="Customer"><Input value={form.customer} onChange={(event) => setForm((current) => ({ ...current, customer: event.target.value }))} /></Field>
                     <Field label="Contact name"><Input value={form.contactName} onChange={(event) => setForm((current) => ({ ...current, contactName: event.target.value }))} /></Field>
                     <Field label="Contact email"><Input type="email" value={form.contactEmail} onChange={(event) => setForm((current) => ({ ...current, contactEmail: event.target.value }))} /></Field>
-                    <Field label="Cargo type"><Input value={form.cargoType} onChange={(event) => setForm((current) => ({ ...current, cargoType: event.target.value }))} /></Field>
+                    <Field label="Cargo type"><CargoProductSelect value={form.cargoType} onChange={(value) => setForm((current) => ({ ...current, cargoType: value }))} /></Field>
                     <Field label="Weight kg"><Input type="number" value={form.weightKg} onChange={(event) => setForm((current) => ({ ...current, weightKg: event.target.value }))} /></Field>
                     <Field label="Pieces"><Input type="number" value={form.pieces} onChange={(event) => setForm((current) => ({ ...current, pieces: event.target.value }))} /></Field>
                     <Field label="Flight date"><Input type="date" value={form.flightDate} onChange={(event) => setForm((current) => ({ ...current, flightDate: event.target.value }))} /></Field>

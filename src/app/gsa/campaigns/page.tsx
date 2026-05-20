@@ -167,7 +167,14 @@ export default function GsaCampaignsPage() {
             <Card>
               <CardContent className="grid gap-3 p-5 lg:grid-cols-2">
                 <Field label="Title"><Input value={form.title} onChange={(event) => setForm((current) => ({ ...current, title: event.target.value }))} /></Field>
-                <Field label="Audience"><Input value={form.audience} onChange={(event) => setForm((current) => ({ ...current, audience: event.target.value }))} /></Field>
+                <Field label="Audience">
+                  <Select value={form.audience} onChange={(event) => setForm((current) => ({ ...current, audience: event.target.value }))}>
+                    <option value="Local customer accounts">Local customer accounts</option>
+                    <option value="Key forwarder customers">Key forwarder customers</option>
+                    <option value="Airline partner contacts">Airline partner contacts</option>
+                    <option value="Route-specific customers">Route-specific customers</option>
+                  </Select>
+                </Field>
                 <Field label="Type">
                   <Select value={form.type} onChange={(event) => setForm((current) => ({ ...current, type: event.target.value as CampaignType }))}>
                     <option value="route_announcement">Route announcement</option>

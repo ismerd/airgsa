@@ -148,7 +148,14 @@ export default function AirlineCampaignsPage() {
           <Card>
             <CardContent className="grid gap-3 p-5 lg:grid-cols-2">
               <Field label="Title"><Input value={form.title} onChange={(event) => setForm((current) => ({ ...current, title: event.target.value }))} /></Field>
-              <Field label="Audience"><Input value={form.audience} onChange={(event) => setForm((current) => ({ ...current, audience: event.target.value }))} /></Field>
+              <Field label="Audience">
+                <Select value={form.audience} onChange={(event) => setForm((current) => ({ ...current, audience: event.target.value }))}>
+                  <option value="Assigned GSA partners">Assigned GSA partners</option>
+                  <option value="Selected GSA partners">Selected GSA partners</option>
+                  <option value="All accepted partner contacts">All accepted partner contacts</option>
+                  <option value="Route-specific GSA desks">Route-specific GSA desks</option>
+                </Select>
+              </Field>
               <div className="lg:col-span-2">
                 <Field label="Target GSA partners">
                   <div className="grid gap-2 rounded-lg border border-border-ui bg-surface2 p-3 md:grid-cols-2">
