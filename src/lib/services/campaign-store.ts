@@ -2,7 +2,7 @@ import { mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 import type { SessionPayload } from "@/lib/auth/session";
 import { canViewContract } from "@/lib/auth/permissions";
-import { assertFileStoreFallbackAllowed, rowData, withPostgres, withPostgresTransaction } from "@/lib/services/postgres-store";
+import { assertFileStoreFallbackAllowed, hasPostgres, rowData, withPostgres, withPostgresTransaction } from "@/lib/services/postgres-store";
 import { createWorkflowNotifications } from "@/lib/services/mandate-execution-store";
 import { createId } from "@/lib/services/ids";
 import { listLivePartnerContracts } from "@/lib/services/tender-workflow-store";
@@ -247,6 +247,7 @@ async function readLegacyStore(): Promise<CampaignStore> {
     return result.rows[0] ? normalizeStore(rowData<Partial<CampaignStore>>(result.rows[0])) : null;
   });
   if (dbStore) return dbStore;
+  if (hasPostgres()) return { campaigns: [] };
 
   assertFileStoreFallbackAllowed("Campaign store");
   try {
