@@ -68,6 +68,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     endDate: body.endDate,
     status: body.status,
     commercialTerms: body.commercialTerms,
+    commissionRate: normalizeNumber(body.commissionRate),
     targetLoadFactor: normalizeNumber(body.targetLoadFactor),
     monthlyTonnageTargetKg: normalizeNumber(body.monthlyTonnageTargetKg),
     reportingCadence: body.reportingCadence,

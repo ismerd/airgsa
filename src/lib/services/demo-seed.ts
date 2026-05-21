@@ -198,6 +198,7 @@ async function ensureContractTerms(contract: LivePartnerContract) {
   const updated = await updateContractTerms(contract.id, {
     status: "active",
     commercialTerms: "Hybrid GSA mandate: 5.5% commission, protected rate floor, monthly KPI review.",
+    commissionRate: 5.5,
     targetLoadFactor: 78,
     monthlyTonnageTargetKg: 120000,
     reportingCadence: "monthly",
