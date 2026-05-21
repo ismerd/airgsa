@@ -66,9 +66,12 @@ export function createSessionGsaProfile(session: SessionPayload | null): RealGsa
 }
 
 function belongsToSession(item: GsaIdentity, session: SessionPayload) {
-  if (item.gsaCompanyId && session.companyId) return item.gsaCompanyId === session.companyId;
-  if (item.email && item.email.toLowerCase() === session.email.toLowerCase()) return true;
-  return item.gsaName === session.company || item.gsaId === session.companyId || item.gsaId === session.email;
+  return (
+    normalizedMatch(item.gsaCompanyId, session.companyId) ||
+    normalizedMatch(item.gsaId, session.companyId) ||
+    normalizedMatch(item.email, session.email) ||
+    normalizedMatch(item.gsaName, session.company)
+  );
 }
 
 function realProfileFromContract(contract: LivePartnerContract, session: SessionPayload): RealGsaPartner {
@@ -179,4 +182,8 @@ function findDirectoryProfile(id?: string, email?: string, name?: string) {
 
 function nonEmpty<T>(...values: Array<T[] | undefined>) {
   return values.find((value) => value && value.length > 0) ?? [];
+}
+
+function normalizedMatch(left?: string, right?: string) {
+  return Boolean(left?.trim() && right?.trim() && left.trim().toLowerCase() === right.trim().toLowerCase());
 }
