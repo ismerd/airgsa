@@ -28,6 +28,16 @@ import type { LiveContractRoute, LivePartnerContract } from "@/lib/services/tend
 type RouteStatusFilter = "all" | "assigned" | "unassigned" | "eligible" | "blocked";
 type RouteEligibility = "available" | "assigned-to-selected" | "assigned-to-other" | "no-selection";
 
+const WEEKDAY_OPTIONS = [
+  { value: "Mon", label: "Mo" },
+  { value: "Tue", label: "Tu" },
+  { value: "Wed", label: "We" },
+  { value: "Thu", label: "Th" },
+  { value: "Fri", label: "Fr" },
+  { value: "Sat", label: "Sa" },
+  { value: "Sun", label: "Su" },
+];
+
 type PartnerProfile = {
   id: string;
   name: string;
@@ -176,6 +186,7 @@ export default function AirlineGsaOverviewPage() {
 
   async function createRoute() {
     if (!selectedContract) return;
+    const routeId = `${newRouteOrigin}-${newRouteDestination}`;
     setSaving(true);
     setError(null);
     try {
@@ -194,11 +205,16 @@ export default function AirlineGsaOverviewPage() {
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? "Route could not be created");
+      if (!data.contract) throw new Error("Route was not persisted on the selected contract");
+      setContracts((current) => current.map((contract) => (contract.id === data.contract.id ? data.contract : contract)));
       setNewRouteOrigin("");
       setNewRouteDestination("");
       setNewRouteFrequency("1");
       setNewRouteOperatingDays("");
       setNewRouteAircraft("");
+      setSelectedRouteQuery("");
+      setRoutePickerQuery(routeId);
+      setRoutePickerStatus("all");
       await refreshContracts();
     } catch (err) {
       setError((err as Error).message);
@@ -472,10 +488,9 @@ export default function AirlineGsaOverviewPage() {
                             />
                           </ContractField>
                           <ContractField label="Operating days">
-                            <Input
+                            <OperatingDaysPicker
                               value={newRouteOperatingDays}
-                              onChange={(event) => setNewRouteOperatingDays(event.target.value)}
-                              placeholder="Mon-Fri"
+                              onChange={setNewRouteOperatingDays}
                               disabled={saving}
                             />
                           </ContractField>
@@ -719,10 +734,58 @@ function CardMetric({ label, value }: { label: string; value: string }) {
 
 function ContractField({ label, children }: { label: string; children: ReactNode }) {
   return (
-    <label>
+    <div>
       <span className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-ink-muted">{label}</span>
       {children}
-    </label>
+    </div>
+  );
+}
+
+function OperatingDaysPicker({
+  value,
+  onChange,
+  disabled,
+}: {
+  value: string;
+  onChange: (value: string) => void;
+  disabled?: boolean;
+}) {
+  const selected = new Set(
+    value
+      .split(",")
+      .map((day) => day.trim())
+      .filter(Boolean),
+  );
+
+  function toggle(day: string) {
+    const next = new Set(selected);
+    if (next.has(day)) next.delete(day);
+    else next.add(day);
+    const ordered = WEEKDAY_OPTIONS.map((option) => option.value).filter((option) => next.has(option));
+    onChange(ordered.join(", "));
+  }
+
+  return (
+    <div className="grid grid-cols-7 gap-1 rounded-md border border-border-ui bg-surface p-1">
+      {WEEKDAY_OPTIONS.map((option) => {
+        const active = selected.has(option.value);
+        return (
+          <button
+            key={option.value}
+            type="button"
+            disabled={disabled}
+            onClick={() => toggle(option.value)}
+            className={`h-8 rounded text-xs font-semibold transition disabled:cursor-not-allowed disabled:opacity-60 ${
+              active ? "bg-brand text-white shadow-sm" : "text-ink-muted hover:bg-surface2 hover:text-ink"
+            }`}
+            aria-pressed={active}
+            title={option.value}
+          >
+            {option.label}
+          </button>
+        );
+      })}
+    </div>
   );
 }
 
