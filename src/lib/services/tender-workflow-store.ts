@@ -208,7 +208,6 @@ export async function getLiveTender(id: string) {
 }
 
 export async function createLiveTender(input: TenderCreateInput) {
-  const store = await readStore();
   const now = new Date().toISOString();
   const id = createId("tnd");
   const tender: LiveTender = {
@@ -225,50 +224,54 @@ export async function createLiveTender(input: TenderCreateInput) {
     updatedAt: now,
   };
 
-  store.tenders.unshift(tender);
-  await writeStore(store);
+  await mutateStore((store) => {
+    store.tenders.unshift(tender);
+    return tender;
+  });
   return tender;
 }
 
 export async function updateLiveTender(id: string, input: TenderUpdateInput) {
-  const store = await readStore();
-  const index = store.tenders.findIndex((tender) => tender.id === id);
-  if (index < 0) return null;
+  return mutateStore(async (store) => {
+    const index = store.tenders.findIndex((tender) => tender.id === id);
+    if (index < 0) return null;
 
-  const tender: LiveTender = {
-    ...store.tenders[index],
-    ...input,
-    id,
-    airline: store.tenders[index].airline,
-    airlineEmail: store.tenders[index].airlineEmail,
-    createdAt: store.tenders[index].createdAt,
-    attachments: input.attachments
-      ? await persistWorkflowDocuments(input.attachments, {
-          entityType: "tender-document",
-          entityId: id,
-          airlineCompanyId: store.tenders[index].airlineCompanyId,
-          airlineEmail: store.tenders[index].airlineEmail,
-          visibility: "tender-public",
-        })
-      : store.tenders[index].attachments,
-    updatedAt: new Date().toISOString(),
-  };
+    const existing = store.tenders[index];
+    const tender: LiveTender = {
+      ...existing,
+      ...input,
+      id,
+      airline: existing.airline,
+      airlineEmail: existing.airlineEmail,
+      airlineCompanyId: existing.airlineCompanyId,
+      createdAt: existing.createdAt,
+      attachments: input.attachments
+        ? await persistWorkflowDocuments(input.attachments, {
+            entityType: "tender-document",
+            entityId: id,
+            airlineCompanyId: existing.airlineCompanyId,
+            airlineEmail: existing.airlineEmail,
+            visibility: "tender-public",
+          })
+        : existing.attachments,
+      updatedAt: new Date().toISOString(),
+    };
 
-  store.tenders[index] = tender;
-  await writeStore(store);
-  return tender;
+    store.tenders[index] = tender;
+    return tender;
+  });
 }
 
 export async function deleteLiveTender(id: string) {
-  const store = await readStore();
-  const tender = store.tenders.find((item) => item.id === id);
-  if (!tender) return false;
+  return mutateStore((store) => {
+    const tender = store.tenders.find((item) => item.id === id);
+    if (!tender) return false;
 
-  store.tenders = store.tenders.filter((item) => item.id !== id);
-  store.applications = store.applications.filter((application) => application.tenderId !== id);
-  store.contracts = store.contracts.filter((contract) => contract.tenderId !== id);
-  await writeStore(store);
-  return true;
+    store.tenders = store.tenders.filter((item) => item.id !== id);
+    store.applications = store.applications.filter((application) => application.tenderId !== id);
+    store.contracts = store.contracts.filter((contract) => contract.tenderId !== id);
+    return true;
+  });
 }
 
 export async function listLiveApplications() {
@@ -539,60 +542,60 @@ export async function createLiveApplication(
   },
   input: ApplicationCreateInput,
 ) {
-  const store = await readStore();
-  const tender = store.tenders.find((item) => item.id === tenderId);
-  if (!tender || tender.status !== "open") throw new Error("Tender is not open");
+  return mutateStore(async (store) => {
+    const tender = store.tenders.find((item) => item.id === tenderId);
+    if (!tender || tender.status !== "open") throw new Error("Tender is not open");
 
-  const gsaId = applicant.companyId ?? slugId(applicant.company || applicant.email);
+    const gsaId = applicant.companyId ?? slugId(applicant.company || applicant.email);
 
-  const now = new Date().toISOString();
-  const existingIndex = store.applications.findIndex(
-    (application) =>
-      application.tenderId === tenderId &&
-      (application.gsaId === gsaId || (applicant.companyId && application.gsaCompanyId === applicant.companyId)),
-  );
-  const existingApplication = existingIndex >= 0 ? store.applications[existingIndex] : null;
-  if (existingApplication && !canEditApplication(existingApplication)) {
-    throw new Error("Application edit window has expired");
-  }
-  const applicationId = existingApplication?.id ?? createId("app");
-  const application: LiveTenderApplication = {
-    id: applicationId,
-    tenderId,
-    gsaId,
-    gsaCompanyId: applicant.companyId,
-    gsaName: applicant.company,
-    contactName: applicant.contactName ?? applicant.name,
-    email: applicant.email,
-    headquarters: applicant.headquarters ?? "Not provided",
-    coverage: applicant.coverage ?? [],
-    markets: applicant.markets ?? [],
-    certifications: applicant.certifications ?? [],
-    cargoFocus: applicant.cargoFocus ?? "General cargo",
-    networkScore: applicant.networkScore ?? 50,
-    financialScore: applicant.financialScore ?? 50,
-    complianceScore: applicant.complianceScore ?? 50,
-    winRate: applicant.winRate ?? 0,
-    ...input,
-    documents: await persistWorkflowDocuments(input.documents, {
-      entityType: "application-document",
-      entityId: applicationId,
-      airlineCompanyId: tender.airlineCompanyId,
-      airlineEmail: tender.airlineEmail,
+    const now = new Date().toISOString();
+    const existingIndex = store.applications.findIndex(
+      (application) =>
+        application.tenderId === tenderId &&
+        (application.gsaId === gsaId || (applicant.companyId && application.gsaCompanyId === applicant.companyId)),
+    );
+    const existingApplication = existingIndex >= 0 ? store.applications[existingIndex] : null;
+    if (existingApplication && !canEditApplication(existingApplication)) {
+      throw new Error("Application edit window has expired");
+    }
+    const applicationId = existingApplication?.id ?? createId("app");
+    const application: LiveTenderApplication = {
+      id: applicationId,
+      tenderId,
+      gsaId,
       gsaCompanyId: applicant.companyId,
-      gsaEmail: applicant.email,
-      visibility: "application",
-    }),
-    status: existingApplication?.status ?? "pending",
-    submittedAt: existingApplication?.submittedAt ?? now,
-    updatedAt: now,
-  };
+      gsaName: applicant.company,
+      contactName: applicant.contactName ?? applicant.name,
+      email: applicant.email,
+      headquarters: applicant.headquarters ?? "Not provided",
+      coverage: applicant.coverage ?? [],
+      markets: applicant.markets ?? [],
+      certifications: applicant.certifications ?? [],
+      cargoFocus: applicant.cargoFocus ?? "General cargo",
+      networkScore: applicant.networkScore ?? 50,
+      financialScore: applicant.financialScore ?? 50,
+      complianceScore: applicant.complianceScore ?? 50,
+      winRate: applicant.winRate ?? 0,
+      ...input,
+      documents: await persistWorkflowDocuments(input.documents, {
+        entityType: "application-document",
+        entityId: applicationId,
+        airlineCompanyId: tender.airlineCompanyId,
+        airlineEmail: tender.airlineEmail,
+        gsaCompanyId: applicant.companyId,
+        gsaEmail: applicant.email,
+        visibility: "application",
+      }),
+      status: existingApplication?.status ?? "pending",
+      submittedAt: existingApplication?.submittedAt ?? now,
+      updatedAt: now,
+    };
 
-  if (existingIndex >= 0) store.applications[existingIndex] = application;
-  else store.applications.unshift(application);
+    if (existingIndex >= 0) store.applications[existingIndex] = application;
+    else store.applications.unshift(application);
 
-  await writeStore(store);
-  return application;
+    return application;
+  });
 }
 
 async function persistWorkflowDocuments(
@@ -844,8 +847,16 @@ function isContractOwnedByGsaSession(
   session: Pick<SessionPayload, "companyId" | "company" | "email">,
   contract: Pick<LivePartnerContract, "gsaCompanyId" | "gsaId" | "gsaName" | "email">,
 ) {
-  if (contract.gsaCompanyId && session.companyId) return contract.gsaCompanyId === session.companyId;
-  return contract.gsaName === session.company || contract.email?.toLowerCase() === session.email.toLowerCase();
+  return (
+    normalizedMatch(contract.gsaCompanyId, session.companyId) ||
+    normalizedMatch(contract.gsaId, session.companyId) ||
+    normalizedMatch(contract.email, session.email) ||
+    normalizedMatch(contract.gsaName, session.company)
+  );
+}
+
+function normalizedMatch(left?: string, right?: string) {
+  return Boolean(left?.trim() && right?.trim() && left.trim().toLowerCase() === right.trim().toLowerCase());
 }
 
 export function getTenderAwardSlots(tender: Pick<LiveTender, "awardMode" | "maxAwards">) {
@@ -976,11 +987,11 @@ async function writeStore(store: TenderWorkflowStore) {
   await writeFile(STORE_PATH, `${JSON.stringify(store, null, 2)}\n`, "utf-8");
 }
 
-async function mutateStore<T>(operation: (store: TenderWorkflowStore) => T): Promise<T> {
+async function mutateStore<T>(operation: (store: TenderWorkflowStore) => T | Promise<T>): Promise<T> {
   const dbResult = await withPostgresTransaction(async (client) => {
     await lockWorkflowStore(client);
     const store = await readStoreFromPostgresClient(client);
-    const result = operation(store);
+    const result = await operation(store);
     await writeStoreToPostgresClient(client, store);
     return { result };
   });
@@ -988,7 +999,7 @@ async function mutateStore<T>(operation: (store: TenderWorkflowStore) => T): Pro
 
   assertFileStoreFallbackAllowed("Tender workflow store");
   const store = await readFileStore();
-  const result = operation(store);
+  const result = await operation(store);
   await mkdir(path.dirname(STORE_PATH), { recursive: true });
   await writeFile(STORE_PATH, `${JSON.stringify(store, null, 2)}\n`, "utf-8");
   return result;
