@@ -56,21 +56,47 @@ export function canManageWorkflow(session: SessionPayload) {
 }
 
 export function isTenderOwnedByAirline(session: SessionPayload, tender: LiveTender) {
-  if (tender.airlineCompanyId && session.companyId) return tender.airlineCompanyId === session.companyId;
-  return tender.airlineEmail.toLowerCase() === session.email.toLowerCase();
+  return (
+    idsMatch(tender.airlineCompanyId, session.companyId) ||
+    emailsMatch(tender.airlineEmail, session.email) ||
+    namesMatch(tender.airline, session.company)
+  );
 }
 
 export function isApplicationOwnedByGsa(session: SessionPayload, application: LiveTenderApplication) {
-  if (application.gsaCompanyId && session.companyId) return application.gsaCompanyId === session.companyId;
-  return application.gsaName === session.company || application.email.toLowerCase() === session.email.toLowerCase();
+  return (
+    idsMatch(application.gsaCompanyId, session.companyId) ||
+    idsMatch(application.gsaId, session.companyId) ||
+    emailsMatch(application.email, session.email) ||
+    namesMatch(application.gsaName, session.company)
+  );
 }
 
 export function isContractOwnedByAirline(session: SessionPayload, contract: LivePartnerContract) {
-  if (contract.airlineCompanyId && session.companyId) return contract.airlineCompanyId === session.companyId;
-  return contract.airlineEmail.toLowerCase() === session.email.toLowerCase();
+  return (
+    idsMatch(contract.airlineCompanyId, session.companyId) ||
+    emailsMatch(contract.airlineEmail, session.email) ||
+    namesMatch(contract.airline, session.company)
+  );
 }
 
 export function isContractOwnedByGsa(session: SessionPayload, contract: LivePartnerContract) {
-  if (contract.gsaCompanyId && session.companyId) return contract.gsaCompanyId === session.companyId;
-  return contract.gsaName === session.company || contract.email?.toLowerCase() === session.email.toLowerCase();
+  return (
+    idsMatch(contract.gsaCompanyId, session.companyId) ||
+    idsMatch(contract.gsaId, session.companyId) ||
+    emailsMatch(contract.email, session.email) ||
+    namesMatch(contract.gsaName, session.company)
+  );
+}
+
+function idsMatch(left?: string, right?: string) {
+  return Boolean(left?.trim() && right?.trim() && left.trim().toLowerCase() === right.trim().toLowerCase());
+}
+
+function emailsMatch(left?: string, right?: string) {
+  return Boolean(left?.trim() && right?.trim() && left.trim().toLowerCase() === right.trim().toLowerCase());
+}
+
+function namesMatch(left?: string, right?: string) {
+  return Boolean(left?.trim() && right?.trim() && left.trim().toLowerCase() === right.trim().toLowerCase());
 }

@@ -403,24 +403,43 @@ export async function withPostgresTransaction<T>(operation: (client: PoolClient)
   const poolClient = getPool();
   if (!poolClient) return null;
 
-  let connection: PoolClient | null = null;
-  try {
-    await ensureSchema();
-    connection = await poolClient.connect();
-    await connection.query("begin");
-    const result = await operation(connection);
-    await connection.query("commit");
-    return result;
-  } catch (err) {
-    if (connection) await connection.query("rollback").catch(() => undefined);
-    if (!canUseFileStoreFallback()) throw err;
-    console.warn("[postgres] falling back to file store:", (err as Error).message);
-    return null;
-  } finally {
-    connection?.release();
+  await ensureSchema();
+
+  const maxAttempts = 3;
+  for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
+    let connection: PoolClient | null = null;
+    try {
+      connection = await poolClient.connect();
+      await connection.query("begin");
+      const result = await operation(connection);
+      await connection.query("commit");
+      return result;
+    } catch (err) {
+      if (connection) await connection.query("rollback").catch(() => undefined);
+      if (isRetryableTransactionError(err) && attempt < maxAttempts) {
+        await waitForRetry(attempt);
+        continue;
+      }
+      if (!canUseFileStoreFallback()) throw err;
+      console.warn("[postgres] falling back to file store:", (err as Error).message);
+      return null;
+    } finally {
+      connection?.release();
+    }
   }
+
+  return null;
 }
 
 export function rowData<T>(row: QueryResultRow): T {
   return row.data as T;
+}
+
+function isRetryableTransactionError(err: unknown) {
+  const code = typeof err === "object" && err && "code" in err ? (err as { code?: unknown }).code : undefined;
+  return code === "40P01" || code === "40001";
+}
+
+function waitForRetry(attempt: number) {
+  return new Promise((resolve) => setTimeout(resolve, 35 * attempt));
 }
