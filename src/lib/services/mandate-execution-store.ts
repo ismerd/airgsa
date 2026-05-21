@@ -2011,6 +2011,7 @@ async function readLegacyStore(): Promise<MandateExecutionStore> {
 async function writeStoreToPostgres(store: MandateExecutionStore) {
   const normalizedStore = normalizeStore(store);
   return withPostgresTransaction(async (client) => {
+    await lockMandateExecutionStore(client);
     await client.query("delete from public.workflow_control_action_comments");
     await client.query("delete from public.workflow_notifications");
     await client.query("delete from public.workflow_audit_events");
@@ -2119,7 +2120,15 @@ async function writeStoreToPostgres(store: MandateExecutionStore) {
       await client.query(
         `insert into public.workflow_audit_events
           (id, contract_id, entity_type, entity_id, actor_email, actor_role, created_at, data)
-         values ($1, $2, $3, $4, $5, $6, $7, $8::jsonb)`,
+         values ($1, $2, $3, $4, $5, $6, $7, $8::jsonb)
+         on conflict (id) do update set
+          contract_id = excluded.contract_id,
+          entity_type = excluded.entity_type,
+          entity_id = excluded.entity_id,
+          actor_email = excluded.actor_email,
+          actor_role = excluded.actor_role,
+          created_at = excluded.created_at,
+          data = excluded.data`,
         [
           event.id,
           resolveAuditContractId(event),
@@ -2154,6 +2163,10 @@ async function writeStoreToPostgres(store: MandateExecutionStore) {
 
     return true;
   });
+}
+
+async function lockMandateExecutionStore(client: { query: (text: string, values?: unknown[]) => Promise<unknown> }) {
+  await client.query("select pg_advisory_xact_lock(hashtextextended($1, 0))", ["airgsa:mandate-execution-store"]);
 }
 
 function resolveAuditContractId(event: MandateAuditEvent) {
