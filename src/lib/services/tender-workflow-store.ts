@@ -765,8 +765,9 @@ function upsertContractFromAward(
 
 function buildContractRoutes(tender: LiveTender, existingRoutes: LiveContractRoute[] = []) {
   const existingById = new Map(existingRoutes.map((route) => [route.id, route]));
-  return tender.routes.map((route) => {
+  const tenderRoutes = tender.routes.map((route) => {
     const existing = existingById.get(route.id);
+    existingById.delete(route.id);
     return {
       ...route,
       status: existing?.status ?? "available",
@@ -774,6 +775,11 @@ function buildContractRoutes(tender: LiveTender, existingRoutes: LiveContractRou
       assignedBy: existing?.assignedBy,
     } satisfies LiveContractRoute;
   });
+
+  return [
+    ...tenderRoutes,
+    ...Array.from(existingById.values()),
+  ];
 }
 
 function buildDefaultControlRules(tender: LiveTender, application: LiveTenderApplication): ContractControlRules {
