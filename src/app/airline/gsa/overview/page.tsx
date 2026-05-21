@@ -22,7 +22,6 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
-import { Textarea } from "@/components/ui/textarea";
 import type { LiveContractRoute, LivePartnerContract } from "@/lib/services/tender-workflow-store";
 
 type RouteStatusFilter = "all" | "assigned" | "unassigned" | "eligible" | "blocked";
@@ -270,7 +269,7 @@ export default function AirlineGsaOverviewPage() {
                   </div>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                  <div className="grid gap-3 lg:grid-cols-4">
+                  <div className="grid gap-3 lg:grid-cols-5">
                     <ContractField label="Contract start">
                       <Input
                         type="date"
@@ -293,6 +292,7 @@ export default function AirlineGsaOverviewPage() {
                         max={100}
                         value={selectedContract.targetLoadFactor ?? ""}
                         placeholder="82"
+                        aria-label="Target load factor percent"
                         onChange={(event) =>
                           patchContract({ targetLoadFactor: event.target.value ? Number(event.target.value) : undefined })
                         }
@@ -304,21 +304,29 @@ export default function AirlineGsaOverviewPage() {
                         min={0}
                         value={selectedContract.monthlyTonnageTargetKg ? Math.round(selectedContract.monthlyTonnageTargetKg / 1000) : ""}
                         placeholder="1500"
+                        aria-label="Monthly tonnage target in tons"
                         onChange={(event) =>
                           patchContract({ monthlyTonnageTargetKg: event.target.value ? Number(event.target.value) * 1000 : undefined })
                         }
                       />
                     </ContractField>
-                  </div>
-
-                  <div className="grid gap-3 lg:grid-cols-[1fr_260px]">
-                    <ContractField label="Commercial terms">
-                      <Textarea
-                        value={selectedContract.commercialTerms ?? ""}
-                        onChange={(event) => patchContract({ commercialTerms: event.target.value })}
-                        placeholder="Commission, incentive, payment terms, minimum commitment..."
+                    <ContractField label="Commission %">
+                      <Input
+                        type="number"
+                        min={0}
+                        max={100}
+                        step="0.1"
+                        value={selectedContract.commissionRate ?? ""}
+                        placeholder="5.0"
+                        aria-label="Commission percentage"
+                        onChange={(event) =>
+                          patchContract({ commissionRate: event.target.value ? Number(event.target.value) : undefined })
+                        }
                       />
                     </ContractField>
+                  </div>
+
+                  <div className="grid gap-3 lg:grid-cols-[260px_1fr]">
                     <ContractField label="Reporting cadence">
                       <Select
                         value={selectedContract.reportingCadence ?? "weekly"}
@@ -329,6 +337,9 @@ export default function AirlineGsaOverviewPage() {
                         <option value="monthly">Monthly QBR pack</option>
                       </Select>
                     </ContractField>
+                    <div className="rounded-xl border border-border-ui bg-surface2 px-4 py-3 text-sm text-ink-muted">
+                      These values define the measurable contract controls used for route assignment, GSA reporting, and performance dashboards.
+                    </div>
                   </div>
 
                   {!hasContractPeriod && (
@@ -337,7 +348,7 @@ export default function AirlineGsaOverviewPage() {
                     </div>
                   )}
 
-                  <div className="grid gap-3 md:grid-cols-4">
+                  <div className="grid gap-3 md:grid-cols-5">
                     <MiniMetric label="Routes" value={String(selectedRoutes.length)} />
                     <MiniMetric label="Weekly frequency" value={`${weeklyFrequency}x`} />
                     <MiniMetric label="Load factor target" value={selectedContract.targetLoadFactor ? `${selectedContract.targetLoadFactor}%` : "-"} />
@@ -345,6 +356,7 @@ export default function AirlineGsaOverviewPage() {
                       label="Monthly target"
                       value={selectedContract.monthlyTonnageTargetKg ? `${Math.round(selectedContract.monthlyTonnageTargetKg / 1000)}t` : "-"}
                     />
+                    <MiniMetric label="Commission" value={selectedContract.commissionRate != null ? `${selectedContract.commissionRate}%` : "-"} />
                   </div>
                 </CardContent>
               </Card>
@@ -558,10 +570,11 @@ function PartnerContractCard({
         </Badge>
       </div>
 
-      <div className="mt-4 grid grid-cols-3 gap-2">
+      <div className="mt-4 grid grid-cols-4 gap-2">
         <CardMetric label="Routes" value={String(assignedRoutesForPartner.length)} />
         <CardMetric label="Freq." value={`${weeklyFrequency}x`} />
         <CardMetric label="LF target" value={contract.targetLoadFactor ? `${contract.targetLoadFactor}%` : "-"} />
+        <CardMetric label="Comm." value={contract.commissionRate != null ? `${contract.commissionRate}%` : "-"} />
       </div>
 
       <div className="mt-4 grid gap-2 text-xs text-ink-muted">

@@ -109,6 +109,7 @@ export type LivePartnerContract = {
   endDate?: string;
   status: Extract<Status, "pending" | "active" | "suspended" | "closed">;
   commercialTerms?: string;
+  commissionRate?: number;
   targetLoadFactor?: number;
   monthlyTonnageTargetKg?: number;
   reportingCadence?: string;
@@ -146,6 +147,7 @@ export type ContractTermsUpdateInput = Partial<
     | "endDate"
     | "status"
     | "commercialTerms"
+    | "commissionRate"
     | "targetLoadFactor"
     | "monthlyTonnageTargetKg"
     | "reportingCadence"
@@ -165,6 +167,7 @@ export type LiveGsaAssignedRoute = LiveContractRoute & {
   contractStartDate: string;
   contractEndDate?: string;
   commercialTerms?: string;
+  commissionRate?: number;
 };
 
 type TenderWorkflowStore = {
@@ -411,6 +414,7 @@ export async function listRoutesForGsa(session: Pick<SessionPayload, "companyId"
           contractStartDate: contract.startDate,
           contractEndDate: contract.endDate,
           commercialTerms: contract.commercialTerms,
+          commissionRate: contract.commissionRate,
         })),
     );
 }
@@ -635,6 +639,7 @@ function upsertContractFromAward(
     endDate: existingContract?.endDate,
     status: existingContract?.status ?? "pending",
     commercialTerms: existingContract?.commercialTerms ?? application.proposedCommission,
+    commissionRate: existingContract?.commissionRate ?? parseCommissionRate(application.proposedCommission),
     targetLoadFactor: existingContract?.targetLoadFactor,
     monthlyTonnageTargetKg: existingContract?.monthlyTonnageTargetKg,
     reportingCadence: existingContract?.reportingCadence ?? "weekly",
@@ -702,6 +707,7 @@ function normalizeWorkflowStore(store: TenderWorkflowStore): TenderWorkflowStore
       financialScore: contract.financialScore ?? application?.financialScore,
       complianceScore: contract.complianceScore ?? application?.complianceScore,
       winRate: contract.winRate ?? application?.winRate,
+      commissionRate: contract.commissionRate ?? parseCommissionRate(contract.commercialTerms ?? application?.proposedCommission),
       reportingCadence: contract.reportingCadence ?? "weekly",
       controlRules: contract.controlRules ?? (tender && application ? buildDefaultControlRules(tender, application) : undefined),
       contractRoutes: tender ? buildContractRoutes(tender, contract.contractRoutes ?? []) : contract.contractRoutes ?? [],
@@ -722,6 +728,12 @@ function normalizeWorkflowStore(store: TenderWorkflowStore): TenderWorkflowStore
     applications: store.applications,
     contracts,
   };
+}
+
+function parseCommissionRate(value?: string) {
+  if (!value) return undefined;
+  const rate = Number.parseFloat(value.match(/\d+(\.\d+)?/)?.[0] ?? "");
+  return Number.isFinite(rate) ? rate : undefined;
 }
 
 function isContractOwnedByGsaSession(

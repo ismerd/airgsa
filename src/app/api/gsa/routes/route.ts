@@ -30,6 +30,7 @@ export async function GET() {
             contractStartDate: contract.startDate,
             contractEndDate: contract.endDate,
             commercialTerms: contract.commercialTerms,
+            commissionRate: contract.commissionRate,
           })),
       ),
     });
@@ -53,6 +54,7 @@ export async function GET() {
           contractStartDate: contract.startDate,
           contractEndDate: contract.endDate,
           commercialTerms: contract.commercialTerms,
+          commissionRate: contract.commissionRate,
         })),
     ),
   });

@@ -107,7 +107,14 @@ export default async function GsaProfilePage({ params }: { params: Promise<{ id:
               label="Contact"
               value={`${application?.contactName ?? latestContract?.contactName ?? "GSA contact"} - ${application?.email ?? latestContract?.email ?? ""}`}
             />
-            <ApplicationField label="Commission" value={application?.proposedCommission ?? latestContract?.commercialTerms ?? "Not set"} />
+            <ApplicationField
+              label="Commission"
+              value={
+                latestContract?.commissionRate != null
+                  ? `${latestContract.commissionRate}%`
+                  : application?.proposedCommission ?? latestContract?.commercialTerms ?? "Not set"
+              }
+            />
             <ApplicationField label="Launch timeline" value={application?.launchTimeline ?? "Not provided"} />
             <ApplicationField
               label="Monthly target"
