@@ -205,7 +205,7 @@ export default function ApplicationsPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ status }),
       });
-      const data = await res.json();
+      const data = await res.json().catch(() => ({}));
       if (!res.ok) {
         setError(data.error ?? "Application status could not be updated");
         return;
@@ -222,6 +222,8 @@ export default function ApplicationsPage() {
       if (data.tender) {
         setTenders((current) => current.map((item) => (item.id === data.tender.id ? data.tender : item)));
       }
+    } catch (err) {
+      setError((err as Error).message || "Application status could not be updated");
     } finally {
       setPendingAction(null);
     }
@@ -487,6 +489,7 @@ function CandidateReviewCard({
 }) {
   const pending = pendingAction?.startsWith(`${application.id}:`) ?? false;
   const accepted = application.status === "accepted";
+  const rejected = application.status === "rejected";
   const canAccept = !accepted && !pending && !awardFilled;
   const aiInsight = getAiInsight(scorecard);
 
@@ -545,14 +548,14 @@ function CandidateReviewCard({
             onClick={onShortlist}
           >
             <Star className="h-4 w-4" />
-            {application.status === "shortlisted" ? "Remove shortlist" : "Shortlist ★"}
+            {application.status === "shortlisted" ? "Remove shortlist" : "Shortlist"}
           </Button>
           <Button disabled={!canAccept && !accepted} onClick={onAccept}>
             <Trophy className="h-4 w-4" />
             {accepted ? "Awarded" : awardFilled ? "Award filled" : "Award"}
           </Button>
-          <Button variant="destructive" disabled={pending || accepted} onClick={onReject}>
-            Reject
+          <Button variant="destructive" disabled={pending || accepted || rejected} onClick={onReject}>
+            {rejected ? "Rejected" : pendingAction === `${application.id}:rejected` ? "Rejecting..." : "Reject"}
           </Button>
         </div>
 
@@ -753,3 +756,4 @@ function statusRank(status: Status) {
 function capitalize(value: string) {
   return value.charAt(0).toUpperCase() + value.slice(1);
 }
+

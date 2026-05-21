@@ -50,15 +50,14 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
   if (body.route) {
     try {
       const contract = await createAndAssignRouteToContract(id, body.route, session.email);
-      if (contract) {
-        await appendMandateAuditEvent(session, {
-          entityType: "route",
-          entityId: contract.id,
-          action: "route.created",
-          summary: `${session.company} created and assigned ${body.route.origin}-${body.route.destination} to ${contract.gsaName}`,
-          metadata: { origin: body.route.origin, destination: body.route.destination },
-        });
-      }
+      if (!contract) return NextResponse.json({ error: "Contract not found" }, { status: 404 });
+      await appendMandateAuditEvent(session, {
+        entityType: "route",
+        entityId: contract.id,
+        action: "route.created",
+        summary: `${session.company} created and assigned ${body.route.origin}-${body.route.destination} to ${contract.gsaName}`,
+        metadata: { origin: body.route.origin, destination: body.route.destination },
+      });
       return NextResponse.json({ contract });
     } catch (error) {
       return NextResponse.json({ error: (error as Error).message }, { status: 409 });
@@ -75,15 +74,14 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
 
   try {
     const contract = await assignRoutesToContract(id, routeIds, session.email);
-    if (contract) {
-      await appendMandateAuditEvent(session, {
-        entityType: "route",
-        entityId: contract.id,
-        action: "route.assigned",
-        summary: `${session.company} assigned ${routeIds.join(", ")} to ${contract.gsaName}`,
-        metadata: { routeCount: routeIds.length },
-      });
-    }
+    if (!contract) return NextResponse.json({ error: "Contract not found" }, { status: 404 });
+    await appendMandateAuditEvent(session, {
+      entityType: "route",
+      entityId: contract.id,
+      action: "route.assigned",
+      summary: `${session.company} assigned ${routeIds.join(", ")} to ${contract.gsaName}`,
+      metadata: { routeCount: routeIds.length },
+    });
     return NextResponse.json({ contract });
   } catch (error) {
     return NextResponse.json({ error: (error as Error).message }, { status: 409 });
