@@ -25,6 +25,7 @@ export async function createSession(account: SessionPayload): Promise<void> {
     name: account.name,
     company: account.company,
     companyId: account.companyId,
+    avatarPath: account.avatarPath,
   };
   cookieStore.set(SESSION_COOKIE_NAME, await signSessionPayload(payload), {
     ...COOKIE_OPTIONS,

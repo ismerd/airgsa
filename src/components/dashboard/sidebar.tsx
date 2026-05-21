@@ -22,6 +22,7 @@ export type SidebarBrand = {
   color: string;
   subtitle?: string;
   logoSrc?: string;
+  userAvatarSrc?: string;
   profileHref: string;
   userName: string;
 };
@@ -97,8 +98,12 @@ export function Sidebar({
             href={brand.profileHref}
             className="flex items-center gap-2.5 rounded-lg px-2 py-2 transition-colors hover:bg-white/[0.06]"
           >
-            <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-white/10 text-[11px] font-bold text-white">
-              {brand.userName.charAt(0).toUpperCase()}
+            <span className="relative flex h-7 w-7 shrink-0 items-center justify-center overflow-hidden rounded-full bg-white/10 text-[11px] font-bold text-white">
+              {brand.userAvatarSrc ? (
+                <Image src={brand.userAvatarSrc} alt={brand.userName} fill className="object-cover" unoptimized />
+              ) : (
+                brand.userName.charAt(0).toUpperCase()
+              )}
             </span>
             <div className="min-w-0">
               <p className="truncate text-xs font-medium text-white/80">{brand.userName}</p>

@@ -1,26 +1,17 @@
 import type { ReactNode } from "react";
 import Image from "next/image";
-import { revalidatePath } from "next/cache";
 import { BarChart3, Globe2, Package, PlaneTakeoff, Shield, Users, UserCircle } from "lucide-react";
 import { Topbar } from "@/components/dashboard/topbar";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { LogoUploader } from "@/components/dashboard/logo-uploader";
-import { getSession, updateSession } from "@/lib/auth/session";
+import { getSession } from "@/lib/auth/session";
 import { canViewContract, canViewTender } from "@/lib/auth/permissions";
 import { getAirlineProfile } from "@/lib/services/airline-profile";
 import { listLivePartnerContracts, listLiveTenders } from "@/lib/services/tender-workflow-store";
+import { AirlineProfileEditor } from "./airline-profile-editor";
 
 export const dynamic = "force-dynamic";
 
 const DEFAULT_AIRLINE_COLOR = "#1a5aff";
-
-async function updateContactName(formData: FormData) {
-  "use server";
-  const name = (formData.get("name") as string)?.trim();
-  if (!name) return;
-  await updateSession({ name });
-  revalidatePath("/airline/profile");
-}
 
 export default async function AirlineProfilePage() {
   const [session, tenders, contracts] = await Promise.all([
@@ -44,7 +35,14 @@ export default async function AirlineProfilePage() {
       <main className="space-y-5 p-5">
         <div
           className="relative overflow-hidden rounded-2xl p-6 text-white shadow-sm"
-          style={{ background: `linear-gradient(135deg, ${DEFAULT_AIRLINE_COLOR}dd 0%, ${DEFAULT_AIRLINE_COLOR} 100%)` }}
+          style={{
+            backgroundColor: DEFAULT_AIRLINE_COLOR,
+            backgroundImage: profile.bannerPath
+              ? `linear-gradient(90deg, rgba(7, 23, 61, 0.82), rgba(26, 90, 255, 0.58)), url(${profile.bannerPath})`
+              : `linear-gradient(135deg, ${DEFAULT_AIRLINE_COLOR}dd 0%, ${DEFAULT_AIRLINE_COLOR} 100%)`,
+            backgroundPosition: "center",
+            backgroundSize: "cover",
+          }}
         >
           <div
             className="pointer-events-none absolute inset-0 opacity-[0.05]"
@@ -71,10 +69,10 @@ export default async function AirlineProfilePage() {
                 <h1 className="text-2xl font-black tracking-tight">{companyName}</h1>
                 <p className="mt-0.5 text-sm opacity-80">Cargo partner network profile</p>
                 <div className="mt-2 flex flex-wrap gap-3 text-xs">
-                  <ProfilePill>IATA not set</ProfilePill>
-                  <ProfilePill>ICAO not set</ProfilePill>
-                  <ProfilePill>Hub not set</ProfilePill>
-                  <ProfilePill>Network profile</ProfilePill>
+                  <ProfilePill>{profile.iataCode ? `IATA ${profile.iataCode}` : "IATA not set"}</ProfilePill>
+                  <ProfilePill>{profile.icaoCode ? `ICAO ${profile.icaoCode}` : "ICAO not set"}</ProfilePill>
+                  <ProfilePill>{profile.primaryHub ? `Hub ${profile.primaryHub}` : "Hub not set"}</ProfilePill>
+                  <ProfilePill>{profile.bannerPath ? "Banner active" : "Banner not set"}</ProfilePill>
                 </div>
               </div>
             </div>
@@ -110,12 +108,12 @@ export default async function AirlineProfilePage() {
               </CardTitle>
             </CardHeader>
             <CardContent className="grid gap-3 sm:grid-cols-2">
-              <InfoCell label="Primary hub" value="Not configured" />
-              <InfoCell label="Secondary hub" value="Not configured" />
-              <InfoCell label="Headquarters" value="Not configured" />
-              <InfoCell label="Alliance" value="Not configured" />
-              <InfoCell label="Parent group" value="Not configured" />
-              <InfoCell label="Key lanes" value="Not configured" />
+              <InfoCell label="Primary hub" value={profile.primaryHub ?? "Not configured"} />
+              <InfoCell label="Secondary hub" value={profile.secondaryHub ?? "Not configured"} />
+              <InfoCell label="Headquarters" value={profile.headquarters ?? "Not configured"} />
+              <InfoCell label="Alliance" value={profile.alliance ?? "Not configured"} />
+              <InfoCell label="Parent group" value={profile.parentGroup ?? "Not configured"} />
+              <InfoCell label="Key lanes" value={profile.keyLanes ?? "Not configured"} />
             </CardContent>
           </Card>
         </div>
@@ -136,14 +134,14 @@ export default async function AirlineProfilePage() {
           <HighlightCard
             icon={<Package className="h-5 w-5" />}
             label="Cargo focus"
-            value="Not configured"
-            detail="Set products during airline onboarding"
+            value={profile.cargoFocus ?? "Not configured"}
+            detail={profile.cargoFocus ? "Shown on airline profile" : "Set products during airline onboarding"}
           />
           <HighlightCard
             icon={<Shield className="h-5 w-5" />}
             label="Compliance"
-            value="Not configured"
-            detail="Add certifications before publishing tenders"
+            value={profile.compliance ?? "Not configured"}
+            detail={profile.compliance ? "Visible to internal teams" : "Add certifications before publishing tenders"}
           />
         </div>
 
@@ -151,41 +149,16 @@ export default async function AirlineProfilePage() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <UserCircle className="h-4 w-4 text-brand" />
-              Account
+              Account and profile settings
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="flex items-start gap-5 rounded-xl border border-border-ui bg-surface2 p-4">
-              <LogoUploader currentLogo={profile.logoPath} brandColor={DEFAULT_AIRLINE_COLOR} />
-              <div className="min-w-0 pt-1">
-                <p className="font-semibold text-ink">{companyName}</p>
-                <p className="mt-0.5 text-sm text-ink-muted">Upload your airline logo. It is shown to your team and partner-facing surfaces.</p>
-              </div>
-            </div>
             <div className="grid gap-3 sm:grid-cols-3">
               <InfoCell label="Email" value={session?.email ?? "-"} />
               <InfoCell label="Company" value={companyName} />
               <InfoCell label="Role" value="Airline" />
             </div>
-            <form action={updateContactName} className="rounded-xl border border-border-ui p-4">
-              <label className="mb-2 block text-xs font-semibold uppercase tracking-[0.12em] text-ink-muted">
-                Contact name
-              </label>
-              <div className="flex items-center gap-3">
-                <input
-                  name="name"
-                  defaultValue={session?.name ?? ""}
-                  className="flex-1 rounded-lg border border-border-ui bg-surface px-3 py-2 text-sm text-ink placeholder-ink-muted/40 focus:outline-none focus:ring-2 focus:ring-brand/40"
-                  placeholder="Your full name"
-                />
-                <button
-                  type="submit"
-                  className="shrink-0 rounded-lg bg-brand px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-brand/90"
-                >
-                  Save
-                </button>
-              </div>
-            </form>
+            <AirlineProfileEditor profile={profile} contactName={session?.name ?? ""} userAvatarPath={session?.avatarPath} />
           </CardContent>
         </Card>
       </main>
@@ -222,7 +195,7 @@ function HighlightCard({ icon, label, value, detail }: { icon: ReactNode; label:
         {icon}
       </div>
       <p className="text-xs font-semibold uppercase tracking-wider text-ink-muted">{label}</p>
-      <p className="mt-1 text-xl font-bold text-ink">{value}</p>
+      <p className="mt-1 line-clamp-2 text-xl font-bold text-ink">{value}</p>
       <p className="mt-0.5 text-xs text-ink-muted">{detail}</p>
     </div>
   );

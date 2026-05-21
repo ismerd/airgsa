@@ -116,6 +116,7 @@ export default async function AirlineLayout({ children }: { children: React.Reac
           color: "#1a5aff",
           subtitle: "Airline workspace",
           logoSrc: profile.logoPath,
+          userAvatarSrc: session?.avatarPath,
           profileHref: "/airline/profile",
           userName: session?.name ?? "-",
         }}
