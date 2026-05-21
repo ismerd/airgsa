@@ -1,6 +1,5 @@
 "use client";
 
-import type React from "react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
@@ -13,7 +12,6 @@ import {
   Plus,
   Search,
   ShieldAlert,
-  Sparkles,
   Star,
   Trophy,
   X,
@@ -104,14 +102,12 @@ export default function ApplicationsPage() {
         const rows = applicationsByTender.get(tender.id) ?? [];
         const latestSubmittedAt = rows.reduce((latest, row) => Math.max(latest, new Date(row.submittedAt).getTime()), 0);
         const acceptedCount = rows.filter((row) => row.status === "accepted").length;
-        const shortlistedCount = rows.filter((row) => row.status === "shortlisted").length;
         const stage = getTenderStage(tender, rows);
         return {
           tender,
           stage,
           applicationCount: rows.length,
           pendingCount: rows.filter((row) => row.status === "pending").length,
-          shortlistedCount,
           acceptedCount,
           awardSlots: getAwardSlots(tender),
           latestPendingSubmittedAt: rows
@@ -181,10 +177,6 @@ export default function ApplicationsPage() {
     ? tenderOptions.find((option) => option.tender.id === selectedTender.id) ?? null
     : null;
   const acceptedCount = selectedTenderApplications.filter((application) => application.status === "accepted").length;
-  const shortlistedCount = selectedTenderApplications.filter((application) => application.status === "shortlisted").length;
-  const averageFit = candidateRows.length
-    ? Math.round(candidateRows.reduce((sum, row) => sum + row.scorecard.overallFit, 0) / candidateRows.length)
-    : 0;
   const topCandidate = candidateRows[0] ?? null;
   const awardSlots = selectedTender ? getAwardSlots(selectedTender) : 1;
   const awardFilled = acceptedCount >= awardSlots;
@@ -268,7 +260,7 @@ export default function ApplicationsPage() {
               <p className="text-xs font-semibold uppercase tracking-[0.2em] text-brand">Application review</p>
               <h1 className="mt-2 text-2xl font-semibold tracking-tight text-ink">Tender applicant workspace</h1>
               <p className="mt-2 max-w-3xl text-sm leading-6 text-ink-muted">
-                Select a tender, compare applicants by fit score and risk, then shortlist or award a GSA from one focused review board.
+                Compare applicants, shortlist follow-ups, and award the partner for the selected tender.
               </p>
             </div>
             <div className="flex flex-col gap-2 sm:flex-row">
@@ -284,13 +276,6 @@ export default function ApplicationsPage() {
               )}
             </div>
           </div>
-
-          <div className="mt-5 grid gap-3 md:grid-cols-4">
-            <InsightCard icon={Inbox} label="Applications" value={String(selectedTenderApplications.length)} helper={selectedTender?.title ?? "Select a tender"} />
-            <InsightCard icon={Star} label="Shortlisted" value={String(shortlistedCount)} helper="Candidates marked for follow-up" tone="warning" />
-            <InsightCard icon={Trophy} label="Awarded" value={`${acceptedCount}/${awardSlots}`} helper={awardFilled ? "Award capacity filled" : "Award slots open"} tone="success" />
-            <InsightCard icon={Sparkles} label="Average fit" value={candidateRows.length ? `${averageFit}/100` : "-"} helper="Visible applicants" />
-          </div>
         </section>
 
         {error && <p className="rounded-lg bg-danger-bg px-3 py-2 text-sm text-danger">{error}</p>}
@@ -299,8 +284,8 @@ export default function ApplicationsPage() {
           <CardHeader>
             <div className="flex flex-col gap-2 lg:flex-row lg:items-center lg:justify-between">
               <div>
-                <CardTitle>Select tender</CardTitle>
-                <p className="mt-1 text-sm text-ink-muted">Switch between tender workspaces without leaving the application review page.</p>
+                <CardTitle>Tender workspaces</CardTitle>
+                <p className="mt-1 text-sm text-ink-muted">Choose which tender the decision board should evaluate.</p>
               </div>
               <Badge variant="muted">{loading ? "Loading" : `${tenderOptions.length} tenders`}</Badge>
             </div>
@@ -311,7 +296,7 @@ export default function ApplicationsPage() {
             ) : tenderOptions.length === 0 ? (
               <EmptyState title="No tenders available" text="Create a tender first. Applications will be grouped underneath it." />
             ) : (
-              <div className="grid gap-3 xl:grid-cols-3">
+              <div className="grid gap-3 xl:grid-cols-4">
                 {tenderOptions.map((option) => {
                   const selected = option.tender.id === selectedTenderId;
                   const hasNewApplications = option.pendingCount > 0 && option.latestPendingSubmittedAt > (tenderSeenAt[option.tender.id] ?? 0);
@@ -467,7 +452,6 @@ function TenderSelectorCard({
     stage: ReturnType<typeof getTenderStage>;
     applicationCount: number;
     pendingCount: number;
-    shortlistedCount: number;
     acceptedCount: number;
     awardSlots: number;
     latestPendingSubmittedAt: number;
@@ -499,11 +483,16 @@ function TenderSelectorCard({
         </div>
         <Badge variant={option.stage.variant}>{option.stage.label}</Badge>
       </div>
-      <div className="mt-4 grid grid-cols-4 gap-2 text-center">
-        <MiniCount label="Apps" value={option.applicationCount} />
-        <MiniCount label="Pending" value={option.pendingCount} />
-        <MiniCount label="Shortlist" value={option.shortlistedCount} />
-        <MiniCount label={`Award ${option.acceptedCount}/${option.awardSlots}`} value={option.acceptedCount} />
+      <div className="mt-4 grid grid-cols-3 gap-2 text-center">
+        <span className="rounded-lg border border-border-ui bg-surface px-2 py-2 text-xs font-semibold text-ink-muted">
+          {option.applicationCount} applications
+        </span>
+        <span className="rounded-lg border border-border-ui bg-surface px-2 py-2 text-xs font-semibold text-ink-muted">
+          {option.pendingCount} pending
+        </span>
+        <span className="rounded-lg border border-border-ui bg-surface px-2 py-2 text-xs font-semibold text-ink-muted">
+          {option.acceptedCount}/{option.awardSlots} awarded
+        </span>
       </div>
     </button>
   );
@@ -657,37 +646,6 @@ function ApplicationInspector({
   );
 }
 
-function InsightCard({
-  icon: Icon,
-  label,
-  value,
-  helper,
-  tone,
-}: {
-  icon: React.ElementType;
-  label: string;
-  value: string;
-  helper: string;
-  tone?: "warning" | "success";
-}) {
-  const toneClass = tone === "success"
-    ? "border-[#0B7A52]/25 bg-success-bg text-success"
-    : tone === "warning"
-      ? "border-[#B45309]/25 bg-warning-bg text-warning"
-      : "border-border-ui bg-surface2 text-ink";
-
-  return (
-    <div className={`rounded-xl border p-4 ${toneClass}`}>
-      <p className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider opacity-80">
-        <Icon className="h-4 w-4" />
-        {label}
-      </p>
-      <p className="mt-2 text-3xl font-semibold">{value}</p>
-      <p className="mt-1 text-xs opacity-75">{helper}</p>
-    </div>
-  );
-}
-
 function ScoreTile({ label, value }: { label: string; value: number }) {
   return (
     <div className="rounded-xl border border-border-ui bg-surface2 p-3">
@@ -724,15 +682,6 @@ function RiskBadge({ risk }: { risk: CandidateScorecard["riskLevel"] }) {
       <ShieldAlert className="h-3.5 w-3.5" />
       {risk} risk
     </Badge>
-  );
-}
-
-function MiniCount({ label, value }: { label: string; value: number }) {
-  return (
-    <div className="rounded-lg border border-border-ui bg-surface px-2 py-2">
-      <p className="text-base font-semibold text-ink">{value}</p>
-      <p className="text-[10px] text-ink-muted">{label}</p>
-    </div>
   );
 }
 

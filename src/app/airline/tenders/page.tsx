@@ -64,18 +64,17 @@ export default function AirlineTendersPage() {
               <p className="mt-2 max-w-3xl text-sm leading-6 text-ink-muted">
                 Create market mandates, collect structured GSA applications, evaluate candidates, and award the winning partner from one workspace.
               </p>
+              <div className="mt-4 flex flex-wrap gap-2">
+                <SummaryPill label="Total" value={metrics.total} />
+                <SummaryPill label="Active" value={metrics.active} tone="brand" />
+                <SummaryPill label="Evaluation" value={metrics.evaluation} tone="warning" />
+                <SummaryPill label="Awarded" value={metrics.awarded} tone="success" />
+              </div>
             </div>
             <Link href="/airline/tenders/create" className={buttonVariants({ size: "lg" })}>
               <Plus className="h-4 w-4" />
               Create Tender
             </Link>
-          </div>
-
-          <div className="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-            <PipelineMetric label="Total tenders" value={metrics.total} helper="All tender workspaces" />
-            <PipelineMetric label="Active" value={metrics.active} helper="Published to evaluation" tone="brand" />
-            <PipelineMetric label="In evaluation" value={metrics.evaluation} helper="Applications under review" tone="warning" />
-            <PipelineMetric label="Awarded" value={metrics.awarded} helper="Winner selected" tone="success" />
           </div>
         </section>
 
@@ -154,7 +153,7 @@ function TenderPortfolioCard({
         </div>
       </div>
 
-      <div className="grid gap-4 p-5 lg:grid-cols-[1fr_190px]">
+      <div className="space-y-4 p-5">
         <div className="space-y-3">
           <FactRow icon={MapPin} label="Region" value={tender.countryScope || tender.regions.join(", ") || "Not set"} />
           <FactRow icon={Package} label="Cargo focus" value={cargoTypes.join(", ") || tender.productMix || "Not set"} />
@@ -162,13 +161,9 @@ function TenderPortfolioCard({
           <FactRow icon={UsersRound} label="Applications" value={`${applications.length} total, ${shortlisted} shortlisted, ${accepted} awarded`} />
         </div>
 
-        <div className="flex flex-col justify-between gap-3 rounded-xl border border-border-ui bg-surface2 p-3">
-          <div>
-            <p className="text-xs font-semibold uppercase tracking-wider text-ink-muted">Current stage</p>
-            <p className="mt-2 text-lg font-semibold text-ink">{stage.label}</p>
-            <p className="mt-1 text-xs leading-5 text-ink-muted">{getStageHelper(stage.key)}</p>
-          </div>
-          <Button asChild className="w-full">
+        <div className="flex flex-col gap-3 rounded-xl border border-border-ui bg-surface2 p-3 sm:flex-row sm:items-center sm:justify-between">
+          <p className="text-sm leading-5 text-ink-muted">{getStageHelper(stage.key)}</p>
+          <Button asChild>
             <Link href={`/airline/tenders/${tender.id}`}>
               {stage.key === "draft" ? "Finish Draft" : "Open Workspace"}
               <ChevronRight className="h-4 w-4" />
@@ -192,15 +187,13 @@ function FactRow({ icon: Icon, label, value }: { icon: React.ElementType; label:
   );
 }
 
-function PipelineMetric({
+function SummaryPill({
   label,
   value,
-  helper,
   tone,
 }: {
   label: string;
   value: number;
-  helper: string;
   tone?: "brand" | "warning" | "success";
 }) {
   const toneClass = {
@@ -210,11 +203,10 @@ function PipelineMetric({
   }[tone ?? "brand"];
 
   return (
-    <div className={`rounded-xl border p-4 ${tone ? toneClass : "border-border-ui bg-surface2 text-ink"}`}>
-      <p className="text-xs font-semibold uppercase tracking-wider opacity-75">{label}</p>
-      <p className="mt-2 text-3xl font-semibold">{value}</p>
-      <p className="mt-1 text-xs opacity-75">{helper}</p>
-    </div>
+    <span className={`inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-semibold ${tone ? toneClass : "border-border-ui bg-surface2 text-ink"}`}>
+      <span className="opacity-70">{label}</span>
+      <span>{value}</span>
+    </span>
   );
 }
 
