@@ -906,9 +906,10 @@ async function writeStore(store: TenderWorkflowStore) {
     const connection = await client.connect();
     try {
       await connection.query("begin");
-      await connection.query("delete from live_tenders");
-      await connection.query("delete from live_applications");
+      await lockWorkflowStore(connection);
       await connection.query("delete from live_partner_contracts");
+      await connection.query("delete from live_applications");
+      await connection.query("delete from live_tenders");
 
       for (const tender of store.tenders) {
         await connection.query(
@@ -977,6 +978,7 @@ async function writeStore(store: TenderWorkflowStore) {
 
 async function mutateStore<T>(operation: (store: TenderWorkflowStore) => T): Promise<T> {
   const dbResult = await withPostgresTransaction(async (client) => {
+    await lockWorkflowStore(client);
     const store = await readStoreFromPostgresClient(client);
     const result = operation(store);
     await writeStoreToPostgresClient(client, store);
@@ -1001,11 +1003,9 @@ async function readStoreFromPostgresClient(client: PgQueryable): Promise<TenderW
 }
 
 async function readRawStoreFromPostgresClient(client: PgQueryable): Promise<TenderWorkflowStore> {
-  const [tendersResult, applicationsResult, contractsResult] = await Promise.all([
-    client.query("select data from live_tenders order by created_at desc for update"),
-    client.query("select data from live_applications order by submitted_at desc for update"),
-    client.query("select data from live_partner_contracts order by created_at desc for update"),
-  ]);
+  const tendersResult = await client.query("select data from live_tenders order by created_at desc for update");
+  const applicationsResult = await client.query("select data from live_applications order by submitted_at desc for update");
+  const contractsResult = await client.query("select data from live_partner_contracts order by created_at desc for update");
 
   return {
     tenders: tendersResult.rows.map((row) => rowData<LiveTender>(row)),
@@ -1016,6 +1016,7 @@ async function readRawStoreFromPostgresClient(client: PgQueryable): Promise<Tend
 
 async function readStoreWithPersistedContractReconciliation(): Promise<TenderWorkflowStore> {
   const dbResult = await withPostgresTransaction(async (client) => {
+    await lockWorkflowStore(client);
     const rawStore = await readRawStoreFromPostgresClient(client);
     const reconciledStore = normalizeWorkflowStore(rawStore);
     if (hasContractReconciliationChanges(rawStore, reconciledStore)) {
@@ -1046,9 +1047,9 @@ function hasContractReconciliationChanges(rawStore: TenderWorkflowStore, reconci
 }
 
 async function writeStoreToPostgresClient(client: PgQueryable, store: TenderWorkflowStore) {
-  await client.query("delete from live_tenders");
-  await client.query("delete from live_applications");
   await client.query("delete from live_partner_contracts");
+  await client.query("delete from live_applications");
+  await client.query("delete from live_tenders");
 
   for (const tender of store.tenders) {
     await client.query(
@@ -1098,4 +1099,8 @@ async function writeStoreToPostgresClient(client: PgQueryable, store: TenderWork
       ],
     );
   }
+}
+
+async function lockWorkflowStore(client: PgQueryable) {
+  await client.query("select pg_advisory_xact_lock(hashtextextended($1, 0))", ["airgsa:tender-workflow-store"]);
 }
