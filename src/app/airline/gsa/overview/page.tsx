@@ -16,6 +16,7 @@ import {
   Target,
   UsersRound,
 } from "lucide-react";
+import { AirportCodePicker } from "@/components/dashboard/freight-field-selects";
 import { Topbar } from "@/components/dashboard/topbar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -54,6 +55,11 @@ export default function AirlineGsaOverviewPage() {
   const [routePickerQuery, setRoutePickerQuery] = useState("");
   const [routePickerOrigin, setRoutePickerOrigin] = useState("all");
   const [routePickerStatus, setRoutePickerStatus] = useState<RouteStatusFilter>("eligible");
+  const [newRouteOrigin, setNewRouteOrigin] = useState("");
+  const [newRouteDestination, setNewRouteDestination] = useState("");
+  const [newRouteFrequency, setNewRouteFrequency] = useState("1");
+  const [newRouteOperatingDays, setNewRouteOperatingDays] = useState("");
+  const [newRouteAircraft, setNewRouteAircraft] = useState("");
   const [pendingTransferRouteId, setPendingTransferRouteId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -161,6 +167,39 @@ export default function AirlineGsaOverviewPage() {
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? "Route could not be assigned");
+      await refreshContracts();
+    } catch (err) {
+      setError((err as Error).message);
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function createRoute() {
+    if (!selectedContract) return;
+    setSaving(true);
+    setError(null);
+    try {
+      const res = await fetch(`/api/contracts/${selectedContract.id}/routes`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          route: {
+            origin: newRouteOrigin,
+            destination: newRouteDestination,
+            frequencyPerWeek: Number(newRouteFrequency),
+            operatingDays: newRouteOperatingDays,
+            aircraft: newRouteAircraft,
+          },
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error ?? "Route could not be created");
+      setNewRouteOrigin("");
+      setNewRouteDestination("");
+      setNewRouteFrequency("1");
+      setNewRouteOperatingDays("");
+      setNewRouteAircraft("");
       await refreshContracts();
     } catch (err) {
       setError((err as Error).message);
@@ -357,7 +396,7 @@ export default function AirlineGsaOverviewPage() {
                     <div>
                       <CardTitle>Routes for {selectedPartner.name}</CardTitle>
                       <p className="mt-1 text-sm text-ink-muted">
-                        These routes are copied from the awarded tender and stored on this partner contract.
+                        Assign existing tender routes or create a route from the global airport catalogue.
                       </p>
                     </div>
                     <div className="flex flex-wrap items-center gap-2">
@@ -383,13 +422,81 @@ export default function AirlineGsaOverviewPage() {
                     <div className="rounded-xl border border-brand/20 bg-brand-light/40 p-4">
                       <div className="flex flex-col gap-2 lg:flex-row lg:items-center lg:justify-between">
                         <div>
-                          <p className="font-semibold text-ink">Add routes to this contract</p>
+                          <p className="font-semibold text-ink">Create or assign routes</p>
                           <p className="mt-1 text-sm text-ink-muted">
-                            Filter by origin, assignment status, or search the awarded tender route list.
+                            Search worldwide airports to create a new lane, or assign routes already copied from the awarded tender.
                           </p>
                         </div>
                         <Badge variant="muted">{routeCandidates.length} available in picker</Badge>
                       </div>
+
+                      <div className="mt-4 rounded-xl border border-border-ui bg-surface p-4">
+                        <p className="text-sm font-semibold text-ink">New route</p>
+                        <div className="mt-3 grid gap-3 xl:grid-cols-[1fr_1fr_120px_160px_160px_auto]">
+                          <ContractField label="Origin">
+                            <AirportCodePicker
+                              value={newRouteOrigin}
+                              onChange={setNewRouteOrigin}
+                              placeholder="Search origin..."
+                              disabled={saving}
+                            />
+                          </ContractField>
+                          <ContractField label="Destination">
+                            <AirportCodePicker
+                              value={newRouteDestination}
+                              onChange={setNewRouteDestination}
+                              placeholder="Search destination..."
+                              disabled={saving}
+                            />
+                          </ContractField>
+                          <ContractField label="Freq / week">
+                            <Input
+                              type="number"
+                              min={1}
+                              max={21}
+                              value={newRouteFrequency}
+                              onChange={(event) => setNewRouteFrequency(event.target.value)}
+                              disabled={saving}
+                            />
+                          </ContractField>
+                          <ContractField label="Operating days">
+                            <Input
+                              value={newRouteOperatingDays}
+                              onChange={(event) => setNewRouteOperatingDays(event.target.value)}
+                              placeholder="Mon-Fri"
+                              disabled={saving}
+                            />
+                          </ContractField>
+                          <ContractField label="Aircraft">
+                            <Input
+                              value={newRouteAircraft}
+                              onChange={(event) => setNewRouteAircraft(event.target.value)}
+                              placeholder="A330F"
+                              disabled={saving}
+                            />
+                          </ContractField>
+                          <div className="flex items-end">
+                            <Button
+                              type="button"
+                              disabled={
+                                saving ||
+                                !hasContractPeriod ||
+                                !newRouteOrigin ||
+                                !newRouteDestination ||
+                                newRouteOrigin === newRouteDestination
+                              }
+                              onClick={createRoute}
+                              className="w-full"
+                            >
+                              Create
+                            </Button>
+                          </div>
+                        </div>
+                        {!hasContractPeriod && (
+                          <p className="mt-2 text-xs text-warning">Set contract start and end before creating assigned routes.</p>
+                        )}
+                      </div>
+
                       <div className="mt-4 grid gap-3 xl:grid-cols-[1fr_180px_200px]">
                         <div className="relative">
                           <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-ink-muted" />
@@ -466,7 +573,13 @@ export default function AirlineGsaOverviewPage() {
                           </tr>
                         </thead>
                         <tbody className="divide-y divide-border-ui">
-                          {routeCandidates.map((route) => {
+                          {routeCandidates.length === 0 ? (
+                            <tr>
+                              <td colSpan={6} className="px-4 py-8 text-center text-sm text-ink-muted">
+                                No existing tender routes match the current filters. Create a new route above.
+                              </td>
+                            </tr>
+                          ) : routeCandidates.map((route) => {
                             const owner = getRouteOwner(route.id, selectedContract.tenderId, contracts);
                             const eligibility = getEligibility(selectedContract.id, owner?.contract.id ?? null);
                             return (

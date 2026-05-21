@@ -8,7 +8,12 @@ import {
 } from "@/lib/api/protection";
 import { getSession } from "@/lib/auth/session";
 import { canEditContract } from "@/lib/auth/permissions";
-import { assignRoutesToContract, getLivePartnerContract } from "@/lib/services/tender-workflow-store";
+import {
+  assignRoutesToContract,
+  createAndAssignRouteToContract,
+  getLivePartnerContract,
+  type ContractRouteCreateInput,
+} from "@/lib/services/tender-workflow-store";
 import { appendMandateAuditEvent } from "@/lib/services/mandate-execution-store";
 
 const ROUTE_ASSIGN_BODY_LIMIT_BYTES = 8 * 1024;
@@ -34,12 +39,30 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     return NextResponse.json({ error: "Closed contracts cannot receive route assignments" }, { status: 409 });
   }
 
-  let body: { routeId?: string; routeIds?: string[] };
+  let body: { routeId?: string; routeIds?: string[]; route?: ContractRouteCreateInput };
   try {
-    body = await readJsonWithLimit<{ routeId?: string; routeIds?: string[] }>(req, ROUTE_ASSIGN_BODY_LIMIT_BYTES);
+    body = await readJsonWithLimit<{ routeId?: string; routeIds?: string[]; route?: ContractRouteCreateInput }>(req, ROUTE_ASSIGN_BODY_LIMIT_BYTES);
   } catch (error) {
     if (error instanceof RequestBodyTooLargeError) return bodyTooLargeResponse(error);
     return NextResponse.json({ error: "Invalid JSON body." }, { status: 400 });
+  }
+
+  if (body.route) {
+    try {
+      const contract = await createAndAssignRouteToContract(id, body.route, session.email);
+      if (contract) {
+        await appendMandateAuditEvent(session, {
+          entityType: "route",
+          entityId: contract.id,
+          action: "route.created",
+          summary: `${session.company} created and assigned ${body.route.origin}-${body.route.destination} to ${contract.gsaName}`,
+          metadata: { origin: body.route.origin, destination: body.route.destination },
+        });
+      }
+      return NextResponse.json({ contract });
+    } catch (error) {
+      return NextResponse.json({ error: (error as Error).message }, { status: 409 });
+    }
   }
 
   const routeIds = Array.isArray(body.routeIds) ? body.routeIds : body.routeId ? [body.routeId] : [];

@@ -153,6 +153,14 @@ export type ContractTermsUpdateInput = Partial<
   >
 >;
 
+export type ContractRouteCreateInput = {
+  origin: string;
+  destination: string;
+  frequencyPerWeek: number;
+  operatingDays?: string;
+  aircraft?: string;
+};
+
 export type LiveGsaAssignedRoute = LiveContractRoute & {
   contractId: string;
   tenderId: string;
@@ -365,6 +373,41 @@ export async function assignRoutesToContract(id: string, routeIds: string[], ass
   });
 }
 
+export async function createAndAssignRouteToContract(id: string, input: ContractRouteCreateInput, assignedBy?: string) {
+  return mutateStore((store) => {
+  const contract = store.contracts.find((item) => item.id === id);
+  if (!contract) return null;
+  if (contract.status === "closed") throw new Error("Closed contracts cannot receive route assignments");
+
+  const route = normalizeContractRoute(input);
+  const now = new Date().toISOString();
+  const existingRoute = contract.contractRoutes.find((item) => item.id === route.id);
+  if (existingRoute) {
+    return assignExistingRouteInStore(store, contract, [route.id], assignedBy, now);
+  }
+
+  store.contracts = store.contracts.map((item) => {
+    if (item.tenderId !== contract.tenderId) return item;
+    const shouldAssignToTarget = item.id === id;
+    return {
+      ...item,
+      contractRoutes: [
+        ...item.contractRoutes,
+        {
+          ...route,
+          status: shouldAssignToTarget ? "assigned" as const : "available" as const,
+          assignedAt: shouldAssignToTarget ? now : undefined,
+          assignedBy: shouldAssignToTarget ? assignedBy : undefined,
+        },
+      ],
+      updatedAt: now,
+    };
+  });
+
+  return store.contracts.find((item) => item.id === id) ?? null;
+  });
+}
+
 export async function unassignRouteFromContract(id: string, routeId: string) {
   return mutateStore((store) => {
   const index = store.contracts.findIndex((contract) => contract.id === id);
@@ -389,6 +432,67 @@ export async function unassignRouteFromContract(id: string, routeId: string) {
 
   return store.contracts[index];
   });
+}
+
+function assignExistingRouteInStore(
+  store: TenderWorkflowStore,
+  contract: LivePartnerContract,
+  routeIds: string[],
+  assignedBy: string | undefined,
+  now: string,
+) {
+  const routeIdSet = new Set(routeIds);
+  store.contracts = store.contracts.map((item) => {
+    if (item.tenderId !== contract.tenderId) return item;
+
+    const shouldAssignToTarget = item.id === contract.id;
+    return {
+      ...item,
+      contractRoutes: item.contractRoutes.map((route) => {
+        if (!routeIdSet.has(route.id)) return route;
+        if (shouldAssignToTarget) {
+          return {
+            ...route,
+            status: "assigned" as const,
+            assignedAt: route.assignedAt ?? now,
+            assignedBy,
+          };
+        }
+
+        return {
+          ...route,
+          status: "available" as const,
+          assignedAt: undefined,
+          assignedBy: undefined,
+        };
+      }),
+      updatedAt: now,
+    };
+  });
+
+  return store.contracts.find((item) => item.id === contract.id) ?? null;
+}
+
+function normalizeContractRoute(input: ContractRouteCreateInput): TenderRouteFrequency {
+  const origin = input.origin.trim().toUpperCase();
+  const destination = input.destination.trim().toUpperCase();
+  if (!/^[A-Z]{3}$/.test(origin) || !/^[A-Z]{3}$/.test(destination)) {
+    throw new Error("Origin and destination must be valid 3-letter IATA airport codes");
+  }
+  if (origin === destination) throw new Error("Origin and destination must be different");
+
+  const rawFrequency = Number(input.frequencyPerWeek);
+  if (!Number.isFinite(rawFrequency) || rawFrequency <= 0) throw new Error("Frequency must be a valid number");
+  const frequencyPerWeek = Math.max(1, Math.min(21, Math.round(rawFrequency)));
+
+  return {
+    id: `${origin}-${destination}`,
+    origin,
+    destination,
+    frequencyPerWeek,
+    operatingDays: input.operatingDays?.trim() || undefined,
+    aircraft: input.aircraft?.trim() || undefined,
+  };
 }
 
 export async function listRoutesForGsa(session: Pick<SessionPayload, "companyId" | "company" | "email">) {
