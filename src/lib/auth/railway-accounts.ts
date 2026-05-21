@@ -11,6 +11,7 @@ export type RailwayAccountInput = {
   accessRole?: SessionPayload["accessRole"];
   company: string;
   companyId?: string;
+  avatarPath?: string;
 };
 
 type StoredRailwayAccount = RailwayAccountInput & {
@@ -314,7 +315,7 @@ export async function resetRailwayPassword(token: string, password: string): Pro
 
 export async function updateRailwayAccountProfile(
   email: string,
-  input: { name?: string; company?: string },
+  input: { name?: string; company?: string; avatarPath?: string },
 ): Promise<SessionPayload | null> {
   const account = await getRailwayAccountByEmail(email);
   if (!account || account.status !== "active") return null;
@@ -324,6 +325,7 @@ export async function updateRailwayAccountProfile(
     ...account,
     name: input.name?.trim() || account.name,
     company: input.company?.trim() || account.company,
+    avatarPath: typeof input.avatarPath === "string" ? input.avatarPath.trim() || undefined : account.avatarPath,
     updatedAt: now,
   };
 
@@ -380,6 +382,7 @@ function accountToSession(account: StoredRailwayAccount): SessionPayload {
     name: account.name,
     company: account.company,
     companyId: account.companyId,
+    avatarPath: account.avatarPath,
   };
 }
 

@@ -30,7 +30,7 @@ export type StoredAttachment = {
   id: string;
   contractId?: string;
   entityId?: string;
-  entityType: "control-action-comment" | "monthly-report" | "tender-document" | "application-document" | "airline-logo";
+  entityType: "control-action-comment" | "monthly-report" | "tender-document" | "application-document" | "airline-logo" | "airline-banner" | "user-avatar";
   airlineCompanyId?: string;
   airlineEmail?: string;
   gsaCompanyId?: string;
@@ -259,16 +259,17 @@ function validateAttachmentPayload(input: {
 }) {
   const fileName = input.fileName.trim();
   const extension = fileName.includes(".") ? fileName.split(".").pop()?.toLowerCase() : undefined;
-  const maxBytes = input.entityType === "airline-logo" ? MAX_LOGO_BYTES : MAX_DOCUMENT_BYTES;
+  const isImageProfileAsset = input.entityType === "airline-logo" || input.entityType === "airline-banner" || input.entityType === "user-avatar";
+  const maxBytes = isImageProfileAsset ? MAX_LOGO_BYTES : MAX_DOCUMENT_BYTES;
 
   if (input.size > maxBytes) {
     const limitMb = Math.round(maxBytes / (1024 * 1024));
     throw new Error(`Attachment must be ${limitMb} MB or smaller`);
   }
 
-  if (input.entityType === "airline-logo") {
+  if (isImageProfileAsset) {
     if (!["png", "jpg", "jpeg", "webp"].includes(extension ?? "") || !input.mimeType.startsWith("image/")) {
-      throw new Error("Airline logo must be PNG, JPG or WebP");
+      throw new Error("Profile image must be PNG, JPG or WebP");
     }
     return;
   }

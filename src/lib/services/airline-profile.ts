@@ -7,6 +7,17 @@ const PROFILE_PATH = path.join(process.cwd(), "data", "airline-profile.json");
 
 export type AirlineProfile = {
   logoPath?: string;
+  bannerPath?: string;
+  iataCode?: string;
+  icaoCode?: string;
+  primaryHub?: string;
+  secondaryHub?: string;
+  headquarters?: string;
+  alliance?: string;
+  parentGroup?: string;
+  keyLanes?: string;
+  cargoFocus?: string;
+  compliance?: string;
   updatedAt?: string;
 };
 
@@ -34,7 +45,8 @@ export async function getAirlineProfile(session?: AirlineProfileSession): Promis
 
 export async function saveAirlineProfile(session: AirlineProfileSession, profile: AirlineProfile): Promise<AirlineProfile> {
   const tenantKey = getAirlineProfileTenant(session);
-  const normalized = normalizeProfile({ ...profile, updatedAt: new Date().toISOString() });
+  const current = await getAirlineProfile(session);
+  const normalized = normalizeProfile({ ...current, ...profile, updatedAt: new Date().toISOString() });
   const saved = await withPostgres(async (client) => {
     await client.query(
       `
@@ -88,7 +100,27 @@ async function readFileProfile(): Promise<AirlineProfile> {
 
 function normalizeProfile(profile: Partial<AirlineProfile>): AirlineProfile {
   return {
-    logoPath: typeof profile.logoPath === "string" && profile.logoPath.trim() ? profile.logoPath.trim() : undefined,
+    logoPath: cleanText(profile.logoPath),
+    bannerPath: cleanText(profile.bannerPath),
+    iataCode: cleanCode(profile.iataCode, 2),
+    icaoCode: cleanCode(profile.icaoCode, 3),
+    primaryHub: cleanCode(profile.primaryHub, 4),
+    secondaryHub: cleanCode(profile.secondaryHub, 4),
+    headquarters: cleanText(profile.headquarters),
+    alliance: cleanText(profile.alliance),
+    parentGroup: cleanText(profile.parentGroup),
+    keyLanes: cleanText(profile.keyLanes),
+    cargoFocus: cleanText(profile.cargoFocus),
+    compliance: cleanText(profile.compliance),
     updatedAt: typeof profile.updatedAt === "string" ? profile.updatedAt : undefined,
   };
+}
+
+function cleanText(value: unknown) {
+  return typeof value === "string" && value.trim() ? value.trim().slice(0, 500) : undefined;
+}
+
+function cleanCode(value: unknown, maxLength: number) {
+  const cleaned = typeof value === "string" ? value.trim().toUpperCase().replace(/[^A-Z0-9]/g, "") : "";
+  return cleaned ? cleaned.slice(0, maxLength) : undefined;
 }

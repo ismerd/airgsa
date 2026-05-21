@@ -57,6 +57,6 @@ export async function DELETE() {
     return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
   }
 
-  const profile = await saveAirlineProfile(session, {});
+  const profile = await saveAirlineProfile(session, { logoPath: "" });
   return NextResponse.json({ logoPath: profile.logoPath ?? null });
 }

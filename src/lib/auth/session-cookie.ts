@@ -5,6 +5,7 @@ export type SessionPayload = {
   name: string;
   company: string;
   companyId?: string;
+  avatarPath?: string;
 };
 
 const encoder = new TextEncoder();
@@ -54,6 +55,7 @@ export async function verifySessionCookie(value: string | undefined): Promise<Se
       name: payload.name,
       company: payload.company,
       companyId: payload.companyId,
+      avatarPath: payload.avatarPath,
     };
   } catch {
     return null;
