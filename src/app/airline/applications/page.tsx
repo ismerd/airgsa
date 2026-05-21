@@ -5,7 +5,6 @@ import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import {
   ArrowRight,
-  Award,
   Eye,
   FileText,
   Inbox,
@@ -177,7 +176,6 @@ export default function ApplicationsPage() {
     ? tenderOptions.find((option) => option.tender.id === selectedTender.id) ?? null
     : null;
   const acceptedCount = selectedTenderApplications.filter((application) => application.status === "accepted").length;
-  const topCandidate = candidateRows[0] ?? null;
   const awardSlots = selectedTender ? getAwardSlots(selectedTender) : 1;
   const awardFilled = acceptedCount >= awardSlots;
 
@@ -316,125 +314,93 @@ export default function ApplicationsPage() {
         </Card>
 
         {selectedTender && (
-          <div className="grid gap-5 xl:grid-cols-[1fr_340px]">
-            <section className="space-y-5">
-              <Card>
-                <CardHeader>
-                  <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-                    <div>
-                      <p className="text-xs font-semibold uppercase tracking-[0.18em] text-brand">Decision board</p>
-                      <CardTitle className="mt-1">{selectedTender.title}</CardTitle>
-                      <p className="mt-1 text-sm text-ink-muted">
-                        {selectedTender.countryScope || selectedTender.regions.join(", ")} - {getTenderCargoTypes(selectedTender).join(", ") || selectedTender.productMix || "cargo scope"}
-                      </p>
-                    </div>
-                    {selectedTenderOption && <Badge variant={selectedTenderOption.stage.variant}>{selectedTenderOption.stage.label}</Badge>}
+          <section className="space-y-5">
+            <Card>
+              <CardHeader>
+                <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+                  <div>
+                    <p className="text-xs font-semibold uppercase tracking-[0.18em] text-brand">Decision board</p>
+                    <CardTitle className="mt-1">{selectedTender.title}</CardTitle>
+                    <p className="mt-1 text-sm text-ink-muted">
+                      {selectedTender.countryScope || selectedTender.regions.join(", ")} - {getTenderCargoTypes(selectedTender).join(", ") || selectedTender.productMix || "cargo scope"}
+                    </p>
                   </div>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="grid gap-3 lg:grid-cols-[1fr_180px_210px]">
-                    <div className="relative">
-                      <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-ink-muted" />
-                      <Input
-                        value={query}
-                        onChange={(event) => setQuery(event.target.value)}
-                        placeholder="Search GSA, country, airport, capability..."
-                        className="pl-9"
-                      />
-                    </div>
-                    <Select value={statusFilter} onChange={(event) => setStatusFilter(event.target.value as ApplicationStatusFilter)}>
-                      <option value="all">All statuses</option>
-                      <option value="pending">Pending</option>
-                      <option value="shortlisted">Shortlisted</option>
-                      <option value="accepted">Accepted</option>
-                      <option value="rejected">Rejected</option>
-                    </Select>
-                    <Select value={sortBy} onChange={(event) => setSortBy(event.target.value as ApplicationSort)}>
-                      <option value="score-desc">Sort: fit score</option>
-                      <option value="submitted-desc">Sort: newest</option>
-                      <option value="gsa-asc">Sort: GSA name</option>
-                      <option value="status-asc">Sort: status</option>
-                    </Select>
-                  </div>
-
-                  <div className="flex flex-wrap gap-2">
-                    {(["all", "pending", "shortlisted", "accepted", "rejected"] as ApplicationStatusFilter[]).map((status) => (
-                      <Button
-                        key={status}
-                        type="button"
-                        size="sm"
-                        variant={statusFilter === status ? "default" : "outline"}
-                        onClick={() => setStatusFilter(status)}
-                      >
-                        {status === "all" ? "All" : capitalize(status)}
-                        <span className="ml-1 text-xs opacity-75">({countStatus(selectedTenderApplications, status)})</span>
-                      </Button>
-                    ))}
-                  </div>
-                </CardContent>
-              </Card>
-
-              {candidateRows.length === 0 ? (
-                <EmptyState title="No matching applications" text="Adjust the filters or search term to review more submissions." />
-              ) : (
-                <div className="grid gap-4 xl:grid-cols-2">
-                  {candidateRows.map(({ application, structured, scorecard }) => (
-                    <CandidateReviewCard
-                      key={application.id}
-                      application={application}
-                      structured={structured}
-                      scorecard={scorecard}
-                      awardFilled={awardFilled}
-                      pendingAction={pendingAction}
-                      onView={() => setSelectedApplicationId(application.id)}
-                      onShortlist={() => updateStatus(application, application.status === "shortlisted" ? "pending" : "shortlisted")}
-                      onAccept={() => updateStatus(application, "accepted")}
-                      onReject={() => updateStatus(application, "rejected")}
+                  {selectedTenderOption && <Badge variant={selectedTenderOption.stage.variant}>{selectedTenderOption.stage.label}</Badge>}
+                </div>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="grid gap-3 lg:grid-cols-[1fr_180px_210px]">
+                  <div className="relative">
+                    <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-ink-muted" />
+                    <Input
+                      value={query}
+                      onChange={(event) => setQuery(event.target.value)}
+                      placeholder="Search GSA, country, airport, capability..."
+                      className="pl-9"
                     />
+                  </div>
+                  <Select value={statusFilter} onChange={(event) => setStatusFilter(event.target.value as ApplicationStatusFilter)}>
+                    <option value="all">All statuses</option>
+                    <option value="pending">Pending</option>
+                    <option value="shortlisted">Shortlisted</option>
+                    <option value="accepted">Accepted</option>
+                    <option value="rejected">Rejected</option>
+                  </Select>
+                  <Select value={sortBy} onChange={(event) => setSortBy(event.target.value as ApplicationSort)}>
+                    <option value="score-desc">Sort: fit score</option>
+                    <option value="submitted-desc">Sort: newest</option>
+                    <option value="gsa-asc">Sort: GSA name</option>
+                    <option value="status-asc">Sort: status</option>
+                  </Select>
+                </div>
+
+                <div className="flex flex-wrap gap-2">
+                  {(["all", "pending", "shortlisted", "accepted", "rejected"] as ApplicationStatusFilter[]).map((status) => (
+                    <Button
+                      key={status}
+                      type="button"
+                      size="sm"
+                      variant={statusFilter === status ? "default" : "outline"}
+                      onClick={() => setStatusFilter(status)}
+                    >
+                      {status === "all" ? "All" : capitalize(status)}
+                      <span className="ml-1 text-xs opacity-75">({countStatus(selectedTenderApplications, status)})</span>
+                    </Button>
                   ))}
                 </div>
-              )}
-            </section>
+              </CardContent>
+            </Card>
 
-            <aside className="space-y-5">
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <Award className="h-5 w-5 text-brand" />
-                    Review summary
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  {topCandidate ? (
-                    <>
-                      <div className="rounded-xl border border-brand/20 bg-brand-light p-4">
-                        <p className="text-xs font-semibold uppercase tracking-wider text-brand">Top candidate</p>
-                        <p className="mt-2 text-lg font-semibold text-ink">{topCandidate.application.gsaName}</p>
-                        <p className="mt-1 text-sm text-ink-muted">{topCandidate.scorecard.overallFit}/100 overall fit</p>
-                      </div>
-                      <p className="text-sm leading-6 text-ink-muted">{topCandidate.scorecard.summary}</p>
-                    </>
-                  ) : (
-                    <p className="text-sm text-ink-muted">No applications visible in the current filter.</p>
-                  )}
-                  <Button asChild variant="outline" className="w-full">
-                    <Link href={selectedTender ? `/airline/tenders/${selectedTender.id}` : "/airline/tenders"}>
-                      Continue in full workspace
-                    </Link>
-                  </Button>
-                </CardContent>
-              </Card>
+            {candidateRows.length === 0 ? (
+              <EmptyState title="No matching applications" text="Adjust the filters or search term to review more submissions." />
+            ) : (
+              <div className="grid gap-4 2xl:grid-cols-2">
+                {candidateRows.map(({ application, structured, scorecard }) => (
+                  <CandidateReviewCard
+                    key={application.id}
+                    application={application}
+                    structured={structured}
+                    scorecard={scorecard}
+                    awardFilled={awardFilled}
+                    pendingAction={pendingAction}
+                    onView={() => setSelectedApplicationId(application.id)}
+                    onShortlist={() => updateStatus(application, application.status === "shortlisted" ? "pending" : "shortlisted")}
+                    onAccept={() => updateStatus(application, "accepted")}
+                    onReject={() => updateStatus(application, "rejected")}
+                  />
+                ))}
+              </div>
+            )}
+          </section>
+        )}
 
-              {selectedApplication && selectedApplicationStructured && selectedApplicationScore && (
-                <ApplicationInspector
-                  application={selectedApplication}
-                  structured={selectedApplicationStructured}
-                  scorecard={selectedApplicationScore}
-                  onClose={() => setSelectedApplicationId(null)}
-                />
-              )}
-            </aside>
-          </div>
+        {selectedApplication && selectedApplicationStructured && selectedApplicationScore && (
+          <ApplicationDrawer
+            application={selectedApplication}
+            structured={selectedApplicationStructured}
+            scorecard={selectedApplicationScore}
+            onClose={() => setSelectedApplicationId(null)}
+          />
         )}
       </main>
     </>
@@ -522,19 +488,17 @@ function CandidateReviewCard({
   const pending = pendingAction?.startsWith(`${application.id}:`) ?? false;
   const accepted = application.status === "accepted";
   const canAccept = !accepted && !pending && !awardFilled;
+  const aiInsight = getAiInsight(scorecard);
 
   return (
-    <article className="overflow-hidden rounded-2xl border border-border-ui bg-surface shadow-sm">
+    <article className="overflow-hidden rounded-2xl border border-border-ui bg-surface shadow-sm transition hover:border-brand/30 hover:shadow-md">
       <div className="border-b border-border-ui bg-surface2 p-5">
         <div className="flex items-start justify-between gap-3">
-          <div>
+          <div className="min-w-0">
             <p className="text-lg font-semibold text-ink">{application.gsaName}</p>
             <p className="mt-1 text-sm text-ink-muted">{structured.country} - {application.contactName}</p>
           </div>
-          <div className="text-right">
-            <p className="text-3xl font-semibold text-ink">{scorecard.overallFit}</p>
-            <p className="text-xs text-ink-muted">fit score</p>
-          </div>
+          <ScoreRing value={scorecard.overallFit} />
         </div>
         <div className="mt-4 flex flex-wrap gap-2">
           <StatusBadge application={application} />
@@ -562,12 +526,18 @@ function CandidateReviewCard({
           </div>
         </div>
 
-        <p className="line-clamp-3 text-sm leading-6 text-ink-muted">{scorecard.summary}</p>
-
         <div className="grid gap-2 sm:grid-cols-2">
+          <InfoMini label="Airports" value={structured.coveredAirports.join(", ") || "Not provided"} />
+          <InfoMini label="Monthly tonnage" value={structured.expectedMonthlyTonnage} />
+          <InfoMini label="Capabilities" value={structured.cargoCapabilities.slice(0, 4).join(", ") || "Not provided"} wide />
+        </div>
+
+        <p className="rounded-xl border border-border-ui bg-surface2 p-3 text-sm leading-6 text-ink-muted">{aiInsight}</p>
+
+        <div className="flex flex-wrap gap-2 border-t border-border-ui pt-4">
           <Button variant="outline" onClick={onView}>
             <Eye className="h-4 w-4" />
-            View Application
+            View full application
           </Button>
           <Button
             variant={application.status === "shortlisted" ? "outline" : "secondary"}
@@ -575,7 +545,7 @@ function CandidateReviewCard({
             onClick={onShortlist}
           >
             <Star className="h-4 w-4" />
-            {application.status === "shortlisted" ? "Remove shortlist" : "Shortlist"}
+            {application.status === "shortlisted" ? "Remove shortlist" : "Shortlist ★"}
           </Button>
           <Button disabled={!canAccept && !accepted} onClick={onAccept}>
             <Trophy className="h-4 w-4" />
@@ -599,7 +569,7 @@ function CandidateReviewCard({
   );
 }
 
-function ApplicationInspector({
+function ApplicationDrawer({
   application,
   structured,
   scorecard,
@@ -611,42 +581,68 @@ function ApplicationInspector({
   onClose: () => void;
 }) {
   return (
-    <Card className="sticky top-5">
-      <CardHeader>
-        <div className="flex items-start justify-between gap-3">
+    <div className="fixed inset-0 z-50 flex justify-end bg-navy/55 backdrop-blur-sm" role="dialog" aria-modal="true">
+      <button type="button" className="absolute inset-0 cursor-default" aria-label="Close application details" onClick={onClose} />
+      <aside className="relative flex h-full w-full max-w-2xl flex-col border-l border-border-ui bg-surface shadow-2xl">
+        <div className="flex items-start justify-between gap-4 border-b border-border-ui p-5">
           <div>
-            <CardTitle>{application.gsaName}</CardTitle>
-            <p className="mt-1 text-sm text-ink-muted">Application inspector</p>
+            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-brand">Full application</p>
+            <h2 className="mt-2 text-xl font-semibold text-ink">{application.gsaName}</h2>
+            <p className="mt-1 text-sm text-ink-muted">{structured.country} - {application.contactName}</p>
           </div>
           <Button variant="ghost" size="icon" onClick={onClose}>
             <X className="h-4 w-4" />
           </Button>
         </div>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        <div className="rounded-xl border border-brand/20 bg-brand-light p-4">
-          <p className="text-xs font-semibold uppercase tracking-wider text-brand">Recommendation</p>
-          <p className="mt-2 text-lg font-semibold text-ink">{scorecard.recommendation}</p>
-          <p className="mt-1 text-sm text-ink-muted">{scorecard.overallFit}/100 overall fit</p>
+
+        <div className="min-h-0 flex-1 space-y-4 overflow-y-auto p-5">
+          <div className="rounded-xl border border-brand/20 bg-brand-light p-4">
+            <p className="text-xs font-semibold uppercase tracking-wider text-brand">Recommendation</p>
+            <p className="mt-2 text-lg font-semibold text-ink">{scorecard.recommendation}</p>
+            <p className="mt-1 text-sm text-ink-muted">{scorecard.overallFit}/100 overall fit. {scorecard.summary}</p>
+          </div>
+          <InspectorField label="Company profile" value={structured.companyProfile} />
+          <InspectorField label="Covered airports" value={structured.coveredAirports.join(", ") || "Not provided"} />
+          <InspectorField label="Cargo capabilities" value={structured.cargoCapabilities.join(", ") || "Not provided"} />
+          <InspectorField label="Expected monthly tonnage" value={structured.expectedMonthlyTonnage} />
+          <InspectorField label="Sales strategy" value={structured.salesStrategy} />
+          <InspectorField label="First 90 days plan" value={structured.first90DaysPlan} />
+          <InspectorField label="Named account coverage" value={application.namedAccountCoverage} />
+          <InspectorField label="Commercial proposal" value={application.proposedCommission} />
+          <InspectorField label="Launch timeline" value={application.launchTimeline} />
         </div>
-        <InspectorField label="Company profile" value={structured.companyProfile} />
-        <InspectorField label="Covered airports" value={structured.coveredAirports.join(", ") || "Not provided"} />
-        <InspectorField label="Cargo capabilities" value={structured.cargoCapabilities.join(", ") || "Not provided"} />
-        <InspectorField label="Expected monthly tonnage" value={structured.expectedMonthlyTonnage} />
-        <InspectorField label="Sales strategy" value={structured.salesStrategy} />
-        <InspectorField label="First 90 days plan" value={structured.first90DaysPlan} />
-        <Button asChild variant="outline" className="w-full">
-          <Link href={`/airline/applications/${application.id}`}>
-            Full application page
-            <FileText className="h-4 w-4" />
-          </Link>
-        </Button>
-      </CardContent>
-    </Card>
+
+        <div className="border-t border-border-ui p-5">
+          <Button asChild variant="outline" className="w-full">
+            <Link href={`/airline/applications/${application.id}`}>
+              Open full application page
+              <FileText className="h-4 w-4" />
+            </Link>
+          </Button>
+        </div>
+      </aside>
+    </div>
+  );
+}
+
+function ScoreRing({ value }: { value: number }) {
+  const color = getScoreColor(value);
+  return (
+    <div
+      className="grid h-16 w-16 shrink-0 place-items-center rounded-full"
+      style={{ background: `conic-gradient(${color} ${value * 3.6}deg, var(--surface3) 0deg)` }}
+      aria-label={`Fit score ${value} out of 100`}
+    >
+      <div className="grid h-12 w-12 place-items-center rounded-full bg-surface text-center">
+        <span className="text-lg font-bold leading-none text-ink">{value}</span>
+        <span className="text-[9px] font-semibold uppercase text-ink-muted">fit</span>
+      </div>
+    </div>
   );
 }
 
 function ScoreTile({ label, value }: { label: string; value: number }) {
+  const color = getScoreColor(value);
   return (
     <div className="rounded-xl border border-border-ui bg-surface2 p-3">
       <div className="flex items-center justify-between text-sm">
@@ -654,8 +650,17 @@ function ScoreTile({ label, value }: { label: string; value: number }) {
         <span className="font-semibold text-ink">{value}</span>
       </div>
       <div className="mt-2 h-2 overflow-hidden rounded-full bg-surface3">
-        <div className="h-full rounded-full bg-brand" style={{ width: `${value}%` }} />
+        <div className="h-full rounded-full" style={{ width: `${value}%`, backgroundColor: color }} />
       </div>
+    </div>
+  );
+}
+
+function InfoMini({ label, value, wide }: { label: string; value: string; wide?: boolean }) {
+  return (
+    <div className={`rounded-xl border border-border-ui bg-surface2 p-3 ${wide ? "sm:col-span-2" : ""}`}>
+      <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-ink-muted">{label}</p>
+      <p className="mt-1 line-clamp-2 text-sm font-medium leading-5 text-ink">{value || "Not provided"}</p>
     </div>
   );
 }
@@ -692,6 +697,25 @@ function InspectorField({ label, value }: { label: string; value: string }) {
       <p className="mt-2 text-sm leading-6 text-ink">{value || "Not provided"}</p>
     </div>
   );
+}
+
+function getAiInsight(scorecard: CandidateScorecard) {
+  const action =
+    scorecard.recommendation === "Strong contender"
+      ? "Best next step: move quickly to award or final commercial validation."
+      : scorecard.recommendation === "Shortlist"
+        ? "Best next step: shortlist and validate the missing readiness or commercial signals."
+        : scorecard.recommendation === "Review carefully"
+          ? "Best next step: request clarification before advancing."
+          : "Best next step: do not advance unless strategic context changes.";
+
+  return `${scorecard.summary} ${action}`;
+}
+
+function getScoreColor(value: number) {
+  if (value < 40) return "#DC2626";
+  if (value <= 70) return "#D97706";
+  return "#059669";
 }
 
 function EmptyState({ title, text }: { title: string; text: string }) {
