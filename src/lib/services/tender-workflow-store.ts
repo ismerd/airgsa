@@ -282,7 +282,7 @@ export async function getLiveApplication(id: string) {
 }
 
 export async function listLivePartnerContracts() {
-  const store = await readStore();
+  const store = await readStoreWithPersistedContractReconciliation();
   return store.contracts.sort((left, right) => right.createdAt.localeCompare(left.createdAt));
 }
 
@@ -997,16 +997,51 @@ type PgQueryable = {
 };
 
 async function readStoreFromPostgresClient(client: PgQueryable): Promise<TenderWorkflowStore> {
+  return normalizeWorkflowStore(await readRawStoreFromPostgresClient(client));
+}
+
+async function readRawStoreFromPostgresClient(client: PgQueryable): Promise<TenderWorkflowStore> {
   const [tendersResult, applicationsResult, contractsResult] = await Promise.all([
     client.query("select data from live_tenders order by created_at desc for update"),
     client.query("select data from live_applications order by submitted_at desc for update"),
     client.query("select data from live_partner_contracts order by created_at desc for update"),
   ]);
 
-  return normalizeWorkflowStore({
+  return {
     tenders: tendersResult.rows.map((row) => rowData<LiveTender>(row)),
     applications: applicationsResult.rows.map((row) => rowData<LiveTenderApplication>(row)),
     contracts: contractsResult.rows.map((row) => rowData<LivePartnerContract>(row)),
+  };
+}
+
+async function readStoreWithPersistedContractReconciliation(): Promise<TenderWorkflowStore> {
+  const dbResult = await withPostgresTransaction(async (client) => {
+    const rawStore = await readRawStoreFromPostgresClient(client);
+    const reconciledStore = normalizeWorkflowStore(rawStore);
+    if (hasContractReconciliationChanges(rawStore, reconciledStore)) {
+      await writeStoreToPostgresClient(client, reconciledStore);
+    }
+    return reconciledStore;
+  });
+  if (dbResult) return dbResult;
+
+  assertFileStoreFallbackAllowed("Tender workflow store");
+  return readFileStore();
+}
+
+function hasContractReconciliationChanges(rawStore: TenderWorkflowStore, reconciledStore: TenderWorkflowStore) {
+  if (rawStore.contracts.length !== reconciledStore.contracts.length) return true;
+
+  const rawById = new Map(rawStore.contracts.map((contract) => [contract.id, contract]));
+  return reconciledStore.contracts.some((contract) => {
+    const raw = rawById.get(contract.id);
+    if (!raw) return true;
+    if ((raw.contractRoutes?.length ?? 0) !== contract.contractRoutes.length) return true;
+    if (raw.contactName !== contract.contactName && contract.contactName) return true;
+    if (raw.email !== contract.email && contract.email) return true;
+    if (raw.gsaCompanyId !== contract.gsaCompanyId && contract.gsaCompanyId) return true;
+    if (raw.airlineCompanyId !== contract.airlineCompanyId && contract.airlineCompanyId) return true;
+    return false;
   });
 }
 
