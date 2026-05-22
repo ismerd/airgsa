@@ -30,7 +30,7 @@ export type StoredAttachment = {
   id: string;
   contractId?: string;
   entityId?: string;
-  entityType: "control-action-comment" | "monthly-report" | "tender-document" | "application-document" | "airline-logo" | "airline-banner" | "user-avatar";
+  entityType: "control-action-comment" | "monthly-report" | "tender-document" | "application-document" | "airline-logo" | "airline-banner" | "gsa-logo" | "gsa-banner" | "user-avatar";
   airlineCompanyId?: string;
   airlineEmail?: string;
   gsaCompanyId?: string;
@@ -259,7 +259,7 @@ function validateAttachmentPayload(input: {
 }) {
   const fileName = input.fileName.trim();
   const extension = fileName.includes(".") ? fileName.split(".").pop()?.toLowerCase() : undefined;
-  const isImageProfileAsset = input.entityType === "airline-logo" || input.entityType === "airline-banner" || input.entityType === "user-avatar";
+  const isImageProfileAsset = input.entityType === "airline-logo" || input.entityType === "airline-banner" || input.entityType === "gsa-logo" || input.entityType === "gsa-banner" || input.entityType === "user-avatar";
   const maxBytes = isImageProfileAsset ? MAX_LOGO_BYTES : MAX_DOCUMENT_BYTES;
 
   if (input.size > maxBytes) {

@@ -345,6 +345,12 @@ export async function updateRailwayAccountProfile(
   return saved ? accountToSession(saved) : null;
 }
 
+export async function getRailwayAccountSession(email: string): Promise<SessionPayload | null> {
+  const account = await getRailwayAccountByEmail(email);
+  if (!account || account.status !== "active") return null;
+  return accountToSession(account);
+}
+
 async function getRailwayAccountByEmail(email: string): Promise<StoredRailwayAccount | null> {
   const normalizedEmail = email.trim().toLowerCase();
   const account = await withPostgres(async (client) => {

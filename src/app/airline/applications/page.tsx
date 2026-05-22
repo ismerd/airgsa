@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import {
@@ -530,7 +530,7 @@ function CandidateReviewCard({
         </div>
 
         <div className="grid gap-2 sm:grid-cols-2">
-          <InfoMini label="Airports" value={structured.coveredAirports.join(", ") || "Not provided"} />
+          <InfoMini label="Coverage" value={getCoverageScopeLabel(application, structured)} />
           <InfoMini label="Monthly tonnage" value={structured.expectedMonthlyTonnage} />
           <InfoMini label="Capabilities" value={structured.cargoCapabilities.slice(0, 4).join(", ") || "Not provided"} wide />
         </div>
@@ -599,20 +599,68 @@ function ApplicationDrawer({
         </div>
 
         <div className="min-h-0 flex-1 space-y-4 overflow-y-auto p-5">
-          <div className="rounded-xl border border-brand/20 bg-brand-light p-4">
-            <p className="text-xs font-semibold uppercase tracking-wider text-brand">Recommendation</p>
-            <p className="mt-2 text-lg font-semibold text-ink">{scorecard.recommendation}</p>
-            <p className="mt-1 text-sm text-ink-muted">{scorecard.overallFit}/100 overall fit. {scorecard.summary}</p>
+          <div className={`rounded-2xl border p-4 ${getRecommendationPanelClass(scorecard)}`}>
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-start">
+              <ScoreRing value={scorecard.overallFit} />
+              <div className="min-w-0 flex-1">
+                <div className="flex flex-wrap items-center gap-2">
+                  <p className="text-xs font-semibold uppercase tracking-wider text-current opacity-75">Recommendation</p>
+                  <RiskBadge risk={scorecard.riskLevel} />
+                </div>
+                <p className="mt-2 text-xl font-semibold text-ink">{scorecard.recommendation}</p>
+                <p className="mt-1 text-sm leading-6 text-ink-muted">{getRecommendationAction(scorecard)}</p>
+              </div>
+            </div>
+
+            <div className="mt-4 grid gap-2 sm:grid-cols-4">
+              <DrawerScoreMetric label="Market" value={scorecard.marketCoverageScore} />
+              <DrawerScoreMetric label="Sales" value={scorecard.salesStrengthScore} />
+              <DrawerScoreMetric label="Cargo" value={scorecard.cargoCapabilityScore} />
+              <DrawerScoreMetric label="Commercial" value={scorecard.commercialPlanScore} />
+            </div>
           </div>
-          <InspectorField label="Company profile" value={structured.companyProfile} />
-          <InspectorField label="Covered airports" value={structured.coveredAirports.join(", ") || "Not provided"} />
-          <InspectorField label="Cargo capabilities" value={structured.cargoCapabilities.join(", ") || "Not provided"} />
-          <InspectorField label="Expected monthly tonnage" value={structured.expectedMonthlyTonnage} />
-          <InspectorField label="Sales strategy" value={structured.salesStrategy} />
-          <InspectorField label="First 90 days plan" value={structured.first90DaysPlan} />
-          <InspectorField label="Named account coverage" value={application.namedAccountCoverage} />
-          <InspectorField label="Commercial proposal" value={application.proposedCommission} />
-          <InspectorField label="Launch timeline" value={application.launchTimeline} />
+
+          <div className="grid gap-3 md:grid-cols-2">
+            <DecisionSignalCard
+              title="What supports this bid"
+              items={structured.strengths.length ? structured.strengths.slice(0, 5) : ["No strong signal detected yet"]}
+              tone="positive"
+            />
+            <DecisionSignalCard
+              title="What needs attention"
+              items={getApplicationGaps(application, structured, scorecard)}
+              tone="risk"
+            />
+          </div>
+
+          <div className="rounded-2xl border border-border-ui bg-surface2 p-4">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <div>
+                <p className="text-sm font-semibold text-ink">Application snapshot</p>
+                <p className="mt-1 text-xs leading-5 text-ink-muted">Grouped by how the airline will compare this bid.</p>
+              </div>
+              <Badge>{structured.documentsCount} doc{structured.documentsCount === 1 ? "" : "s"}</Badge>
+            </div>
+            <div className="mt-4 space-y-3">
+              <SnapshotSection title="Coverage fit" helper="Where this GSA says it can actively cover the mandate.">
+                <SnapshotFact label="Coverage scope" value={getCoverageScopeLabel(application, structured)} />
+                <SnapshotFact label="Monthly target" value={structured.expectedMonthlyTonnage} />
+              </SnapshotSection>
+              <SnapshotSection title="Commercial offer" helper="Commercial commitments the airline can compare across bids.">
+                <SnapshotFact label="Proposal" value={application.proposedCommission} />
+                <SnapshotFact label="Account coverage" value={application.namedAccountCoverage || "Not provided"} />
+              </SnapshotSection>
+              <SnapshotSection title="Execution readiness" helper="How the GSA plans to activate after award.">
+                <SnapshotFact label="Sales activation" value={structured.salesStrategy} wide />
+                <SnapshotFact label="Launch readiness" value={structured.first90DaysPlan} wide />
+                <SnapshotFact label="Launch timeline" value={application.launchTimeline} />
+                <SnapshotFact label="Cargo capability" value={structured.cargoCapabilities.join(", ") || "Not provided"} />
+              </SnapshotSection>
+              <SnapshotSection title="Company context" helper="Profile information, not the primary decision driver.">
+                <SnapshotFact label="Profile" value={structured.companyProfile} wide />
+              </SnapshotSection>
+            </div>
+          </div>
         </div>
 
         <div className="border-t border-border-ui p-5">
@@ -659,6 +707,73 @@ function ScoreTile({ label, value }: { label: string; value: number }) {
   );
 }
 
+function DrawerScoreMetric({ label, value }: { label: string; value: number }) {
+  const color = getScoreColor(value);
+  return (
+    <div className="rounded-xl border border-white/40 bg-white/45 p-3">
+      <div className="flex items-center justify-between gap-2">
+        <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-ink-muted">{label}</p>
+        <p className="text-sm font-bold text-ink">{value}</p>
+      </div>
+      <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-surface3">
+        <div className="h-full rounded-full" style={{ width: `${value}%`, backgroundColor: color }} />
+      </div>
+    </div>
+  );
+}
+
+function DecisionSignalCard({ title, items, tone }: { title: string; items: string[]; tone: "positive" | "risk" }) {
+  const isPositive = tone === "positive";
+  return (
+    <div className={`rounded-2xl border p-4 ${isPositive ? "border-success/20 bg-success-bg/40" : "border-warning/25 bg-warning-bg/35"}`}>
+      <p className={`text-xs font-semibold uppercase tracking-wider ${isPositive ? "text-success" : "text-warning"}`}>{title}</p>
+      <div className="mt-3 flex flex-wrap gap-2">
+        {items.map((item) => (
+          <span
+            key={item}
+            className={`rounded-full border px-3 py-1.5 text-xs font-semibold ${
+              isPositive
+                ? "border-success/20 bg-surface text-success"
+                : "border-warning/25 bg-surface text-warning"
+            }`}
+          >
+            {item}
+          </span>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function SnapshotSection({
+  title,
+  helper,
+  children,
+}: {
+  title: string;
+  helper: string;
+  children: ReactNode;
+}) {
+  return (
+    <section className="rounded-2xl border border-border-ui bg-surface p-4">
+      <div>
+        <p className="text-sm font-semibold text-ink">{title}</p>
+        <p className="mt-1 text-xs leading-5 text-ink-muted">{helper}</p>
+      </div>
+      <div className="mt-3 grid gap-3 md:grid-cols-2">{children}</div>
+    </section>
+  );
+}
+
+function SnapshotFact({ label, value, wide }: { label: string; value: string; wide?: boolean }) {
+  return (
+    <div className={`rounded-xl border border-border-ui bg-surface2 p-3 ${wide ? "md:col-span-2" : ""}`}>
+      <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-ink-muted">{label}</p>
+      <p className="mt-1.5 text-sm font-medium leading-6 text-ink">{value || "Not provided"}</p>
+    </div>
+  );
+}
+
 function InfoMini({ label, value, wide }: { label: string; value: string; wide?: boolean }) {
   return (
     <div className={`rounded-xl border border-border-ui bg-surface2 p-3 ${wide ? "sm:col-span-2" : ""}`}>
@@ -693,13 +808,53 @@ function RiskBadge({ risk }: { risk: CandidateScorecard["riskLevel"] }) {
   );
 }
 
-function InspectorField({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="rounded-xl border border-border-ui bg-surface2 p-3">
-      <p className="text-xs font-semibold uppercase tracking-wider text-ink-muted">{label}</p>
-      <p className="mt-2 text-sm leading-6 text-ink">{value || "Not provided"}</p>
-    </div>
-  );
+function getRecommendationPanelClass(scorecard: CandidateScorecard) {
+  if (scorecard.recommendation === "Strong contender") return "border-success/25 bg-success-bg/55 text-success";
+  if (scorecard.recommendation === "Shortlist") return "border-brand/25 bg-brand-light text-brand";
+  if (scorecard.recommendation === "Review carefully") return "border-warning/30 bg-warning-bg/50 text-warning";
+  return "border-danger/25 bg-danger-bg/50 text-danger";
+}
+
+function getRecommendationAction(scorecard: CandidateScorecard) {
+  if (scorecard.recommendation === "Strong contender") {
+    return `High fit at ${scorecard.overallFit}/100. Move to award or final commercial validation.`;
+  }
+  if (scorecard.recommendation === "Shortlist") {
+    return `Good candidate at ${scorecard.overallFit}/100. Shortlist and validate the weaker signals before award.`;
+  }
+  if (scorecard.recommendation === "Review carefully") {
+    return `Mixed fit at ${scorecard.overallFit}/100. Clarify the gaps before moving this GSA forward.`;
+  }
+  return `Low fit at ${scorecard.overallFit}/100. Reject unless there is a strategic reason to keep the bid.`;
+}
+
+function getApplicationGaps(
+  application: LiveTenderApplication,
+  structured: ReturnType<typeof toStructuredApplication>,
+  scorecard: CandidateScorecard,
+) {
+  const gaps = [
+    scorecard.marketCoverageScore < 60 ? "Market coverage needs validation" : "",
+    scorecard.salesStrengthScore < 60 ? "Sales proof is weak" : "",
+    scorecard.cargoCapabilityScore < 60 ? "Cargo capability mismatch" : "",
+    scorecard.commercialPlanScore < 60 ? "Commercial plan needs detail" : "",
+    !application.monthlySalesTarget ? "Monthly target missing" : "",
+    !application.launchTimeline ? "Launch timeline missing" : "",
+    structured.documentsCount === 0 ? "No supporting documents" : "",
+  ].filter(Boolean);
+
+  return gaps.length ? gaps.slice(0, 5) : ["No major gaps flagged"];
+}
+
+function getCoverageScopeLabel(
+  application: LiveTenderApplication,
+  structured: ReturnType<typeof toStructuredApplication>,
+) {
+  const selectedScope = [...application.markets, ...application.coverage].filter(Boolean);
+  if (selectedScope.length > 0) return Array.from(new Set(selectedScope)).join(", ");
+  if (structured.coveredAirports.length > 0) return structured.coveredAirports.join(", ");
+  if (structured.offices.length > 0) return structured.offices.join(", ");
+  return "Not selected in application";
 }
 
 function getAiInsight(scorecard: CandidateScorecard) {

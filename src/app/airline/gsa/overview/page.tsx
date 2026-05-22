@@ -7,6 +7,7 @@ import {
   CalendarDays,
   CheckCircle2,
   ClipboardCheck,
+  FileCheck2,
   LockKeyhole,
   PackageCheck,
   Plus,
@@ -64,6 +65,8 @@ export default function AirlineGsaOverviewPage() {
   const [routePickerQuery, setRoutePickerQuery] = useState("");
   const [routePickerOrigin, setRoutePickerOrigin] = useState("all");
   const [routePickerStatus, setRoutePickerStatus] = useState<RouteStatusFilter>("eligible");
+  const [routeManagerOpen, setRouteManagerOpen] = useState(false);
+  const [amendingTerms, setAmendingTerms] = useState(false);
   const [newRouteOrigin, setNewRouteOrigin] = useState("");
   const [newRouteDestination, setNewRouteDestination] = useState("");
   const [newRouteFrequency, setNewRouteFrequency] = useState("1");
@@ -89,6 +92,13 @@ export default function AirlineGsaOverviewPage() {
     }
   }, [contracts, selectedContractId]);
 
+  useEffect(() => {
+    setRouteManagerOpen(false);
+    setRoutePickerOpen(false);
+    setRoutePickerQuery("");
+    setAmendingTerms(false);
+  }, [selectedContractId]);
+
   const selectedContract = contracts.find((contract) => contract.id === selectedContractId) ?? null;
   const selectedPartner = selectedContract ? buildPartnerProfile(selectedContract) : null;
   const selectedRoutes = selectedContract?.contractRoutes.filter((route) => route.status === "assigned") ?? [];
@@ -102,6 +112,11 @@ export default function AirlineGsaOverviewPage() {
   );
   const weeklyFrequency = selectedRoutes.reduce((sum, route) => sum + route.frequencyPerWeek, 0);
   const origins = Array.from(new Set((selectedContract?.contractRoutes ?? []).map((route) => route.origin))).sort();
+  const routeScopeRequired = selectedContract ? isRouteScopeRequired(selectedContract) : false;
+  const routeManagerVisible = Boolean(selectedContract && (routeManagerOpen || routePickerOpen || routeScopeRequired || selectedRoutes.length > 0));
+  const activationState = selectedContract
+    ? getActivationState(selectedContract, selectedRoutes.length)
+    : null;
   const hasContractPeriod = Boolean(selectedContract?.startDate && selectedContract.endDate);
   const routeCandidates = (selectedContract?.contractRoutes ?? []).filter((route) => {
     const owner = selectedContract ? getRouteOwner(route.id, selectedContract.tenderId, contracts) : null;
@@ -243,12 +258,12 @@ export default function AirlineGsaOverviewPage() {
 
   return (
     <>
-      <Topbar title="GSA partner workspace" subtitle="Contract-bound route allocation" />
+      <Topbar title="Partner Activation" subtitle="Turn awarded GSAs into active contracts, scopes, and performance tracking" />
       <main className="space-y-5 p-5">
         <div className="grid gap-4 md:grid-cols-3">
-          <Metric label="Accepted GSAs" value={loading ? "..." : String(contracts.length)} />
-          <Metric label="Assigned routes" value={String(assignedRouteCount)} />
-          <Metric label="Contract scopes" value={String(new Set(contracts.map((contract) => contract.tenderId)).size)} />
+          <Metric label="Accepted partners" value={loading ? "..." : String(contracts.length)} />
+          <Metric label="Assigned routes" value={loading ? "..." : String(assignedRouteCount)} />
+          <Metric label="Active mandates" value={loading ? "..." : String(new Set(contracts.map((contract) => contract.tenderId)).size)} />
         </div>
 
         {error && (
@@ -257,14 +272,16 @@ export default function AirlineGsaOverviewPage() {
           </div>
         )}
 
-        {!loading && contracts.length === 0 ? (
+        {loading ? (
+          <GsaOverviewLoading />
+        ) : contracts.length === 0 ? (
           <Card>
             <CardContent className="flex flex-col items-center gap-4 p-10 text-center">
               <UsersRound className="h-10 w-10 text-ink-muted/50" />
               <div>
                 <p className="text-lg font-semibold text-ink">No accepted GSAs yet</p>
                 <p className="mt-1 text-sm text-ink-muted">
-                  Accept a GSA application first. Accepted partners become available for contract-bound route allocation here.
+                  Accept a GSA application first. Accepted partners become activation workspaces here.
                 </p>
               </div>
               <Button asChild>
@@ -283,11 +300,11 @@ export default function AirlineGsaOverviewPage() {
                   <div>
                     <CardTitle className="flex items-center gap-2">
                       <ShieldCheck className="h-5 w-5 text-brand" />
-                      Working GSAs
+                      Active GSA partners
                     </CardTitle>
-                    <p className="mt-1 text-sm text-ink-muted">
-                      Accepted awards are persisted as partner contracts and can receive targets and route allocations.
-                    </p>
+                      <p className="mt-1 text-sm text-ink-muted">
+                        Awarded GSAs move here from the decision room. Pick one partner and follow the next required activation step.
+                      </p>
                   </div>
                   <Badge variant="muted">{contracts.length} active contract{contracts.length === 1 ? "" : "s"}</Badge>
                 </div>
@@ -305,119 +322,236 @@ export default function AirlineGsaOverviewPage() {
               </CardContent>
             </Card>
 
-            {selectedContract && selectedPartner && (
+            {selectedContract && selectedPartner && activationState && (
               <Card>
                 <CardHeader>
                   <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
                     <div>
                       <CardTitle className="flex items-center gap-2">
                         <ClipboardCheck className="h-5 w-5 text-brand" />
-                        Contract controls for {selectedPartner.name}
+                        Activate {selectedPartner.name}
                       </CardTitle>
                       <p className="mt-1 text-sm text-ink-muted">
-                        Set the working conditions first, then assign routes from this awarded tender scope.
+                        Use the award defaults first. Change terms only if the signed agreement differs.
                       </p>
                     </div>
-                    <Button asChild size="sm" variant="outline">
-                      <Link href={`/airline/gsa/${selectedPartner.id}`}>Open full profile</Link>
-                    </Button>
+                    <div className="flex flex-wrap gap-2">
+                      <Button asChild size="sm" variant="outline">
+                        <Link href={`/airline/gsa/${selectedPartner.id}`}>Open full profile</Link>
+                      </Button>
+                      <Button
+                        size="sm"
+                        disabled={saving || activationState.actionDisabled}
+                        onClick={() => {
+                          if (activationState.action === "amend") setAmendingTerms(true);
+                          if (activationState.action === "routes") {
+                            setRouteManagerOpen(true);
+                            setRoutePickerOpen(true);
+                          }
+                          if (activationState.action === "activate") patchContract({ status: "active" });
+                        }}
+                      >
+                        {activationState.actionLabel}
+                        <ArrowRight className="h-4 w-4" />
+                      </Button>
+                    </div>
                   </div>
                 </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="grid gap-3 lg:grid-cols-5">
-                    <ContractField label="Contract start">
-                      <Input
-                        type="date"
-                        value={selectedContract.startDate ?? ""}
-                        onChange={(event) => patchContract({ startDate: event.target.value })}
-                      />
-                    </ContractField>
-                    <ContractField label="Contract end">
-                      <Input
-                        type="date"
-                        min={selectedContract.startDate}
-                        value={selectedContract.endDate ?? ""}
-                        onChange={(event) => patchContract({ endDate: event.target.value })}
-                      />
-                    </ContractField>
-                    <ContractField label="Target load factor">
-                      <Input
-                        type="number"
-                        min={0}
-                        max={100}
-                        value={selectedContract.targetLoadFactor ?? ""}
-                        placeholder="82"
-                        aria-label="Target load factor percent"
-                        onChange={(event) =>
-                          patchContract({ targetLoadFactor: event.target.value ? Number(event.target.value) : undefined })
-                        }
-                      />
-                    </ContractField>
-                    <ContractField label="Monthly tonnage target">
-                      <Input
-                        type="number"
-                        min={0}
-                        value={selectedContract.monthlyTonnageTargetKg ? Math.round(selectedContract.monthlyTonnageTargetKg / 1000) : ""}
-                        placeholder="1500"
-                        aria-label="Monthly tonnage target in tons"
-                        onChange={(event) =>
-                          patchContract({ monthlyTonnageTargetKg: event.target.value ? Number(event.target.value) * 1000 : undefined })
-                        }
-                      />
-                    </ContractField>
-                    <ContractField label="Commission %">
-                      <Input
-                        type="number"
-                        min={0}
-                        max={100}
-                        step="0.1"
-                        value={selectedContract.commissionRate ?? ""}
-                        placeholder="5.0"
-                        aria-label="Commission percentage"
-                        onChange={(event) =>
-                          patchContract({ commissionRate: event.target.value ? Number(event.target.value) : undefined })
-                        }
-                      />
-                    </ContractField>
-                  </div>
+                <CardContent className="space-y-5">
+                  <div className="grid gap-4 xl:grid-cols-[1.1fr_1fr]">
+                    <div className={`rounded-2xl border p-4 ${activationState.toneClass}`}>
+                      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                        <div>
+                          <Badge variant={activationState.badgeVariant}>{activationState.badge}</Badge>
+                          <p className="mt-3 text-xl font-semibold text-ink">{activationState.title}</p>
+                          <p className="mt-1 max-w-2xl text-sm leading-6 text-ink-muted">{activationState.description}</p>
+                        </div>
+                        <div className="rounded-xl border border-border-ui bg-surface px-3 py-2 text-right">
+                          <p className="text-xs font-semibold uppercase tracking-wider text-ink-muted">Current status</p>
+                          <p className="mt-1 text-sm font-semibold capitalize text-ink">{selectedContract.status}</p>
+                        </div>
+                      </div>
+                      <div className="mt-4 grid gap-3 md:grid-cols-3">
+                        <ActivationStep
+                          title="Terms"
+                          value={hasRequiredTerms(selectedContract) ? "Ready" : "Needs review"}
+                          helper={hasRequiredTerms(selectedContract) ? "Copied from tender and GSA offer" : "A required contract default is missing"}
+                          ready={hasRequiredTerms(selectedContract)}
+                        />
+                        <ActivationStep
+                          title="Scope"
+                          value={getScopeStepValue(selectedContract, selectedRoutes.length)}
+                          helper={getScopeStepHelper(selectedContract, selectedRoutes.length)}
+                          ready={!isRouteScopeRequired(selectedContract) || selectedRoutes.length > 0}
+                        />
+                        <ActivationStep
+                          title="Tracking"
+                          value={selectedContract.reportingCadence ? "Reporting set" : "Needs cadence"}
+                          helper={formatReportingCadence(selectedContract.reportingCadence)}
+                          ready={Boolean(selectedContract.reportingCadence)}
+                        />
+                      </div>
+                    </div>
 
-                  <div className="grid gap-3 lg:grid-cols-[260px_1fr]">
-                    <ContractField label="Reporting cadence">
-                      <Select
-                        value={selectedContract.reportingCadence ?? "weekly"}
-                        onChange={(event) => patchContract({ reportingCadence: event.target.value })}
-                      >
-                        <option value="weekly">Weekly sales review</option>
-                        <option value="biweekly">Bi-weekly review</option>
-                        <option value="monthly">Monthly QBR pack</option>
-                      </Select>
-                    </ContractField>
-                    <div className="rounded-xl border border-border-ui bg-surface2 px-4 py-3 text-sm text-ink-muted">
-                      These values define the measurable contract controls used for route assignment, GSA reporting, and performance dashboards.
+                    <div className="rounded-2xl border border-border-ui bg-surface2 p-4">
+                      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                        <div>
+                          <p className="text-sm font-semibold text-ink">Mandate source</p>
+                          <p className="mt-1 text-xs leading-5 text-ink-muted">
+                            These are the decisions from the tender. They should not be re-entered here.
+                          </p>
+                        </div>
+                        <Badge variant="muted">{getCommercialModelLabel(selectedContract)}</Badge>
+                      </div>
+                      <div className="mt-4 grid gap-2 sm:grid-cols-2">
+                        <ReadOnlyFact label="Mandate" value={getMandateLabel(selectedContract)} />
+                        <ReadOnlyFact label="Coverage" value={getCoverageLabel(selectedContract)} />
+                        <ReadOnlyFact label="Award" value={getAwardLabel(selectedContract)} />
+                        <ReadOnlyFact label="Market" value={selectedContract.market} />
+                      </div>
                     </div>
                   </div>
 
-                  {!hasContractPeriod && (
-                    <div className="rounded-lg border border-amber-500/25 bg-warning-bg p-3 text-xs text-warning">
-                      Set contract start and end before assigning routes. The assignment is only valid for that contract period.
+                  <div className="rounded-2xl border border-border-ui bg-surface2 p-4">
+                    <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                      <div>
+                        <p className="text-sm font-semibold text-ink">Signed terms summary</p>
+                        <p className="text-xs leading-5 text-ink-muted">
+                          Start with these copied defaults. Edit only after a real commercial change.
+                        </p>
+                      </div>
+                      <Button size="sm" variant="outline" onClick={() => setAmendingTerms((open) => !open)}>
+                        {amendingTerms ? "Close edit" : "Amend terms"}
+                      </Button>
                     </div>
-                  )}
 
-                  <div className="grid gap-3 md:grid-cols-5">
-                    <MiniMetric label="Routes" value={String(selectedRoutes.length)} />
-                    <MiniMetric label="Weekly frequency" value={`${weeklyFrequency}x`} />
-                    <MiniMetric label="Load factor target" value={selectedContract.targetLoadFactor ? `${selectedContract.targetLoadFactor}%` : "-"} />
-                    <MiniMetric
-                      label="Monthly target"
-                      value={selectedContract.monthlyTonnageTargetKg ? `${Math.round(selectedContract.monthlyTonnageTargetKg / 1000)}t` : "-"}
-                    />
-                    <MiniMetric label="Commission" value={selectedContract.commissionRate != null ? `${selectedContract.commissionRate}%` : "-"} />
+                    <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-5">
+                      <MiniMetric label="Period" value={formatPeriod(selectedContract)} />
+                      <MiniMetric label="Load factor" value={selectedContract.targetLoadFactor ? `${selectedContract.targetLoadFactor}%` : "-"} />
+                      <MiniMetric
+                        label="Monthly target"
+                        value={selectedContract.monthlyTonnageTargetKg ? `${Math.round(selectedContract.monthlyTonnageTargetKg / 1000)}t` : "-"}
+                      />
+                      <MiniMetric label="Commission" value={selectedContract.commissionRate != null ? `${selectedContract.commissionRate}%` : "-"} />
+                      <MiniMetric label="Cadence" value={formatReportingCadence(selectedContract.reportingCadence)} />
+                    </div>
+
+                    {amendingTerms && (
+                      <div className="mt-4 rounded-xl border border-brand/20 bg-surface p-4">
+                        <div className="mb-4">
+                          <p className="text-sm font-semibold text-ink">Amend signed terms</p>
+                          <p className="mt-1 text-xs leading-5 text-ink-muted">
+                            Use this only when the final signed contract differs from the tender or accepted GSA proposal.
+                          </p>
+                        </div>
+                        <div className="grid gap-3 lg:grid-cols-3">
+                          <ContractField label="Start date">
+                            <Input
+                              type="date"
+                              value={selectedContract.startDate ?? ""}
+                              onChange={(event) => patchContract({ startDate: event.target.value })}
+                            />
+                          </ContractField>
+                          <ContractField label="End date">
+                            <Input
+                              type="date"
+                              min={selectedContract.startDate}
+                              value={selectedContract.endDate ?? ""}
+                              onChange={(event) => patchContract({ endDate: event.target.value })}
+                            />
+                          </ContractField>
+                          <ContractField label="Reporting cadence">
+                            <Select
+                              value={selectedContract.reportingCadence ?? "weekly"}
+                              onChange={(event) => patchContract({ reportingCadence: event.target.value })}
+                            >
+                              <option value="weekly">Weekly sales review</option>
+                              <option value="biweekly">Bi-weekly review</option>
+                              <option value="monthly">Monthly QBR pack</option>
+                            </Select>
+                          </ContractField>
+                        </div>
+
+                        <div className="mt-3 grid gap-3 lg:grid-cols-3">
+                          <ContractField label="Load factor (%)">
+                            <Input
+                              type="number"
+                              min={0}
+                              max={100}
+                              value={selectedContract.targetLoadFactor ?? ""}
+                              placeholder="70"
+                              aria-label="Target load factor percent"
+                              onChange={(event) =>
+                                patchContract({ targetLoadFactor: event.target.value ? Number(event.target.value) : undefined })
+                              }
+                            />
+                          </ContractField>
+                          <ContractField label="Monthly target (tons)">
+                            <Input
+                              type="number"
+                              min={0}
+                              value={selectedContract.monthlyTonnageTargetKg ? Math.round(selectedContract.monthlyTonnageTargetKg / 1000) : ""}
+                              placeholder="1500"
+                              aria-label="Monthly tonnage target in tons"
+                              onChange={(event) =>
+                                patchContract({ monthlyTonnageTargetKg: event.target.value ? Number(event.target.value) * 1000 : undefined })
+                              }
+                            />
+                          </ContractField>
+                          <ContractField label="Commission (%)">
+                            <Input
+                              type="number"
+                              min={0}
+                              max={100}
+                              step="0.1"
+                              value={selectedContract.commissionRate ?? ""}
+                              placeholder="5.0"
+                              aria-label="Commission percentage"
+                              onChange={(event) =>
+                                patchContract({ commissionRate: event.target.value ? Number(event.target.value) : undefined })
+                              }
+                            />
+                          </ContractField>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="rounded-2xl border border-border-ui bg-surface2 p-4">
+                    <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+                      <div>
+                        <p className="flex items-center gap-2 text-sm font-semibold text-ink">
+                          <Route className="h-4 w-4 text-brand" />
+                          Scope and route allocation
+                        </p>
+                        <p className="mt-1 text-xs leading-5 text-ink-muted">
+                          {getRouteScopeSummary(selectedContract, selectedRoutes.length)}
+                        </p>
+                      </div>
+                      <div className="flex flex-wrap gap-2">
+                        <Badge variant={routeScopeRequired ? "warning" : "muted"}>
+                          {routeScopeRequired ? "route scope required" : "routes optional"}
+                        </Badge>
+                        <Button
+                          size="sm"
+                          variant={routeManagerOpen ? "secondary" : "outline"}
+                          onClick={() => setRouteManagerOpen((open) => !open)}
+                        >
+                          {routeManagerOpen ? "Hide route tools" : "Manage route scope"}
+                        </Button>
+                      </div>
+                    </div>
+                    <div className="mt-4 grid gap-3 md:grid-cols-3">
+                      <ReadOnlyFact label="Coverage model" value={getCoverageLabel(selectedContract)} />
+                      <ReadOnlyFact label="Assigned routes" value={String(selectedRoutes.length)} />
+                      <ReadOnlyFact label="Weekly frequency" value={`${weeklyFrequency}x`} />
+                    </div>
                   </div>
                 </CardContent>
               </Card>
             )}
 
-            {selectedContract && selectedPartner && (
+            {selectedContract && selectedPartner && routeManagerVisible && (
               <Card>
                 <CardHeader className="gap-4">
                   <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
@@ -676,7 +810,7 @@ function PartnerContractCard({
 }) {
   const assignedRoutesForPartner = contract.contractRoutes.filter((route) => route.status === "assigned");
   const weeklyFrequency = assignedRoutesForPartner.reduce((sum, route) => sum + route.frequencyPerWeek, 0);
-  const hasContractPeriod = Boolean(contract.startDate && contract.endDate);
+  const activation = getActivationState(contract, assignedRoutesForPartner.length);
 
   return (
     <button
@@ -693,9 +827,7 @@ function PartnerContractCard({
           <p className="truncate text-base font-semibold text-ink">{partner.name}</p>
           <p className="mt-1 truncate text-xs text-ink-muted">{partner.contactName}</p>
         </div>
-        <Badge variant={hasContractPeriod ? "success" : "warning"}>
-          {hasContractPeriod ? "contract set" : "needs terms"}
-        </Badge>
+        <Badge variant={activation.badgeVariant}>{activation.shortLabel}</Badge>
       </div>
 
       <div className="mt-4 grid grid-cols-4 gap-2">
@@ -706,6 +838,10 @@ function PartnerContractCard({
       </div>
 
       <div className="mt-4 grid gap-2 text-xs text-ink-muted">
+        <span className="flex items-center gap-2">
+          <FileCheck2 className="h-3.5 w-3.5 text-brand" />
+          {getCoverageLabel(contract)} · {getCommercialModelLabel(contract)}
+        </span>
         <span className="flex items-center gap-2">
           <CalendarDays className="h-3.5 w-3.5 text-brand" />
           {contract.startDate && contract.endDate
@@ -718,6 +854,7 @@ function PartnerContractCard({
             ? `${Math.round(contract.monthlyTonnageTargetKg / 1000)}t monthly target`
             : "No monthly target set"}
         </span>
+        <span className="font-semibold text-ink">{activation.shortAction}</span>
       </div>
     </button>
   );
@@ -732,10 +869,42 @@ function CardMetric({ label, value }: { label: string; value: string }) {
   );
 }
 
+function ActivationStep({
+  title,
+  value,
+  helper,
+  ready,
+}: {
+  title: string;
+  value: string;
+  helper: string;
+  ready: boolean;
+}) {
+  return (
+    <div className="rounded-xl border border-border-ui bg-surface p-3">
+      <p className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-wider text-ink-muted">
+        <CheckCircle2 className={`h-3.5 w-3.5 ${ready ? "text-success" : "text-warning"}`} />
+        {title}
+      </p>
+      <p className="mt-2 text-sm font-semibold text-ink">{value}</p>
+      <p className="mt-1 text-xs leading-5 text-ink-muted">{helper}</p>
+    </div>
+  );
+}
+
+function ReadOnlyFact({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="min-h-16 rounded-xl border border-border-ui bg-surface px-3 py-2">
+      <p className="text-[11px] font-semibold uppercase tracking-wider text-ink-muted">{label}</p>
+      <p className="mt-1 text-sm font-semibold text-ink">{value || "-"}</p>
+    </div>
+  );
+}
+
 function ContractField({ label, children }: { label: string; children: ReactNode }) {
   return (
-    <div>
-      <span className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-ink-muted">{label}</span>
+    <div className="min-w-0">
+      <span className="mb-1.5 block h-4 truncate text-xs font-semibold uppercase tracking-wider text-ink-muted">{label}</span>
       {children}
     </div>
   );
@@ -924,6 +1093,165 @@ function getEligibility(selectedContractId: string, ownerContractId: string | nu
   return "available";
 }
 
+type ActivationAction = "amend" | "routes" | "activate" | "done";
+
+function getActivationState(contract: LivePartnerContract, assignedRouteCount: number): {
+  badge: string;
+  shortLabel: string;
+  title: string;
+  description: string;
+  action: ActivationAction;
+  actionLabel: string;
+  actionDisabled: boolean;
+  shortAction: string;
+  badgeVariant: "success" | "warning" | "muted" | "danger" | "default";
+  toneClass: string;
+} {
+  const termsReady = hasRequiredTerms(contract);
+  const routesReady = !isRouteScopeRequired(contract) || assignedRouteCount > 0;
+
+  if (!termsReady) {
+    return {
+      badge: "Action needed",
+      shortLabel: "needs terms",
+      title: "Check the missing signed terms",
+      description: "The award created this partner contract, but one of the measurable defaults is missing. Open Amend terms once, fix the missing value, then continue.",
+      action: "amend",
+      actionLabel: "Amend terms",
+      actionDisabled: false,
+      shortAction: "Next: fix missing terms",
+      badgeVariant: "warning",
+      toneClass: "border-warning/25 bg-warning-bg/50",
+    };
+  }
+
+  if (!routesReady) {
+    return {
+      badge: "Route scope needed",
+      shortLabel: "needs routes",
+      title: "Assign the route scope",
+      description: "This tender was route-led, so the GSA needs at least one assigned lane before the partner can be treated as active.",
+      action: "routes",
+      actionLabel: "Assign routes",
+      actionDisabled: false,
+      shortAction: "Next: assign route scope",
+      badgeVariant: "warning",
+      toneClass: "border-warning/25 bg-warning-bg/50",
+    };
+  }
+
+  if (contract.status !== "active") {
+    return {
+      badge: "Ready",
+      shortLabel: "ready",
+      title: "Ready to activate",
+      description: "The contract terms and required scope are in place. Activate the partner to make this a live working relationship.",
+      action: "activate",
+      actionLabel: "Activate partner",
+      actionDisabled: false,
+      shortAction: "Next: activate partner",
+      badgeVariant: "default",
+      toneClass: "border-brand/25 bg-brand-light/45",
+    };
+  }
+
+  return {
+    badge: "Active",
+    shortLabel: "active",
+    title: "Partner is active",
+    description: "The commercial baseline is locked in for operations. Use route scope only when the mandate requires exact lane ownership.",
+    action: "done",
+    actionLabel: "Active",
+    actionDisabled: true,
+    shortAction: "Active partner",
+    badgeVariant: "success",
+    toneClass: "border-success/25 bg-success-bg/50",
+  };
+}
+
+function hasRequiredTerms(contract: LivePartnerContract) {
+  return Boolean(
+    contract.startDate &&
+      contract.endDate &&
+      contract.reportingCadence &&
+      contract.targetLoadFactor != null &&
+      contract.monthlyTonnageTargetKg != null &&
+      contract.commissionRate != null,
+  );
+}
+
+function isRouteScopeRequired(contract: LivePartnerContract) {
+  return contract.coverageModel === "route-led" || contract.mandateType === "route-launch";
+}
+
+function getScopeStepValue(contract: LivePartnerContract, assignedRouteCount: number) {
+  if (isRouteScopeRequired(contract)) return assignedRouteCount > 0 ? `${assignedRouteCount} route${assignedRouteCount === 1 ? "" : "s"}` : "Needs route";
+  if (assignedRouteCount > 0) return `${assignedRouteCount} priority route${assignedRouteCount === 1 ? "" : "s"}`;
+  return "Market scope";
+}
+
+function getScopeStepHelper(contract: LivePartnerContract, assignedRouteCount: number) {
+  if (isRouteScopeRequired(contract)) {
+    return assignedRouteCount > 0 ? "Route-led mandate has assigned lanes" : "Route-led mandates require assigned lanes";
+  }
+  if (assignedRouteCount > 0) return "Optional priority lanes are attached";
+  return "Country or market coverage is enough for this mandate";
+}
+
+function getRouteScopeSummary(contract: LivePartnerContract, assignedRouteCount: number) {
+  if (isRouteScopeRequired(contract)) {
+    return assignedRouteCount > 0
+      ? "Route-led mandate: assigned lanes define the GSA's working scope."
+      : "Route-led mandate: assign at least one lane before activation.";
+  }
+  if (contract.coverageModel === "airport-led") {
+    return "Airport-led mandate: airport focus is already part of the award. Add route lanes only for priority flows.";
+  }
+  if (contract.coverageModel === "regional-cluster") {
+    return "Regional mandate: market scope is primary. Routes are optional priority lanes for execution tracking.";
+  }
+  return "Country-wide mandate: the accepted market scope is already active. Routes are optional priority lanes.";
+}
+
+function getMandateLabel(contract: LivePartnerContract) {
+  if (contract.mandateType === "sales-only") return "Sales-only representation";
+  if (contract.mandateType === "route-launch") return "Route launch";
+  if (contract.mandateType === "product-specialist") return "Product specialist";
+  if (contract.mandateType === "regional-cluster") return "Regional cluster";
+  return "Full GSA";
+}
+
+function getCoverageLabel(contract: LivePartnerContract) {
+  if (contract.coverageModel === "airport-led") return "Airport-led";
+  if (contract.coverageModel === "route-led") return "Route-led";
+  if (contract.coverageModel === "regional-cluster") return "Regional cluster";
+  return "Country-wide";
+}
+
+function getCommercialModelLabel(contract: LivePartnerContract) {
+  if (contract.commercialModel === "capacity-risk") return "Capacity commitment";
+  if (contract.commercialModel === "hybrid") return "Hybrid";
+  return "Commission";
+}
+
+function getAwardLabel(contract: LivePartnerContract) {
+  if (contract.awardMode === "multi") return `Multi-award${contract.maxAwards ? `, up to ${contract.maxAwards}` : ""}`;
+  return "Single winner";
+}
+
+function formatReportingCadence(value?: string) {
+  if (value === "biweekly") return "Bi-weekly";
+  if (value === "monthly") return "Monthly";
+  if (value === "quarterly") return "Quarterly";
+  return "Weekly";
+}
+
+function formatPeriod(contract: LivePartnerContract) {
+  if (!contract.startDate && !contract.endDate) return "-";
+  if (!contract.endDate) return `From ${contract.startDate}`;
+  return `${contract.startDate} to ${contract.endDate}`;
+}
+
 function getRouteOwner(routeId: string, tenderId: string, contracts: LivePartnerContract[]) {
   const contract = contracts.find(
     (item) => item.tenderId === tenderId && item.contractRoutes.some((route) => route.id === routeId && route.status === "assigned"),
@@ -951,6 +1279,52 @@ function buildPartnerProfile(contract: LivePartnerContract): PartnerProfile {
   };
 }
 
+function GsaOverviewLoading() {
+  return (
+    <div className="space-y-5">
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <ShieldCheck className="h-5 w-5 text-brand" />
+            Loading partner contracts
+          </CardTitle>
+          <p className="mt-1 text-sm text-ink-muted">
+            Accepted GSAs, contract terms, and route assignments are being loaded from the database.
+          </p>
+        </CardHeader>
+        <CardContent className="grid gap-4 lg:grid-cols-2 2xl:grid-cols-3">
+          {Array.from({ length: 3 }).map((_, index) => (
+            <div key={index} className="rounded-2xl border border-border-ui bg-surface2 p-4">
+              <div className="flex items-start gap-3">
+                <div className="h-11 w-11 animate-pulse rounded-xl bg-surface3" />
+                <div className="flex-1 space-y-2">
+                  <div className="h-4 w-2/3 animate-pulse rounded bg-surface3" />
+                  <div className="h-3 w-1/2 animate-pulse rounded bg-surface3" />
+                </div>
+              </div>
+              <div className="mt-4 grid grid-cols-3 gap-2">
+                <div className="h-14 animate-pulse rounded-lg bg-surface3" />
+                <div className="h-14 animate-pulse rounded-lg bg-surface3" />
+                <div className="h-14 animate-pulse rounded-lg bg-surface3" />
+              </div>
+            </div>
+          ))}
+        </CardContent>
+      </Card>
+      <Card>
+        <CardContent className="p-5">
+          <div className="h-5 w-56 animate-pulse rounded bg-surface3" />
+          <div className="mt-4 grid gap-3 lg:grid-cols-5">
+            {Array.from({ length: 5 }).map((_, index) => (
+              <div key={index} className="h-16 animate-pulse rounded-xl bg-surface3" />
+            ))}
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
 function Metric({ label, value }: { label: string; value: string }) {
   return (
     <Card>
@@ -966,13 +1340,20 @@ function Metric({ label, value }: { label: string; value: string }) {
 }
 
 function MiniMetric({ label, value }: { label: string; value: string }) {
+  const Icon =
+    label === "Period" ? CalendarDays :
+    label === "Weekly frequency" ? PackageCheck :
+    label.includes("Load") || label.includes("target") || label.includes("Target") ? Target :
+    label === "Commission" || label === "Cadence" ? FileCheck2 :
+    Route;
+
   return (
-    <div className="rounded-lg border border-border-ui bg-surface2 p-3">
+    <div className="flex min-h-16 flex-col justify-between rounded-xl border border-border-ui bg-surface2 p-3">
       <p className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wider text-ink-muted">
-        {label === "Weekly frequency" ? <PackageCheck className="h-3.5 w-3.5" /> : <Route className="h-3.5 w-3.5" />}
+        <Icon className="h-3.5 w-3.5" />
         {label}
       </p>
-      <p className="mt-1 truncate text-base font-semibold text-ink">{value}</p>
+      <p className="truncate text-base font-semibold text-ink">{value}</p>
     </div>
   );
 }

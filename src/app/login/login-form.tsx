@@ -8,72 +8,72 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 
-const demoGroups = [
+const quickLoginGroups = [
   {
-    title: "Airline",
-    company: "AeroNova Cargo",
+    title: "Airlines",
+    company: "Local staging airlines",
     accounts: [
       {
-        label: "Company admin",
-        description: "Tender, applications, partner profiles",
-        email: "airline@airgsa.demo",
-        password: "demo2026",
+        label: "Global Air Logistics",
+        description: "Airline admin workspace",
+        email: "m.weber@globalairexample.test",
+        password: "AirGSA-Test-2026!",
       },
       {
-        label: "Employee",
-        description: "Restricted airline operations view",
-        email: "ops@aeronova.example",
-        password: "demo2026",
+        label: "AeroNova Cargo",
+        description: "Airline admin workspace",
+        email: "ops@aeronova-cargo.test",
+        password: "AirGSA-Test-2026!",
+      },
+      {
+        label: "Northstar Air Cargo",
+        description: "Airline admin workspace",
+        email: "network@northstar-air.test",
+        password: "AirGSA-Test-2026!",
       },
     ],
   },
   {
-    title: "GSA",
-    company: "Forto Logistics",
+    title: "GSAs",
+    company: "Local staging GSAs",
     accounts: [
       {
-        label: "Company admin",
-        description: "Team, profile, tenders and oversight",
-        email: "christopher.braun@forto.com",
-        password: "demo2026",
-      },
-      {
-        label: "Cargo operator",
-        description: "Cargo workspace and own performance",
-        email: "lena.hartmann@forto.example",
-        password: "demo2026",
-      },
-    ],
-  },
-  {
-    title: "GSA",
-    company: "Priority Freight Europe",
-    accounts: [
-      {
-        label: "Company admin",
+        label: "Koklu Crew Cargo",
         description: "GSA admin workspace",
-        email: "marco.sauer@priorityfreight.com",
-        password: "demo2026",
+        email: "serkan@koklu-crew.test",
+        password: "AirGSA-Test-2026!",
       },
-    ],
-  },
-  {
-    title: "GSA",
-    company: "Air Menzies International",
-    accounts: [
       {
-        label: "Company admin",
+        label: "RhineBridge GSA",
         description: "GSA admin workspace",
-        email: "samantha.leaper@airmenzies.com",
-        password: "demo2026",
+        email: "ops@rhinebridge-gsa.test",
+        password: "AirGSA-Test-2026!",
+      },
+      {
+        label: "AtlasLift Partners",
+        description: "GSA admin workspace",
+        email: "sales@atlaslift-partners.test",
+        password: "AirGSA-Test-2026!",
+      },
+      {
+        label: "MedCargo Hub",
+        description: "GSA admin workspace",
+        email: "team@medcargo-hub.test",
+        password: "AirGSA-Test-2026!",
+      },
+      {
+        label: "Pacific GSA Network",
+        description: "GSA admin workspace",
+        email: "desk@pacific-gsa.test",
+        password: "AirGSA-Test-2026!",
       },
     ],
   },
 ];
 
-const showDemoAccounts = process.env.NEXT_PUBLIC_SHOW_DEMO_ACCOUNTS === "true" || process.env.NODE_ENV !== "production";
+const showQuickLoginAccounts = process.env.NEXT_PUBLIC_SHOW_DEMO_ACCOUNTS === "true" || process.env.NODE_ENV !== "production";
 
-type DemoAccount = (typeof demoGroups)[number]["accounts"][number];
+type QuickLoginAccount = (typeof quickLoginGroups)[number]["accounts"][number];
 
 export function LoginForm() {
   const searchParams = useSearchParams();
@@ -83,15 +83,15 @@ export function LoginForm() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
-  const [activeDemo, setActiveDemo] = useState<string | null>(null);
+  const [activeQuickLogin, setActiveQuickLogin] = useState<string | null>(null);
 
   async function handleSubmit(event: FormEvent) {
     event.preventDefault();
     await signIn(email, password, true);
   }
 
-  async function demoLogin(account: DemoAccount) {
-    setActiveDemo(account.email);
+  async function quickLogin(account: QuickLoginAccount) {
+    setActiveQuickLogin(account.email);
     await signIn(account.email, account.password, false);
   }
 
@@ -131,7 +131,7 @@ export function LoginForm() {
       setError("Network error. Please try again.");
     } finally {
       setLoading(false);
-      setActiveDemo(null);
+      setActiveQuickLogin(null);
     }
   }
 
@@ -143,8 +143,8 @@ export function LoginForm() {
       </div>
 
       <Card className="overflow-hidden">
-        <div className={showDemoAccounts ? "grid gap-0 lg:grid-cols-[0.9fr_1.1fr]" : ""}>
-          <div className={showDemoAccounts ? "border-b border-border-ui p-6 lg:border-b-0 lg:border-r" : "p-6"}>
+        <div className={showQuickLoginAccounts ? "grid gap-0 lg:grid-cols-[0.85fr_1.15fr]" : ""}>
+          <div className={showQuickLoginAccounts ? "border-b border-border-ui p-6 lg:border-b-0 lg:border-r" : "p-6"}>
             <CardHeader className="p-0">
               <CardTitle className="text-base font-normal text-ink-muted">
                 Enter your credentials to continue
@@ -207,25 +207,25 @@ export function LoginForm() {
             </CardContent>
           </div>
 
-          {showDemoAccounts && (
+          {showQuickLoginAccounts && (
           <div className="bg-surface2 p-6">
             <div className="flex flex-wrap items-start justify-between gap-3">
               <div>
-                <p className="text-[11px] font-semibold uppercase tracking-wider text-ink-muted">Demo accounts</p>
-                <h2 className="mt-1 text-lg font-bold text-ink">One-click access</h2>
+                <p className="text-[11px] font-semibold uppercase tracking-wider text-ink-muted">Local staging accounts</p>
+                <h2 className="mt-1 text-lg font-bold text-ink">Quick login</h2>
               </div>
               <span className="rounded-full border border-border-ui bg-surface px-3 py-1 text-xs font-semibold text-ink-muted">
-                Admin + employee
+                Test only
               </span>
             </div>
-            <div className="mt-5 grid gap-4 md:grid-cols-2">
-              {demoGroups.map((group) => (
-                <DemoGroup
+            <div className="mt-5 grid gap-4 xl:grid-cols-2">
+              {quickLoginGroups.map((group) => (
+                <QuickLoginGroup
                   key={`${group.title}-${group.company}`}
                   group={group}
-                  activeDemo={activeDemo}
+                  activeQuickLogin={activeQuickLogin}
                   loading={loading}
-                  onLogin={demoLogin}
+                  onLogin={quickLogin}
                 />
               ))}
             </div>
@@ -245,16 +245,16 @@ async function readJson(res: Response) {
   }
 }
 
-function DemoGroup({
+function QuickLoginGroup({
   group,
-  activeDemo,
+  activeQuickLogin,
   loading,
   onLogin,
 }: {
-  group: (typeof demoGroups)[number];
-  activeDemo: string | null;
+  group: (typeof quickLoginGroups)[number];
+  activeQuickLogin: string | null;
   loading: boolean;
-  onLogin: (account: DemoAccount) => void;
+  onLogin: (account: QuickLoginAccount) => void;
 }) {
   return (
     <div className="rounded-xl border border-border-ui bg-surface p-3">
@@ -282,7 +282,7 @@ function DemoGroup({
                 <p className="mt-1 text-xs text-ink-muted">{account.description}</p>
               </div>
               <span className="rounded-full bg-surface px-2 py-0.5 text-[10px] font-bold text-brand">
-                {activeDemo === account.email ? "Opening" : "Login"}
+                {activeQuickLogin === account.email ? "Opening" : "Login"}
               </span>
             </div>
             <p className="mt-2 font-mono text-[11px] text-ink-muted">

@@ -1,13 +1,13 @@
 import type { ReactNode } from "react";
-import Image from "next/image";
 import { BarChart3, Globe2, Package, PlaneTakeoff, Shield, Users, UserCircle } from "lucide-react";
 import { Topbar } from "@/components/dashboard/topbar";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { getSession } from "@/lib/auth/session";
+import { getFreshSession } from "@/lib/auth/session";
 import { canViewContract, canViewTender } from "@/lib/auth/permissions";
 import { getAirlineProfile } from "@/lib/services/airline-profile";
 import { listLivePartnerContracts, listLiveTenders } from "@/lib/services/tender-workflow-store";
 import { AirlineProfileEditor } from "./airline-profile-editor";
+import { AvatarAssetUploader, HeroBannerUpload, HeroLogoUpload } from "./airline-profile-assets";
 
 export const dynamic = "force-dynamic";
 
@@ -15,7 +15,7 @@ const DEFAULT_AIRLINE_COLOR = "#1a5aff";
 
 export default async function AirlineProfilePage() {
   const [session, tenders, contracts] = await Promise.all([
-    getSession(),
+    getFreshSession(),
     listLiveTenders(),
     listLivePartnerContracts(),
   ]);
@@ -28,13 +28,14 @@ export default async function AirlineProfilePage() {
   const activeTenders = visibleTenders.filter((t) => t.status === "open").length;
   const draftTenders = visibleTenders.filter((t) => t.status === "draft").length;
   const gsaCount = new Set(visibleContracts.map((contract) => contract.gsaCompanyId ?? contract.gsaId)).size;
+  const canManageBrand = session?.role === "admin" || session?.accessRole === "owner" || session?.accessRole === "admin";
 
   return (
     <>
       <Topbar title="Airline profile" subtitle={companyName} />
       <main className="space-y-5 p-5">
         <div
-          className="relative overflow-hidden rounded-2xl p-6 text-white shadow-sm"
+          className="group relative overflow-hidden rounded-2xl p-6 text-white shadow-sm"
           style={{
             backgroundColor: DEFAULT_AIRLINE_COLOR,
             backgroundImage: profile.bannerPath
@@ -44,6 +45,7 @@ export default async function AirlineProfilePage() {
             backgroundSize: "cover",
           }}
         >
+          <HeroBannerUpload currentPath={profile.bannerPath} canManageBrand={canManageBrand} />
           <div
             className="pointer-events-none absolute inset-0 opacity-[0.05]"
             style={{
@@ -51,20 +53,9 @@ export default async function AirlineProfilePage() {
               backgroundSize: "28px 28px",
             }}
           />
-          <div className="relative flex flex-col gap-6 md:flex-row md:items-center md:justify-between">
+          <div className="relative z-20 flex flex-col gap-6 md:flex-row md:items-center md:justify-between">
             <div className="flex items-center gap-5">
-              <div
-                className={`relative flex shrink-0 items-center justify-center overflow-hidden rounded-2xl text-3xl font-black shadow-xl ${
-                  profile.logoPath ? "border border-white/30 bg-white" : "bg-white/20 backdrop-blur-sm"
-                }`}
-                style={{ height: "4.5rem", width: "4.5rem" }}
-              >
-                {profile.logoPath ? (
-                  <Image src={profile.logoPath} alt={`${companyName} logo`} fill className="object-contain p-2" unoptimized />
-                ) : (
-                  <span>{initials}</span>
-                )}
-              </div>
+              <HeroLogoUpload currentPath={profile.logoPath} companyName={companyName} initials={initials} canManageBrand={canManageBrand} />
               <div>
                 <h1 className="text-2xl font-black tracking-tight">{companyName}</h1>
                 <p className="mt-0.5 text-sm opacity-80">Cargo partner network profile</p>
@@ -146,11 +137,15 @@ export default async function AirlineProfilePage() {
         </div>
 
         <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <UserCircle className="h-4 w-4 text-brand" />
-              Account and profile settings
-            </CardTitle>
+          <CardHeader className="flex-row items-start justify-between gap-4">
+            <div>
+              <CardTitle className="flex items-center gap-2">
+                <UserCircle className="h-4 w-4 text-brand" />
+                Account and profile settings
+              </CardTitle>
+              <p className="mt-1 text-sm text-ink-muted">Hover your photo to update your personal workspace image.</p>
+            </div>
+            <AvatarAssetUploader currentPath={session?.avatarPath} variant="compact" />
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="grid gap-3 sm:grid-cols-3">
@@ -158,7 +153,10 @@ export default async function AirlineProfilePage() {
               <InfoCell label="Company" value={companyName} />
               <InfoCell label="Role" value="Airline" />
             </div>
-            <AirlineProfileEditor profile={profile} contactName={session?.name ?? ""} userAvatarPath={session?.avatarPath} />
+            <AirlineProfileEditor
+              profile={profile}
+              contactName={session?.name ?? ""}
+            />
           </CardContent>
         </Card>
       </main>

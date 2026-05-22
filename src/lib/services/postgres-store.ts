@@ -171,6 +171,15 @@ async function ensureSchema() {
         updated_at timestamptz not null default now()
       );
 
+      create table if not exists workflow_gsa_profiles (
+        tenant_key text primary key,
+        gsa_company_id text,
+        gsa_email text,
+        logo_path text,
+        data jsonb not null default '{}'::jsonb,
+        updated_at timestamptz not null default now()
+      );
+
       create table if not exists workflow_attachments (
         id text primary key,
         contract_id text,
@@ -361,6 +370,7 @@ async function ensureSchema() {
       create index if not exists account_registrations_status_idx on account_registrations(status, submitted_at desc);
       create index if not exists account_registrations_role_idx on account_registrations(role, submitted_at desc);
       create index if not exists workflow_airline_profiles_email_idx on workflow_airline_profiles(lower(airline_email));
+      create index if not exists workflow_gsa_profiles_email_idx on workflow_gsa_profiles(lower(gsa_email));
       create index if not exists workflow_attachments_contract_idx on workflow_attachments(contract_id, created_at desc);
       create index if not exists workflow_attachments_entity_idx on workflow_attachments(entity_type, entity_id, created_at desc);
       create index if not exists workflow_attachments_airline_idx on workflow_attachments(airline_company_id, created_at desc);

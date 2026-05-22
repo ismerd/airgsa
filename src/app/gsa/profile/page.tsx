@@ -3,8 +3,10 @@ import { revalidatePath } from "next/cache";
 import { Award, Globe2, ShieldCheck, TrendingUp, UserCircle, Zap } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Topbar } from "@/components/dashboard/topbar";
-import { getSession, updateSession } from "@/lib/auth/session";
+import { getFreshSession, updateSession } from "@/lib/auth/session";
 import type { RealGsaPartner } from "@/lib/real-gsa-data";
+import { AvatarAssetUploader, HeroBannerUpload, HeroLogoUpload } from "@/app/airline/profile/airline-profile-assets";
+import { getGsaCompanyProfile } from "@/lib/services/gsa-company-profile";
 import { resolveGsaOperationalProfile } from "@/lib/services/gsa-profile";
 
 export const dynamic = "force-dynamic";
@@ -169,14 +171,19 @@ function RadarChart({
 }
 
 export default async function GsaCompanyProfilePage() {
-  const session = await getSession();
-  const profile = await resolveGsaOperationalProfile(session);
+  const session = await getFreshSession();
+  const [profile, assets] = await Promise.all([
+    resolveGsaOperationalProfile(session),
+    getGsaCompanyProfile(session),
+  ]);
 
   const marketDepth = Math.min(100, profile.coverage.length * 25);
   const trackRecord = Math.min(100, Math.round(profile.winRate * 2.5));
   const activeRegions = ALL_REGIONS.filter((r) => isRegionActive(r, profile));
   const inactiveRegions = ALL_REGIONS.filter((r) => !isRegionActive(r, profile));
   const signals = getStrengthSignals(profile);
+  const canManageBrand = session?.role === "admin" || session?.accessRole === "owner" || session?.accessRole === "admin";
+  const initials = getInitials(profile.name);
 
   return (
     <>
@@ -185,9 +192,17 @@ export default async function GsaCompanyProfilePage() {
 
         {/* ── Hero Banner ── */}
         <div
-          className="relative overflow-hidden rounded-2xl p-6 text-white shadow-sm"
-          style={{ background: `linear-gradient(135deg, ${profile.color}dd 0%, ${profile.color} 100%)` }}
+          className="group relative overflow-hidden rounded-2xl p-6 text-white shadow-sm"
+          style={{
+            backgroundColor: profile.color,
+            backgroundImage: assets.bannerPath
+              ? `linear-gradient(90deg, rgba(7, 23, 61, 0.82), ${profile.color}99), url(${assets.bannerPath})`
+              : `linear-gradient(135deg, ${profile.color}dd 0%, ${profile.color} 100%)`,
+            backgroundPosition: "center",
+            backgroundSize: "cover",
+          }}
         >
+          <HeroBannerUpload currentPath={assets.bannerPath} canManageBrand={canManageBrand} uploadEndpoint="/api/gsa/profile/assets" />
           <div
             className="pointer-events-none absolute inset-0 opacity-[0.06]"
             style={{
@@ -195,14 +210,15 @@ export default async function GsaCompanyProfilePage() {
               backgroundSize: "28px 28px",
             }}
           />
-          <div className="relative flex flex-col gap-6 md:flex-row md:items-center md:justify-between">
+          <div className="relative z-20 flex flex-col gap-6 md:flex-row md:items-center md:justify-between">
             <div className="flex items-center gap-5">
-              <div
-                className="flex shrink-0 items-center justify-center rounded-2xl bg-white/20 text-3xl font-black shadow-xl backdrop-blur-sm"
-                style={{ height: "4.5rem", width: "4.5rem" }}
-              >
-                {profile.name.charAt(0).toUpperCase()}
-              </div>
+              <HeroLogoUpload
+                currentPath={assets.logoPath}
+                companyName={profile.name}
+                initials={initials}
+                canManageBrand={canManageBrand}
+                uploadEndpoint="/api/gsa/profile/assets"
+              />
               <div>
                 <h1 className="text-2xl font-black tracking-tight">{profile.name}</h1>
                 <p className="mt-0.5 text-sm opacity-80">{profile.headquarters}</p>
@@ -216,7 +232,7 @@ export default async function GsaCompanyProfilePage() {
               <HeroKpi label="Win Rate" value={profile.winRate} unit="%" />
             </div>
           </div>
-          <div className="relative mt-4 flex flex-wrap gap-2">
+          <div className="relative z-20 mt-4 flex flex-wrap gap-2">
             {profile.certifications.map((cert) => (
               <span
                 key={cert}
@@ -340,11 +356,15 @@ export default async function GsaCompanyProfilePage() {
 
         {/* ── Account ── */}
         <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <UserCircle className="h-4 w-4 text-brand" />
-              Account
-            </CardTitle>
+          <CardHeader className="flex-row items-start justify-between gap-4">
+            <div>
+              <CardTitle className="flex items-center gap-2">
+                <UserCircle className="h-4 w-4 text-brand" />
+                Account
+              </CardTitle>
+              <p className="mt-1 text-sm text-ink-muted">Hover your photo to update your personal workspace image.</p>
+            </div>
+            <AvatarAssetUploader currentPath={session?.avatarPath} uploadEndpoint="/api/gsa/profile/assets" variant="compact" />
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="grid gap-3 sm:grid-cols-3">
@@ -380,6 +400,16 @@ export default async function GsaCompanyProfilePage() {
       </main>
     </>
   );
+}
+
+function getInitials(companyName: string) {
+  return companyName
+    .split(/\s+/)
+    .map((part) => part[0])
+    .filter(Boolean)
+    .slice(0, 2)
+    .join("")
+    .toUpperCase() || "G";
 }
 
 function HeroKpi({ label, value, unit }: { label: string; value: number; unit: string }) {

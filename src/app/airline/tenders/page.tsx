@@ -156,6 +156,7 @@ function TenderPortfolioCard({
       <div className="space-y-4 p-5">
         <div className="space-y-3">
           <FactRow icon={MapPin} label="Region" value={tender.countryScope || tender.regions.join(", ") || "Not set"} />
+          <FactRow icon={MapPin} label="Scope" value={`${getMandateLabel(tender)} · ${getCoverageLabel(tender)}`} />
           <FactRow icon={Package} label="Cargo focus" value={cargoTypes.join(", ") || tender.productMix || "Not set"} />
           <FactRow icon={CalendarDays} label="Deadline" value={tender.deadline || "Not set"} />
           <FactRow icon={UsersRound} label="Applications" value={`${applications.length} total, ${shortlisted} shortlisted, ${accepted} awarded`} />
@@ -208,6 +209,21 @@ function SummaryPill({
       <span>{value}</span>
     </span>
   );
+}
+
+function getMandateLabel(tender: LiveTender) {
+  if (tender.mandateType === "sales-only") return "Sales-only";
+  if (tender.mandateType === "route-launch") return "Route launch";
+  if (tender.mandateType === "product-specialist") return "Product specialist";
+  if (tender.mandateType === "regional-cluster") return "Regional cluster";
+  return "Full GSA";
+}
+
+function getCoverageLabel(tender: LiveTender) {
+  if (tender.coverageModel === "airport-led") return "Airport-led";
+  if (tender.coverageModel === "route-led") return "Route-led";
+  if (tender.coverageModel === "regional-cluster") return "Regional cluster";
+  return "Country-wide";
 }
 
 function getStageHelper(stage: string) {
