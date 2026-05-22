@@ -12,7 +12,7 @@ import {
   Users,
 } from "lucide-react";
 import { Sidebar, type NavGroup } from "@/components/dashboard/sidebar";
-import { getSession } from "@/lib/auth/session";
+import { getFreshSession } from "@/lib/auth/session";
 import { canViewApplication } from "@/lib/auth/permissions";
 import { getAirlineProfile } from "@/lib/services/airline-profile";
 import { listMandateQuotes, listMonthlyReports } from "@/lib/services/mandate-execution-store";
@@ -52,22 +52,27 @@ function getNav(pendingApplications: number, controlQueueCount: number, accessRo
     ],
   },
   {
-    heading: "GSA Management",
+    heading: "Tender & Award",
     items: [
-      { label: "Tenders", href: "/airline/tenders", icon: PlaneTakeoff },
-      { label: "Applications", href: "/airline/applications", icon: Users, badgeCount: pendingApplications },
-      { label: "Partner profiles", href: "/airline/gsa/overview", icon: Handshake },
+      { label: "Tender Pipeline", href: "/airline/tenders", icon: PlaneTakeoff },
+      { label: "Decision Room", href: "/airline/applications", icon: Users, badgeCount: pendingApplications },
     ],
   },
   {
-    heading: "Analytics",
+    heading: "Partner Operations",
     items: [
-      { label: "Performance", href: "/airline/performance", icon: BarChart3 },
+      { label: "Partner Activation", href: "/airline/gsa/overview", icon: Handshake },
+    ],
+  },
+  {
+    heading: "Performance Control",
+    items: [
+      { label: "Route Performance", href: "/airline/performance", icon: BarChart3 },
       { label: "Contracts & KPI", href: "/airline/contracts", icon: FileCheck2 },
     ],
   },
   {
-    heading: "Market Intelligence",
+    heading: "Market & Growth",
     items: [
       { label: "Intelligence", href: "/airline/intelligence", icon: Newspaper },
       { label: "Marketing", href: "/airline/campaigns", icon: Megaphone },
@@ -84,7 +89,7 @@ function getNav(pendingApplications: number, controlQueueCount: number, accessRo
 }
 
 export default async function AirlineLayout({ children }: { children: React.ReactNode }) {
-  const session = await getSession();
+  const session = await getFreshSession();
   const [applications, tenders, quotes, reports] = session
     ? await Promise.all([
         listLiveApplications(),

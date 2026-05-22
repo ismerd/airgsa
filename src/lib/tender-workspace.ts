@@ -99,13 +99,13 @@ export function getTenderIntelligenceSummary(tender: LiveTender, applications: L
   const cargoTypes = getTenderCargoTypes(tender);
   const monthlyTonnage = Math.round((tender.annualTonnage || 0) / 12);
 
-  return `${tender.airline} is sourcing GSA coverage for ${tender.countryScope || tender.regions.join(", ") || "the selected market"} with ${
+  return `${tender.airline} is sourcing ${getMandateLabel(tender)} for ${tender.countryScope || tender.regions.join(", ") || "the selected market"} under a ${getCoverageLabel(tender)} coverage model with ${
     monthlyTonnage ? `${monthlyTonnage.toLocaleString()} tons monthly` : "a market-led tonnage target"
   }. The tender is currently in ${stage.label.toLowerCase()} stage. ${
     airports.length ? `Primary airport focus is ${airports.join(", ")}.` : "The scope is market-led rather than lane-specific."
   } ${
     cargoTypes.length ? `Cargo focus includes ${cargoTypes.join(", ")}.` : "Cargo focus should be clarified during evaluation."
-  } Applications should be compared on market coverage, cargo capability, sales execution, and commercial readiness.`;
+  } Applications should be compared on market coverage, cargo capability, sales execution, required capability fit, and commercial readiness.`;
 }
 
 export function toStructuredApplication(tender: LiveTender, application: LiveTenderApplication): StructuredGsaApplication {
@@ -145,10 +145,10 @@ export function toStructuredApplication(tender: LiveTender, application: LiveTen
 export function scoreCandidate(tender: LiveTender, application: LiveTenderApplication): CandidateScorecard {
   const tenderAirports = getTenderAirports(tender);
   const structured = toStructuredApplication(tender, application);
-  const marketCoverageScore = scoreAirportCoverage(tenderAirports, structured.coveredAirports, application);
+  const marketCoverageScore = scoreMarketCoverage(tender, tenderAirports, structured.coveredAirports, application);
   const cargoCapabilityScore = scoreCargoCapability(tender, structured);
   const salesStrengthScore = clamp(Math.round(application.networkScore * 0.45 + application.winRate * 0.35 + structured.teamSize * 0.9 + structured.yearsInCargoSales * 0.8));
-  const commercialPlanScore = scoreCommercialPlan(application);
+  const commercialPlanScore = scoreCommercialPlan(tender, application);
   const overallFit = clamp(Math.round((marketCoverageScore + salesStrengthScore + cargoCapabilityScore + commercialPlanScore) / 4));
   const missingSignals = [
     !application.networkPlan,
@@ -181,6 +181,12 @@ export function scoreCandidate(tender: LiveTender, application: LiveTenderApplic
 
 function getCoverageAirports(tender: LiveTender, application: LiveTenderApplication) {
   const airports = new Set<string>();
+  for (const route of tender.routes) {
+    if (application.coverage.includes(route.id) || application.markets.includes(route.id)) {
+      airports.add(route.origin.toUpperCase());
+      airports.add(route.destination.toUpperCase());
+    }
+  }
   for (const market of [...application.markets, ...application.coverage]) {
     for (const airport of AIRPORTS_BY_MARKET[market] ?? []) airports.add(airport);
   }
@@ -192,7 +198,12 @@ function getCoverageAirports(tender: LiveTender, application: LiveTenderApplicat
   return Array.from(airports).slice(0, 8);
 }
 
-function scoreAirportCoverage(tenderAirports: string[], coveredAirports: string[], application: LiveTenderApplication) {
+function scoreMarketCoverage(tender: LiveTender, tenderAirports: string[], coveredAirports: string[], application: LiveTenderApplication) {
+  if (tender.coverageModel === "country-wide" || tender.coverageModel === "regional-cluster") {
+    const regionMatches = tender.regions.filter((region) => application.markets.includes(region) || application.coverage.includes(region)).length;
+    const regionFit = tender.regions.length ? Math.round((regionMatches / tender.regions.length) * 45) : 28;
+    return clamp(regionFit + Math.round(application.networkScore * 0.35) + Math.round(application.complianceScore * 0.2));
+  }
   if (tenderAirports.length === 0) return clamp(Math.round((application.networkScore + application.complianceScore) / 2));
   const covered = tenderAirports.filter((airport) => coveredAirports.includes(airport)).length;
   return clamp(Math.round((covered / tenderAirports.length) * 70 + application.networkScore * 0.3));
@@ -206,13 +217,14 @@ function scoreCargoCapability(tender: LiveTender, structured: StructuredGsaAppli
   return clamp(Math.round((matches / cargoTypes.length) * 70 + Math.min(structured.cargoCapabilities.length, 6) * 5));
 }
 
-function scoreCommercialPlan(application: LiveTenderApplication) {
+function scoreCommercialPlan(tender: LiveTender, application: LiveTenderApplication) {
   let score = 30;
   if (application.proposedCommission.trim()) score += 18;
   if (application.namedAccountCoverage.trim()) score += 16;
   if (application.monthlySalesTarget.trim()) score += 14;
   if (application.networkPlan.trim().length > 60) score += 14;
   if (application.operationalReadiness.trim().length > 40) score += 8;
+  if ((tender.requiredCapabilities?.length ?? 0) > 0 && application.documents.length > 0) score += 4;
   return clamp(score);
 }
 
@@ -235,8 +247,24 @@ function buildStrengths(tender: LiveTender, application: LiveTenderApplication, 
     application.operationalReadiness ? "Launch plan provided" : "",
     application.monthlySalesTarget ? "Monthly target declared" : "",
     tender.regions.some((region) => application.markets.includes(region)) ? "Direct market match" : "",
+    tender.requiredCapabilities?.length && application.documents.length ? "Capability evidence attached" : "",
   ].filter(Boolean);
   return strengths.slice(0, 4);
+}
+
+function getMandateLabel(tender: LiveTender) {
+  if (tender.mandateType === "sales-only") return "sales-only GSA representation";
+  if (tender.mandateType === "route-launch") return "a route launch mandate";
+  if (tender.mandateType === "product-specialist") return "a product specialist GSA mandate";
+  if (tender.mandateType === "regional-cluster") return "a regional cluster GSA mandate";
+  return "full GSA representation";
+}
+
+function getCoverageLabel(tender: LiveTender) {
+  if (tender.coverageModel === "airport-led") return "airport-led";
+  if (tender.coverageModel === "route-led") return "route-led";
+  if (tender.coverageModel === "regional-cluster") return "regional-cluster";
+  return "country-wide";
 }
 
 function clamp(value: number) {

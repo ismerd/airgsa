@@ -1,7 +1,8 @@
 import { BarChart3, BellRing, Building2, CalendarDays, CheckSquare2, FileSpreadsheet, Inbox, Megaphone, Newspaper, Package, PackageSearch, PanelLeft, Users, UserRound } from "lucide-react";
 import { Sidebar, type NavGroup } from "@/components/dashboard/sidebar";
-import { getSession } from "@/lib/auth/session";
+import { getFreshSession } from "@/lib/auth/session";
 import { canViewApplication, canViewTender } from "@/lib/auth/permissions";
+import { getGsaCompanyProfile } from "@/lib/services/gsa-company-profile";
 import { resolveGsaOperationalProfile } from "@/lib/services/gsa-profile";
 import { listMandateQuotes, listWorkflowNotifications } from "@/lib/services/mandate-execution-store";
 import { listLiveApplications, listLiveTenders } from "@/lib/services/tender-workflow-store";
@@ -89,16 +90,17 @@ function getNav(notificationCount: number, pendingQuoteCount: number, accessRole
 }
 
 export default async function GsaLayout({ children }: { children: React.ReactNode }) {
-  const session = await getSession();
-  const [tenders, applications, quotes, notifications, partner] = session
+  const session = await getFreshSession();
+  const [tenders, applications, quotes, notifications, partner, profileAssets] = session
     ? await Promise.all([
         listLiveTenders(),
         listLiveApplications(),
         listMandateQuotes(session),
         listWorkflowNotifications(session),
         resolveGsaOperationalProfile(session),
+        getGsaCompanyProfile(session),
       ])
-    : [[], [], [], [], null];
+    : [[], [], [], [], null, null];
   const appliedTenderIds = new Set(
     session
       ? applications.filter((application) => canViewApplication(session, application, null)).map((application) => application.tenderId)
@@ -121,6 +123,8 @@ export default async function GsaLayout({ children }: { children: React.ReactNod
           name: partner?.name ?? session?.company ?? "GSA",
           color: partner?.color ?? "#2563EB",
           subtitle: partner?.country ?? "GSA workspace",
+          logoSrc: profileAssets?.logoPath,
+          userAvatarSrc: session?.avatarPath,
           profileHref: "/gsa/profile",
           userName: session?.name ?? partner?.contactName ?? "GSA user",
         }}

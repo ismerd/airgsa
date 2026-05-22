@@ -393,9 +393,11 @@ function OverviewTab({ tender, applications }: { tender: LiveTender; application
         </CardHeader>
         <CardContent className="grid gap-4 md:grid-cols-2">
           <InfoTile icon={Globe2} label="Market" value={tender.countryScope || tender.regions.join(", ") || "Not set"} />
-          <InfoTile icon={Target} label="Airports" value={airports.join(", ") || tender.lanes || "Market-wide"} />
+          <InfoTile icon={Target} label="Mandate type" value={getMandateLabel(tender.mandateType)} />
+          <InfoTile icon={Target} label="Coverage model" value={getCoverageLabel(tender.coverageModel)} />
+          <InfoTile icon={Target} label="Optional airports" value={airports.join(", ") || tender.lanes || "Market-wide"} />
           <InfoTile icon={Package} label="Cargo focus" value={cargoTypes.join(", ") || tender.productMix || "Not set"} />
-          <InfoTile icon={BarChart3} label="Commercial goal" value={tender.commercialExpectations || "Commercial plan requested from applicants"} />
+          <InfoTile icon={BarChart3} label="Commercial target" value={buildCommercialTarget(tender)} />
           <InfoTile icon={CalendarDays} label="Timeline" value={`Deadline ${tender.deadline || "-"} / Start ${tender.expectedStart || "-"}`} />
           <InfoTile icon={UsersRound} label="Applications" value={`${applications.length} submitted`} />
         </CardContent>
@@ -419,6 +421,9 @@ function OverviewTab({ tender, applications }: { tender: LiveTender; application
 function RequirementsTab({ tender }: { tender: LiveTender }) {
   const mandatory = tender.requirements.filter((item) => /experience|certification|required|iata|cass|must/i.test(item));
   const preferred = tender.requirements.filter((item) => !mandatory.includes(item));
+  const capabilities = tender.requiredCapabilities ?? tender.requirements
+    .filter((item) => item.startsWith("Capability:"))
+    .map((item) => item.replace(/^Capability:\s*/i, ""));
   const commercial = tender.commercialExpectations
     .split("\n")
     .map((item) => item.trim())
@@ -426,11 +431,36 @@ function RequirementsTab({ tender }: { tender: LiveTender }) {
 
   return (
     <div className="grid gap-5 xl:grid-cols-3">
-      <RequirementPanel title="Mandatory Requirements" tone="brand" items={mandatory.length ? mandatory : tender.requirements.slice(0, 3)} />
+      <RequirementPanel title="Standard Capabilities" tone="brand" items={capabilities.length ? capabilities : mandatory.length ? mandatory : tender.requirements.slice(0, 3)} />
       <RequirementPanel title="Preferred Requirements" tone="muted" items={preferred.length ? preferred : ["Local account relationships", "Cargo sales reporting discipline", "Launch team readiness"]} />
       <RequirementPanel title="Commercial Expectations" tone="warning" items={commercial.length ? commercial : ["Submit sales plan", "Declare monthly tonnage target", "Explain commission or incentive expectations"]} />
     </div>
   );
+}
+
+function getMandateLabel(value?: LiveTender["mandateType"]) {
+  if (value === "sales-only") return "Sales-only representation";
+  if (value === "route-launch") return "Route launch";
+  if (value === "product-specialist") return "Product specialist";
+  if (value === "regional-cluster") return "Regional cluster";
+  return "Full GSA mandate";
+}
+
+function getCoverageLabel(value?: LiveTender["coverageModel"]) {
+  if (value === "airport-led") return "Airport-led";
+  if (value === "route-led") return "Route-led";
+  if (value === "regional-cluster") return "Regional cluster";
+  return "Country-wide";
+}
+
+function buildCommercialTarget(tender: LiveTender) {
+  const parts = [
+    tender.commercialModel ?? "commission",
+    tender.commissionRate ? `${tender.commissionRate}% commission target` : "",
+    tender.targetLoadFactor ? `${tender.targetLoadFactor}% load factor` : "",
+    tender.monthlyRevenueTarget ? `${tender.monthlyRevenueTarget.toLocaleString()} monthly revenue` : "",
+  ].filter(Boolean);
+  return parts.length ? parts.join(" · ") : tender.commercialExpectations || "Commercial plan requested from applicants";
 }
 
 function ApplicationsTab({

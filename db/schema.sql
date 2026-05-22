@@ -125,6 +125,15 @@ create table if not exists public.workflow_airline_profiles (
   updated_at timestamptz not null default now()
 );
 
+create table if not exists public.workflow_gsa_profiles (
+  tenant_key text primary key,
+  gsa_company_id text,
+  gsa_email text,
+  logo_path text,
+  data jsonb not null default '{}'::jsonb,
+  updated_at timestamptz not null default now()
+);
+
 create table if not exists public.workflow_attachments (
   id text primary key,
   contract_id text,
@@ -728,6 +737,7 @@ create index if not exists auth_accounts_status_idx on public.auth_accounts(stat
 create index if not exists auth_password_reset_tokens_account_idx on public.auth_password_reset_tokens(account_id, created_at desc);
 create index if not exists auth_password_reset_tokens_expires_idx on public.auth_password_reset_tokens(expires_at);
 create index if not exists workflow_airline_profiles_email_idx on public.workflow_airline_profiles(lower(airline_email));
+create index if not exists workflow_gsa_profiles_email_idx on public.workflow_gsa_profiles(lower(gsa_email));
 create index if not exists workflow_attachments_contract_idx on public.workflow_attachments(contract_id, created_at desc);
 create index if not exists workflow_attachments_entity_idx on public.workflow_attachments(entity_type, entity_id, created_at desc);
 create index if not exists workflow_attachments_airline_idx on public.workflow_attachments(airline_company_id, created_at desc);
@@ -763,6 +773,7 @@ alter table public.team_accounts enable row level security;
 alter table public.account_registrations enable row level security;
 alter table public.fr24_runtime_settings enable row level security;
 alter table public.workflow_airline_profiles enable row level security;
+alter table public.workflow_gsa_profiles enable row level security;
 alter table public.workflow_attachments enable row level security;
 alter table public.workflow_email_deliveries enable row level security;
 alter table public.workflow_user_state enable row level security;
@@ -917,6 +928,58 @@ create policy "airlines manage own workflow profile" on public.workflow_airline_
             and (
               public.workflow_airline_profiles.airline_company_id = public.users.company_id::text
               or lower(public.workflow_airline_profiles.airline_email) = lower(public.users.email)
+            )
+          )
+        )
+    )
+  );
+create policy "gsas read own workflow profile" on public.workflow_gsa_profiles
+  for select to authenticated
+  using (
+    exists (
+      select 1 from public.users
+      where id = auth.uid()
+        and (
+          role = 'admin'
+          or (
+            role = 'gsa'
+            and (
+              public.workflow_gsa_profiles.gsa_company_id = public.users.company_id::text
+              or lower(public.workflow_gsa_profiles.gsa_email) = lower(public.users.email)
+            )
+          )
+        )
+    )
+  );
+create policy "gsas manage own workflow profile" on public.workflow_gsa_profiles
+  for all to authenticated
+  using (
+    exists (
+      select 1 from public.users
+      where id = auth.uid()
+        and (
+          role = 'admin'
+          or (
+            role = 'gsa'
+            and (
+              public.workflow_gsa_profiles.gsa_company_id = public.users.company_id::text
+              or lower(public.workflow_gsa_profiles.gsa_email) = lower(public.users.email)
+            )
+          )
+        )
+    )
+  )
+  with check (
+    exists (
+      select 1 from public.users
+      where id = auth.uid()
+        and (
+          role = 'admin'
+          or (
+            role = 'gsa'
+            and (
+              public.workflow_gsa_profiles.gsa_company_id = public.users.company_id::text
+              or lower(public.workflow_gsa_profiles.gsa_email) = lower(public.users.email)
             )
           )
         )

@@ -1,9 +1,8 @@
 "use client";
 
-import Image from "next/image";
 import { useRouter } from "next/navigation";
-import { useRef, useState } from "react";
-import { Camera, CheckCircle2, ImageIcon, Loader2, Upload, UserCircle, XCircle } from "lucide-react";
+import { useState } from "react";
+import { CheckCircle2, Loader2 } from "lucide-react";
 import { AirportCodePicker } from "@/components/dashboard/freight-field-selects";
 
 type EditableAirlineProfile = {
@@ -21,16 +20,12 @@ type EditableAirlineProfile = {
   bannerPath?: string;
 };
 
-type AssetKind = "logo" | "banner" | "avatar";
-
 export function AirlineProfileEditor({
   profile,
   contactName,
-  userAvatarPath,
 }: {
   profile: EditableAirlineProfile;
   contactName: string;
-  userAvatarPath?: string;
 }) {
   const router = useRouter();
   const [form, setForm] = useState({
@@ -76,38 +71,6 @@ export function AirlineProfileEditor({
 
   return (
     <div className="space-y-5">
-      <section className="rounded-xl border border-border-ui bg-surface2 p-4">
-        <div className="mb-4 flex items-center justify-between gap-3">
-          <div>
-            <h2 className="text-base font-bold text-ink">Brand assets</h2>
-            <p className="mt-1 text-sm text-ink-muted">These visuals appear in the airline workspace and partner-facing profile surfaces.</p>
-          </div>
-        </div>
-        <div className="grid gap-4 lg:grid-cols-[1.1fr_1fr_1fr]">
-          <ProfileAssetUploader
-            kind="banner"
-            label="Workspace banner"
-            detail="Wide header image for the airline profile hero."
-            currentPath={profile.bannerPath}
-            aspect="banner"
-          />
-          <ProfileAssetUploader
-            kind="logo"
-            label="Airline logo"
-            detail="Shown in navigation, tenders, and partner-facing views."
-            currentPath={profile.logoPath}
-            aspect="square"
-          />
-          <ProfileAssetUploader
-            kind="avatar"
-            label="Your photo"
-            detail="Shown next to your personal account inside the workspace."
-            currentPath={userAvatarPath}
-            aspect="avatar"
-          />
-        </div>
-      </section>
-
       <section className="rounded-xl border border-border-ui bg-surface2 p-4">
         <div className="mb-4 flex flex-col gap-2 md:flex-row md:items-start md:justify-between">
           <div>
@@ -169,119 +132,6 @@ export function AirlineProfileEditor({
           </p>
         )}
       </section>
-    </div>
-  );
-}
-
-function ProfileAssetUploader({
-  kind,
-  label,
-  detail,
-  currentPath,
-  aspect,
-}: {
-  kind: AssetKind;
-  label: string;
-  detail: string;
-  currentPath?: string;
-  aspect: "banner" | "square" | "avatar";
-}) {
-  const router = useRouter();
-  const inputRef = useRef<HTMLInputElement>(null);
-  const [path, setPath] = useState(currentPath);
-  const [busy, setBusy] = useState(false);
-  const [error, setError] = useState<string>();
-
-  async function upload(file: File | undefined) {
-    if (!file) return;
-    setBusy(true);
-    setError(undefined);
-    const body = new FormData();
-    body.append("kind", kind);
-    body.append("asset", file);
-    try {
-      const response = await fetch("/api/airline/profile/assets", { method: "POST", body });
-      const data = (await response.json()) as Record<string, string | undefined> & { error?: string };
-      if (!response.ok) {
-        setError(data.error ?? "Upload failed.");
-        return;
-      }
-      const nextPath = data.logoPath ?? data.bannerPath ?? data.avatarPath;
-      setPath(nextPath ? `${nextPath}?v=${Date.now()}` : undefined);
-      router.refresh();
-    } catch {
-      setError("Upload failed.");
-    } finally {
-      setBusy(false);
-      if (inputRef.current) inputRef.current.value = "";
-    }
-  }
-
-  async function remove() {
-    setBusy(true);
-    setError(undefined);
-    try {
-      const response = await fetch(`/api/airline/profile/assets?kind=${kind}`, { method: "DELETE" });
-      const data = (await response.json()) as { error?: string };
-      if (!response.ok) {
-        setError(data.error ?? "Remove failed.");
-        return;
-      }
-      setPath(undefined);
-      router.refresh();
-    } catch {
-      setError("Remove failed.");
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  const previewClass = aspect === "banner"
-    ? "h-28 w-full rounded-xl"
-    : aspect === "avatar"
-      ? "h-20 w-20 rounded-full"
-      : "h-20 w-20 rounded-2xl";
-
-  return (
-    <div className="rounded-xl border border-border-ui bg-surface p-4">
-      <div className="flex items-start gap-4">
-        <button
-          type="button"
-          onClick={() => inputRef.current?.click()}
-          disabled={busy}
-          className={`relative flex shrink-0 items-center justify-center overflow-hidden border border-border-ui bg-brand-light text-brand transition hover:opacity-90 focus:outline-none focus:ring-2 focus:ring-brand/30 disabled:opacity-60 ${previewClass}`}
-        >
-          {path ? (
-            <Image src={path} alt={label} fill className={aspect === "banner" ? "object-cover" : "object-contain p-2"} unoptimized />
-          ) : aspect === "avatar" ? (
-            <UserCircle className="h-9 w-9" />
-          ) : aspect === "banner" ? (
-            <ImageIcon className="h-9 w-9" />
-          ) : (
-            <Camera className="h-9 w-9" />
-          )}
-          <span className="absolute inset-0 flex items-center justify-center bg-black/45 opacity-0 transition-opacity hover:opacity-100">
-            {busy ? <Loader2 className="h-5 w-5 animate-spin text-white" /> : <Upload className="h-5 w-5 text-white" />}
-          </span>
-        </button>
-        <div className="min-w-0 flex-1">
-          <p className="font-semibold text-ink">{label}</p>
-          <p className="mt-1 text-sm leading-5 text-ink-muted">{detail}</p>
-          <div className="mt-3 flex flex-wrap gap-2">
-            <button type="button" onClick={() => inputRef.current?.click()} disabled={busy} className="rounded-lg border border-border-ui px-3 py-1.5 text-xs font-semibold text-ink transition hover:bg-surface2 disabled:opacity-60">
-              Upload
-            </button>
-            {path && (
-              <button type="button" onClick={remove} disabled={busy} className="inline-flex items-center gap-1 rounded-lg border border-danger/25 px-3 py-1.5 text-xs font-semibold text-danger transition hover:bg-danger-bg disabled:opacity-60">
-                <XCircle className="h-3.5 w-3.5" />
-                Remove
-              </button>
-            )}
-          </div>
-          {error && <p className="mt-2 text-xs font-semibold text-danger">{error}</p>}
-        </div>
-      </div>
-      <input ref={inputRef} type="file" accept="image/png,image/jpeg,image/webp" className="hidden" onChange={(event) => upload(event.target.files?.[0])} />
     </div>
   );
 }

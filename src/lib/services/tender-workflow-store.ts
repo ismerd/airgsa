@@ -19,6 +19,10 @@ export type TenderRouteFrequency = {
   aircraft?: string;
 };
 
+export type TenderMandateType = "full-gsa" | "sales-only" | "route-launch" | "product-specialist" | "regional-cluster";
+export type TenderCoverageModel = "country-wide" | "airport-led" | "route-led" | "regional-cluster";
+export type TenderReportingCadence = "weekly" | "biweekly" | "monthly" | "quarterly";
+
 export type TenderWorkflowDocument = {
   id: string;
   name: string;
@@ -43,9 +47,16 @@ export type LiveTender = {
   deadline: string;
   expectedStart: string;
   status: Extract<Status, "draft" | "open" | "closed">;
+  mandateType?: TenderMandateType;
+  coverageModel?: TenderCoverageModel;
   awardMode?: "single" | "multi";
   maxAwards?: number;
   commercialModel?: "commission" | "capacity-risk" | "hybrid";
+  commissionRate?: number;
+  targetLoadFactor?: number;
+  monthlyRevenueTarget?: number;
+  reportingCadence?: TenderReportingCadence;
+  requiredCapabilities?: string[];
   requirements: string[];
   commercialExpectations: string;
   routes: TenderRouteFrequency[];
@@ -105,6 +116,11 @@ export type LivePartnerContract = {
   complianceScore?: number;
   winRate?: number;
   market: string;
+  mandateType?: TenderMandateType;
+  coverageModel?: TenderCoverageModel;
+  awardMode?: "single" | "multi";
+  maxAwards?: number;
+  commercialModel?: "commission" | "capacity-risk" | "hybrid";
   startDate: string;
   endDate?: string;
   status: Extract<Status, "pending" | "active" | "suspended" | "closed">;
@@ -195,7 +211,7 @@ export type ApplicationCreateInput = Pick<
   | "networkPlan"
   | "operationalReadiness"
   | "documents"
->;
+> & Partial<Pick<LiveTenderApplication, "coverage" | "markets">>;
 
 export async function listLiveTenders() {
   const store = await readStore();
@@ -290,12 +306,12 @@ export async function listLivePartnerContracts() {
 }
 
 export async function getLivePartnerContract(id: string) {
-  const store = await readStore();
+  const store = await readStoreWithPersistedContractReconciliation();
   return store.contracts.find((contract) => contract.id === id) ?? null;
 }
 
 export async function getContractByGsaAndAirline(gsaCompanyIdOrId: string, airlineCompanyIdOrEmail: string) {
-  const store = await readStore();
+  const store = await readStoreWithPersistedContractReconciliation();
   return store.contracts.find((contract) => {
     const gsaMatches = contract.gsaCompanyId === gsaCompanyIdOrId || contract.gsaId === gsaCompanyIdOrId;
     const airlineMatches =
@@ -502,7 +518,7 @@ function normalizeContractRoute(input: ContractRouteCreateInput): TenderRouteFre
 }
 
 export async function listRoutesForGsa(session: Pick<SessionPayload, "companyId" | "company" | "email">) {
-  const store = await readStore();
+  const store = await readStoreWithPersistedContractReconciliation();
   return store.contracts
     .filter((contract) => isContractOwnedByGsaSession(session, contract))
     .flatMap((contract) =>
@@ -568,8 +584,8 @@ export async function createLiveApplication(
       contactName: applicant.contactName ?? applicant.name,
       email: applicant.email,
       headquarters: applicant.headquarters ?? "Not provided",
-      coverage: applicant.coverage ?? [],
-      markets: applicant.markets ?? [],
+      coverage: input.coverage?.length ? input.coverage : applicant.coverage ?? [],
+      markets: input.markets?.length ? input.markets : applicant.markets ?? [],
       certifications: applicant.certifications ?? [],
       cargoFocus: applicant.cargoFocus ?? "General cargo",
       networkScore: applicant.networkScore ?? 50,
@@ -719,6 +735,7 @@ function upsertContractFromAward(
   const now = new Date().toISOString();
   const existingIndex = contracts.findIndex((contract) => contract.sourceApplicationId === application.id);
   const existingContract = existingIndex >= 0 ? contracts[existingIndex] : null;
+  const derivedDefaults = buildAwardContractDefaults(tender, application);
   const contract: LivePartnerContract = {
     ...(existingContract ?? {}),
     id: existingContract?.id ?? `ctr-${application.id}`,
@@ -742,14 +759,19 @@ function upsertContractFromAward(
     complianceScore: application.complianceScore,
     winRate: application.winRate,
     market: tender.countryScope || tender.regions.join(", ") || tender.lanes || "Market scope",
-    startDate: existingContract?.startDate ?? tender.expectedStart ?? new Date().toISOString().slice(0, 10),
-    endDate: existingContract?.endDate,
+    mandateType: tender.mandateType,
+    coverageModel: tender.coverageModel,
+    awardMode: tender.awardMode,
+    maxAwards: tender.maxAwards,
+    commercialModel: tender.commercialModel,
+    startDate: existingContract?.startDate ?? derivedDefaults.startDate,
+    endDate: existingContract?.endDate ?? derivedDefaults.endDate,
     status: existingContract?.status ?? "pending",
     commercialTerms: existingContract?.commercialTerms ?? application.proposedCommission,
-    commissionRate: existingContract?.commissionRate ?? parseCommissionRate(application.proposedCommission),
-    targetLoadFactor: existingContract?.targetLoadFactor,
-    monthlyTonnageTargetKg: existingContract?.monthlyTonnageTargetKg,
-    reportingCadence: existingContract?.reportingCadence ?? "weekly",
+    commissionRate: existingContract?.commissionRate ?? derivedDefaults.commissionRate,
+    targetLoadFactor: existingContract?.targetLoadFactor ?? derivedDefaults.targetLoadFactor,
+    monthlyTonnageTargetKg: existingContract?.monthlyTonnageTargetKg ?? derivedDefaults.monthlyTonnageTargetKg,
+    reportingCadence: existingContract?.reportingCadence ?? derivedDefaults.reportingCadence,
     controlRules: existingContract?.controlRules ?? buildDefaultControlRules(tender, application),
     contractRoutes: buildContractRoutes(tender, existingContract?.contractRoutes),
     createdAt: existingContract?.createdAt ?? now,
@@ -790,15 +812,50 @@ function buildDefaultControlRules(tender: LiveTender, application: LiveTenderApp
     autoApprovalVariancePct: 0,
     requireAirlineApprovalBelowFloor: true,
     quoteResponseSlaHours: 4,
-    monthlyRevenueTarget: Math.max(50000, Math.round((tender.annualTonnage || 0) * baseFloor / 12)),
+    monthlyRevenueTarget: tender.monthlyRevenueTarget ?? Math.max(50000, Math.round((tender.annualTonnage || 0) * baseFloor / 12)),
     minimumMonthlyQuotes: 12,
     quoteWinRateTargetPct: 35,
     namedAccounts: [],
     productScope: tender.productMix.split(",").map((item) => item.trim()).filter(Boolean),
-    territoryExclusivity: tender.awardMode === "single" ? "exclusive" : "shared",
+    territoryExclusivity: tender.awardMode === "single" && tender.coverageModel !== "route-led" ? "exclusive" : "shared",
     monthlyReportDueDay: 5,
     penaltyClause: "Below-floor quotes require airline approval before customer confirmation.",
   };
+}
+
+function buildAwardContractDefaults(tender: LiveTender, application: LiveTenderApplication) {
+  const startDate = tender.expectedStart || new Date().toISOString().slice(0, 10);
+  return {
+    startDate,
+    endDate: deriveContractEndDate(startDate, tender.commercialExpectations),
+    commissionRate: parseCommissionRate(application.proposedCommission) ?? tender.commissionRate,
+    targetLoadFactor: tender.targetLoadFactor,
+    monthlyTonnageTargetKg: parseMonthlyTonnageTargetKg(application.monthlySalesTarget) ?? deriveTenderMonthlyTonnageTargetKg(tender),
+    reportingCadence: tender.reportingCadence ?? "weekly",
+  };
+}
+
+function deriveContractEndDate(startDate: string, commercialExpectations?: string) {
+  const durationText = commercialExpectations?.match(/Contract duration:\s*([^\n]+)/i)?.[1] ?? "";
+  const months = Number.parseInt(durationText.match(/(\d+)\s*months?/i)?.[1] ?? "", 10);
+  if (!startDate || !Number.isFinite(months) || months <= 0) return undefined;
+
+  const date = new Date(`${startDate}T00:00:00.000Z`);
+  if (Number.isNaN(date.getTime())) return undefined;
+
+  date.setUTCMonth(date.getUTCMonth() + months);
+  return date.toISOString().slice(0, 10);
+}
+
+function parseMonthlyTonnageTargetKg(value?: string) {
+  if (!value) return undefined;
+  const normalized = value.replace(/,/g, "");
+  const tonnage = Number.parseFloat(normalized.match(/\d+(\.\d+)?/)?.[0] ?? "");
+  return Number.isFinite(tonnage) ? Math.round(tonnage * 1000) : undefined;
+}
+
+function deriveTenderMonthlyTonnageTargetKg(tender: Pick<LiveTender, "annualTonnage">) {
+  return tender.annualTonnage > 0 ? Math.round((tender.annualTonnage / 12) * 1000) : undefined;
 }
 
 function normalizeWorkflowStore(store: TenderWorkflowStore): TenderWorkflowStore {
@@ -807,6 +864,7 @@ function normalizeWorkflowStore(store: TenderWorkflowStore): TenderWorkflowStore
   let contracts: LivePartnerContract[] = store.contracts.map((contract) => {
     const tender = tenderById.get(contract.tenderId);
     const application = applicationById.get(contract.sourceApplicationId);
+    const derivedDefaults = tender && application ? buildAwardContractDefaults(tender, application) : null;
     return {
       ...contract,
       contactName: contract.contactName ?? application?.contactName,
@@ -820,8 +878,17 @@ function normalizeWorkflowStore(store: TenderWorkflowStore): TenderWorkflowStore
       financialScore: contract.financialScore ?? application?.financialScore,
       complianceScore: contract.complianceScore ?? application?.complianceScore,
       winRate: contract.winRate ?? application?.winRate,
-      commissionRate: contract.commissionRate ?? parseCommissionRate(contract.commercialTerms ?? application?.proposedCommission),
-      reportingCadence: contract.reportingCadence ?? "weekly",
+      mandateType: contract.mandateType ?? tender?.mandateType,
+      coverageModel: contract.coverageModel ?? tender?.coverageModel,
+      awardMode: contract.awardMode ?? tender?.awardMode,
+      maxAwards: contract.maxAwards ?? tender?.maxAwards,
+      commercialModel: contract.commercialModel ?? tender?.commercialModel,
+      startDate: contract.startDate ?? derivedDefaults?.startDate ?? new Date().toISOString().slice(0, 10),
+      endDate: contract.endDate ?? derivedDefaults?.endDate,
+      commissionRate: contract.commissionRate ?? derivedDefaults?.commissionRate ?? parseCommissionRate(contract.commercialTerms ?? application?.proposedCommission),
+      targetLoadFactor: contract.targetLoadFactor ?? derivedDefaults?.targetLoadFactor,
+      monthlyTonnageTargetKg: contract.monthlyTonnageTargetKg ?? derivedDefaults?.monthlyTonnageTargetKg,
+      reportingCadence: contract.reportingCadence ?? derivedDefaults?.reportingCadence ?? "weekly",
       controlRules: contract.controlRules ?? (tender && application ? buildDefaultControlRules(tender, application) : undefined),
       contractRoutes: tender ? buildContractRoutes(tender, contract.contractRoutes ?? []) : contract.contractRoutes ?? [],
     };
@@ -1059,6 +1126,17 @@ function hasContractReconciliationChanges(rawStore: TenderWorkflowStore, reconci
     if (raw.email !== contract.email && contract.email) return true;
     if (raw.gsaCompanyId !== contract.gsaCompanyId && contract.gsaCompanyId) return true;
     if (raw.airlineCompanyId !== contract.airlineCompanyId && contract.airlineCompanyId) return true;
+    if (raw.startDate !== contract.startDate && contract.startDate) return true;
+    if (raw.endDate !== contract.endDate && contract.endDate) return true;
+    if (raw.commissionRate !== contract.commissionRate && contract.commissionRate != null) return true;
+    if (raw.targetLoadFactor !== contract.targetLoadFactor && contract.targetLoadFactor != null) return true;
+    if (raw.monthlyTonnageTargetKg !== contract.monthlyTonnageTargetKg && contract.monthlyTonnageTargetKg != null) return true;
+    if (raw.reportingCadence !== contract.reportingCadence && contract.reportingCadence) return true;
+    if (raw.mandateType !== contract.mandateType && contract.mandateType) return true;
+    if (raw.coverageModel !== contract.coverageModel && contract.coverageModel) return true;
+    if (raw.awardMode !== contract.awardMode && contract.awardMode) return true;
+    if (raw.maxAwards !== contract.maxAwards && contract.maxAwards != null) return true;
+    if (raw.commercialModel !== contract.commercialModel && contract.commercialModel) return true;
     return false;
   });
 }
