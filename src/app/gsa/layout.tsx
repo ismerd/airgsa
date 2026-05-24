@@ -1,4 +1,4 @@
-import { BarChart3, BellRing, Building2, CalendarDays, CheckSquare2, FileSpreadsheet, Inbox, Megaphone, Newspaper, Package, PackageSearch, PanelLeft, Users, UserRound } from "lucide-react";
+import { BarChart3, BellRing, Building2, CalendarDays, CheckSquare2, FileSpreadsheet, Inbox, Megaphone, Newspaper, Package, PackageSearch, PanelLeft, Plug, Users, UserRound } from "lucide-react";
 import { Sidebar, type NavGroup } from "@/components/dashboard/sidebar";
 import { getFreshSession } from "@/lib/auth/session";
 import { canViewApplication, canViewTender } from "@/lib/auth/permissions";
@@ -76,6 +76,7 @@ function getNav(notificationCount: number, pendingQuoteCount: number, accessRole
       heading: "Company",
       items: [
         { label: "Company Profile", href: "/gsa/profile", icon: Building2 },
+        { label: "Integrations", href: "/gsa/integrations", icon: Plug },
         { label: "Team & Access", href: "/gsa/team", icon: Users },
       ],
     },

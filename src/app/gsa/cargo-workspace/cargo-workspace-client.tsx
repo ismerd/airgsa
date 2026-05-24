@@ -154,6 +154,40 @@ export function CargoWorkspaceClient({ operations }: { operations: EcargowareOpe
     }
   }
 
+  function webCargoShipmentBody() {
+    const pieces = Number(rateForm.pieces || bookingForm.pieces || 1);
+    const grosswt = Number(rateForm.grossWeight || bookingForm.grossWeight || 0);
+    const productType = normalizeProductCode(rateForm.productType || bookingForm.productType);
+    return {
+      agentName: rateForm.customer || bookingForm.customerName || undefined,
+      iataNo: bookingForm.iataNo || undefined,
+      origin: rateForm.origin || bookingForm.origin,
+      destination: rateForm.destination || bookingForm.destination,
+      pieces,
+      grosswt,
+      shc: productType,
+      stackable: bookingForm.stackable || "N",
+      productType,
+      dims: [
+        {
+          pieces,
+          len: 120,
+          width: 100,
+          height: 120,
+          volume: 1.44,
+          grossWeight: grosswt,
+          chargeWeight: grosswt,
+        },
+      ],
+      description: bookingForm.commodity || rateForm.productType || "GENERAL CARGO",
+      cargoScreened: "Y",
+      lengthUnit: "CM",
+      weightUnit: "KG",
+      fltFromDate: rateForm.flightDate || bookingForm.flightDate,
+      fltToDate: rateForm.flightDate || bookingForm.flightDate,
+    };
+  }
+
   function switchTab(t: Tab) {
     setTab(t);
     setResult(null);
@@ -399,6 +433,10 @@ export function CargoWorkspaceClient({ operations }: { operations: EcargowareOpe
                   <TrendingUp className="h-4 w-4" />
                   {running ? "Searching…" : "Find Rates"}
                 </Button>
+                <Button variant="outline" onClick={() => callApi("webcargo-rate-and-routes", { body: webCargoShipmentBody() })} disabled={running || !rateForm.origin || !rateForm.destination || !rateForm.grossWeight || !hasOperation("webcargo-rate-and-routes")}>
+                  <TrendingUp className="h-4 w-4" />
+                  WebCargo rates
+                </Button>
                 <Button variant="outline" onClick={() => callApi("flights-find-routes", { body: { carrierCode: rateForm.carrier, origin: rateForm.origin, destination: rateForm.destination } })} disabled={running || !rateForm.origin || !rateForm.destination || !hasOperation("flights-find-routes")}>
                   <Plane className="h-4 w-4" />
                   Find Routes
@@ -531,6 +569,10 @@ export function CargoWorkspaceClient({ operations }: { operations: EcargowareOpe
                     <Plus className="h-4 w-4" />
                     {running ? "Creating…" : "Create Booking"}
                   </Button>
+                  <Button variant="outline" className="w-full" disabled={running || !bookingForm.awbNo || !hasOperation("webcargo-request-booking")} onClick={() => callApi("webcargo-request-booking", { body: { correlationId: bookingForm.awbNo, routingId: 1 } })}>
+                    <Plane className="h-4 w-4" />
+                    Request WebCargo booking
+                  </Button>
                 </>
               )}
 
@@ -559,7 +601,7 @@ export function CargoWorkspaceClient({ operations }: { operations: EcargowareOpe
                   <Field label="IATA number (optional)">
                     <Input value={bookingForm.iataNo} onChange={(e) => setBookingForm((f) => ({ ...f, iataNo: e.target.value }))} placeholder="12345678901" />
                   </Field>
-                  <Button className="w-full" disabled={running || !hasOperation("bookings-search")} onClick={() => callApi("bookings-search", { queryParams: { origin: bookingForm.origin, destination: bookingForm.destination, ...(bookingForm.awbNo && { awbNo: bookingForm.awbNo }), ...(bookingForm.iataNo && { iataNo: bookingForm.iataNo }), flightFromDate: bookingForm.searchFromDate, flightToDate: bookingForm.searchToDate } })}>
+                  <Button className="w-full" disabled={running || !hasOperation("bookings-search")} onClick={() => callApi("bookings-search", { query: { origin: bookingForm.origin, destination: bookingForm.destination, ...(bookingForm.awbNo && { awbNo: bookingForm.awbNo }), ...(bookingForm.iataNo && { iataNo: bookingForm.iataNo }), flightFromDate: bookingForm.searchFromDate, flightToDate: bookingForm.searchToDate } })}>
                     <Search className="h-4 w-4" />
                     {running ? "Searching…" : "Search Bookings"}
                   </Button>
@@ -781,7 +823,7 @@ function ApiResult({ result, running, label, successLabel }: { result: Execution
       <Card>
         <CardContent className="flex items-center gap-3 p-5">
           <div className="h-5 w-5 animate-spin rounded-full border-2 border-brand border-t-transparent" />
-          <p className="text-sm font-semibold text-ink-muted">Calling ECAGROWARE…</p>
+          <p className="text-sm font-semibold text-ink-muted">Calling eCargoWare/WebCargo…</p>
         </CardContent>
       </Card>
     );
@@ -819,7 +861,7 @@ function ApiResult({ result, running, label, successLabel }: { result: Execution
           <div>
             <p className="text-sm font-bold text-success">{successLabel}</p>
             <p className="text-xs text-ink-muted">
-              Live response from ECAGROWARE
+              Live response from eCargoWare/WebCargo
             </p>
           </div>
           {result.status && (
@@ -866,4 +908,14 @@ function Row({ label, value, mono }: { label: string; value: string; mono?: bool
 
 function firstAssignedRoute(contract: LivePartnerContract) {
   return contract.contractRoutes.find((route) => route.status === "assigned") ?? null;
+}
+
+function normalizeProductCode(value: string) {
+  const lower = value.toLowerCase();
+  if (lower.includes("danger") || lower.includes("lithium")) return "DGR";
+  if (lower.includes("pharma") || lower.includes("temperature")) return "COL";
+  if (lower.includes("perishable")) return "PER";
+  if (lower.includes("express") || lower.includes("aog")) return "XPS";
+  if (lower.includes("valuable")) return "VAL";
+  return "GCR";
 }

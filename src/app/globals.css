@@ -250,3 +250,49 @@ html.dark .landed-airport-cluster {
   border-color: rgba(228,236,255,0.9);
   box-shadow: 0 8px 24px rgba(0,0,0,0.35);
 }
+
+/* ── Landing page hero sky ── */
+.landing-sky {
+  background: linear-gradient(172deg,
+    #85C0EE 0%,
+    #AAD4F5 14%,
+    #C8E8FF 30%,
+    #DFF2FF 50%,
+    #EEF8FF 68%,
+    #F5FAFF 84%,
+    #FAFCFF 100%
+  );
+}
+html.dark .landing-sky {
+  background: linear-gradient(172deg,
+    #010509 0%,
+    #020A16 18%,
+    #040D1C 40%,
+    #060F20 65%,
+    #070F22 100%
+  );
+}
+
+/* ── Glassmorphism card ── */
+.glass-card {
+  background: rgba(255,255,255,0.87);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+  border: 1px solid rgba(255,255,255,0.7);
+  box-shadow:
+    0 4px 24px rgba(11,30,79,0.09),
+    inset 0 1px 0 rgba(255,255,255,0.8);
+}
+html.dark .glass-card {
+  background: rgba(9,19,40,0.88);
+  border-color: rgba(26,90,255,0.22);
+  box-shadow:
+    0 4px 24px rgba(0,0,0,0.45),
+    inset 0 1px 0 rgba(26,90,255,0.1);
+}
+
+/* ── Landing section divider ── */
+.section-fade-edge {
+  mask-image: linear-gradient(to bottom, transparent, black 8%, black 92%, transparent);
+  -webkit-mask-image: linear-gradient(to bottom, transparent, black 8%, black 92%, transparent);
+}

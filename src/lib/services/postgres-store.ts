@@ -180,6 +180,20 @@ async function ensureSchema() {
         updated_at timestamptz not null default now()
       );
 
+      create table if not exists workflow_company_integrations (
+        id text primary key,
+        provider text not null check (provider in ('ecargoware', 'cargowise')),
+        role text not null check (role in ('gsa')),
+        company_id text,
+        company_key text not null,
+        company text not null,
+        enabled boolean not null default false,
+        created_at timestamptz not null,
+        updated_at timestamptz not null default now(),
+        data jsonb not null default '{}'::jsonb,
+        unique (role, company_key, provider)
+      );
+
       create table if not exists workflow_attachments (
         id text primary key,
         contract_id text,
@@ -247,6 +261,39 @@ async function ensureSchema() {
         airline_company_id text,
         gsa_company_id text,
         status text not null check (status in ('booked', 'flown', 'cancelled')),
+        created_at timestamptz not null,
+        updated_at timestamptz not null,
+        data jsonb not null
+      );
+
+      create table if not exists workflow_quote_rooms (
+        id text primary key,
+        public_token text not null unique,
+        quote_id text not null unique,
+        contract_id text not null,
+        airline_company_id text,
+        gsa_company_id text,
+        customer_email text,
+        status text not null check (status in ('open', 'accepted', 'rejected', 'closed')),
+        created_at timestamptz not null,
+        updated_at timestamptz not null,
+        last_message_at timestamptz not null,
+        data jsonb not null
+      );
+
+      create table if not exists workflow_quote_room_messages (
+        id text primary key,
+        room_id text not null references workflow_quote_rooms(id) on delete cascade,
+        actor text not null check (actor in ('gsa', 'customer', 'system')),
+        created_at timestamptz not null,
+        data jsonb not null
+      );
+
+      create table if not exists workflow_quote_room_offers (
+        id text primary key,
+        room_id text not null references workflow_quote_rooms(id) on delete cascade,
+        quote_id text not null,
+        status text not null check (status in ('sent', 'accepted', 'rejected', 'withdrawn')),
         created_at timestamptz not null,
         updated_at timestamptz not null,
         data jsonb not null
@@ -371,6 +418,8 @@ async function ensureSchema() {
       create index if not exists account_registrations_role_idx on account_registrations(role, submitted_at desc);
       create index if not exists workflow_airline_profiles_email_idx on workflow_airline_profiles(lower(airline_email));
       create index if not exists workflow_gsa_profiles_email_idx on workflow_gsa_profiles(lower(gsa_email));
+      create index if not exists workflow_company_integrations_company_idx on workflow_company_integrations(role, company_key, provider);
+      create index if not exists workflow_company_integrations_enabled_idx on workflow_company_integrations(provider, enabled, updated_at desc);
       create index if not exists workflow_attachments_contract_idx on workflow_attachments(contract_id, created_at desc);
       create index if not exists workflow_attachments_entity_idx on workflow_attachments(entity_type, entity_id, created_at desc);
       create index if not exists workflow_attachments_airline_idx on workflow_attachments(airline_company_id, created_at desc);
@@ -383,6 +432,10 @@ async function ensureSchema() {
       create index if not exists workflow_mandate_quotes_status_idx on workflow_mandate_quotes(status, updated_at desc);
       create index if not exists workflow_mandate_bookings_contract_idx on workflow_mandate_bookings(contract_id, created_at desc);
       create index if not exists workflow_mandate_bookings_quote_idx on workflow_mandate_bookings(quote_id);
+      create index if not exists workflow_quote_rooms_contract_idx on workflow_quote_rooms(contract_id, updated_at desc);
+      create index if not exists workflow_quote_rooms_companies_idx on workflow_quote_rooms(airline_company_id, gsa_company_id, updated_at desc);
+      create index if not exists workflow_quote_room_messages_room_idx on workflow_quote_room_messages(room_id, created_at desc);
+      create index if not exists workflow_quote_room_offers_room_idx on workflow_quote_room_offers(room_id, updated_at desc);
       create index if not exists workflow_control_actions_contract_idx on workflow_control_actions(contract_id, status, updated_at desc);
       create index if not exists workflow_control_action_comments_action_idx on workflow_control_action_comments(action_id, created_at);
       create index if not exists workflow_monthly_reports_contract_period_idx on workflow_monthly_reports(contract_id, period);

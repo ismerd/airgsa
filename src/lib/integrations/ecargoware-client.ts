@@ -1,4 +1,5 @@
 import { ECARGOWARE_BASE_URL, getEcargowareOperation, type EcargowareOperation } from "./ecargoware-catalog";
+import type { CargoIntegrationRuntimeConfig } from "@/lib/services/cargo-integration-store";
 
 export type EcargowareExecuteInput = {
   operationId: string;
@@ -23,7 +24,20 @@ export type EcargowareExecutionResult = {
   message?: string;
 };
 
-export function isEcargowareConfigured() {
+export type EcargowareTestResult = {
+  ok: boolean;
+  status?: number;
+  message: string;
+};
+
+export function isEcargowareConfigured(config?: CargoIntegrationRuntimeConfig | null) {
+  if (config?.enabled) {
+    return Boolean(
+      config.authMode === "bearer"
+        ? config.bearerToken
+        : config.username && config.password && config.company && config.application,
+    );
+  }
   return Boolean(
     process.env.ECARGOWARE_BEARER_TOKEN ||
       (
@@ -35,14 +49,17 @@ export function isEcargowareConfigured() {
   );
 }
 
-export async function executeEcargowareOperation(input: EcargowareExecuteInput): Promise<EcargowareExecutionResult> {
+export async function executeEcargowareOperation(
+  input: EcargowareExecuteInput,
+  config?: CargoIntegrationRuntimeConfig | null,
+): Promise<EcargowareExecutionResult> {
   const operation = getEcargowareOperation(input.operationId);
   if (!operation) {
     throw new Error("Unknown eCargoWare operation.");
   }
 
-  const url = buildUrl(operation, input.query, input.pathParams);
-  const token = await getAccessToken();
+  const url = buildUrl(operation, input.query, input.pathParams, config);
+  const token = await getAccessToken(config);
   const request = {
     url: url.toString(),
     method: operation.method,
@@ -60,7 +77,7 @@ export async function executeEcargowareOperation(input: EcargowareExecuteInput):
       request,
       response: null,
       message:
-        "eCargoWare credentials are not configured. Live cargo-system execution is disabled until server credentials are set.",
+        "eCargoWare credentials are not configured for this GSA. Open Company Profile > Integrations and connect the cargo system first.",
     };
   }
 
@@ -94,12 +111,63 @@ export async function executeEcargowareOperation(input: EcargowareExecuteInput):
   };
 }
 
+export async function testEcargowareConnection(config: CargoIntegrationRuntimeConfig): Promise<EcargowareTestResult> {
+  if (!config.enabled) {
+    return { ok: false, message: "Integration is disabled." };
+  }
+  if (!isEcargowareConfigured(config)) {
+    return { ok: false, message: "Credentials are incomplete." };
+  }
+
+  try {
+    const token = await getAccessToken(config);
+    if (!token) return { ok: false, message: "Could not obtain an access token." };
+
+    if (!config.iataNo) {
+      return {
+        ok: true,
+        message: "Credentials are present. Add an IATA number to run a live booking-list probe.",
+      };
+    }
+
+    const url = new URL("/cargo-api/booking/list-booking", config.baseUrl || ECARGOWARE_BASE_URL);
+    url.searchParams.set("iataNo", config.iataNo);
+    const response = await fetch(url, {
+      method: "GET",
+      headers: {
+        Accept: "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      cache: "no-store",
+    });
+    if (response.ok || response.status === 404 || response.status === 204) {
+      return {
+        ok: true,
+        status: response.status,
+        message: `Connection reached eCargoWare/WebCargo with HTTP ${response.status}.`,
+      };
+    }
+    const parsed = await parseResponse(response);
+    return {
+      ok: false,
+      status: response.status,
+      message: `Connection reached the API but was rejected with HTTP ${response.status}: ${summarizeResponse(parsed)}`,
+    };
+  } catch (error) {
+    return {
+      ok: false,
+      message: error instanceof Error ? error.message : "Connection test failed.",
+    };
+  }
+}
+
 function buildUrl(
   operation: EcargowareOperation,
   query: Record<string, string> | undefined,
   pathParams: Record<string, string> | undefined,
+  config?: CargoIntegrationRuntimeConfig | null,
 ) {
-  const baseUrl = process.env.ECARGOWARE_BASE_URL || ECARGOWARE_BASE_URL;
+  const baseUrl = config?.baseUrl || process.env.ECARGOWARE_BASE_URL || ECARGOWARE_BASE_URL;
   let path = operation.path;
 
   for (const param of operation.pathParams ?? []) {
@@ -118,7 +186,21 @@ function buildUrl(
   return url;
 }
 
-async function getAccessToken() {
+async function getAccessToken(config?: CargoIntegrationRuntimeConfig | null) {
+  if (config?.authMode === "bearer" && config.bearerToken) {
+    return stripBearer(config.bearerToken);
+  }
+  if (config?.authMode === "login") {
+    const token = await requestLoginToken({
+      baseUrl: config.baseUrl || ECARGOWARE_BASE_URL,
+      username: config.username,
+      password: config.password,
+      company: config.company,
+      application: config.application,
+    });
+    if (token) return token;
+  }
+
   if (process.env.ECARGOWARE_BEARER_TOKEN) {
     return process.env.ECARGOWARE_BEARER_TOKEN;
   }
@@ -131,7 +213,24 @@ async function getAccessToken() {
     return null;
   }
 
-  const baseUrl = process.env.ECARGOWARE_BASE_URL || ECARGOWARE_BASE_URL;
+  return requestLoginToken({ baseUrl: process.env.ECARGOWARE_BASE_URL || ECARGOWARE_BASE_URL, username, password, company, application });
+}
+
+async function requestLoginToken({
+  baseUrl,
+  username,
+  password,
+  company,
+  application,
+}: {
+  baseUrl: string;
+  username?: string;
+  password?: string;
+  company?: string;
+  application?: string;
+}) {
+  if (!username || !password || !company || !application) return null;
+
   const response = await fetch(new URL("/security/getToken", baseUrl), {
     method: "POST",
     headers: {
@@ -189,6 +288,17 @@ function extractToken(value: unknown): string | null {
 
 function stripBearer(value: string) {
   return value.replace(/^Bearer\s+/i, "").trim();
+}
+
+function summarizeResponse(value: unknown) {
+  if (!value) return "no response body";
+  if (typeof value === "string") return value.slice(0, 180);
+  if (typeof value === "object") {
+    const record = value as Record<string, unknown>;
+    const message = record.message ?? record.error ?? record.errorMsg ?? record.status;
+    if (typeof message === "string") return message.slice(0, 180);
+  }
+  return "response body received";
 }
 
 function pickOperation(operation: EcargowareOperation) {
