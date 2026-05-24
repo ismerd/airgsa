@@ -1148,6 +1148,7 @@ function ConversationDetail({
   const latestRoom = [...conversation.rooms].sort((a, b) => safeTime(b.lastMessageAt) - safeTime(a.lastMessageAt))[0];
   const latestOffer = latestRoom?.offers.find((offer) => offer.status === "sent") ?? latestRoom?.offers[0];
   const threadMessages = latestRoom ? [...latestRoom.messages].sort((a, b) => safeTime(a.createdAt) - safeTime(b.createdAt)) : [];
+  const customerRoomHref = latestRoom ? (roomLinks[latestRoom.id] || `/quote-room/${encodeURIComponent(latestRoom.publicToken)}`) : null;
 
   return (
     <Card>
@@ -1208,10 +1209,12 @@ function ConversationDetail({
               <p className="font-semibold text-ink">Chat with customer</p>
               <p className="text-sm text-ink-muted">Reply here as the GSA team. The forwarder sees the same thread in the secure customer room.</p>
             </div>
-            {latestRoom && roomLinks[latestRoom.id] && (
-              <Button size="sm" variant="outline" onClick={() => window.open(roomLinks[latestRoom.id], "_blank", "noopener,noreferrer")}>
-                <ExternalLink className="h-3.5 w-3.5" />
-                Customer view
+            {customerRoomHref && (
+              <Button asChild size="sm" variant="outline">
+                <a href={customerRoomHref} target="_blank" rel="noreferrer">
+                  <ExternalLink className="h-3.5 w-3.5" />
+                  Customer view
+                </a>
               </Button>
             )}
           </div>
