@@ -199,7 +199,7 @@ function extractWithRules(emailText: string): Partial<CustomerEmailExtraction> {
     unNumber: matchLineValue(emailText, "UN Number") || emailText.match(/\bUN\d{4}\b/i)?.[0],
     dgClass: matchLineValue(emailText, "Class"),
     packingInstruction: matchLineValue(emailText, "Packing Instruction"),
-    temperatureRange: emailText.match(/[+-]?\d+\s*(?:to|-)\s*[+-]?\d+\s*°?C/i)?.[0],
+    temperatureRange: emailText.match(/[+-]?\d+\s*(?:to|-)\s*[+-]?\d+\s*(?:Â°|°)?C/i)?.[0],
     handlingNotes,
     requestedConfirmations,
     priority: /urgent|high priority|priority|immediate/i.test(emailText) ? "urgent" : "standard",

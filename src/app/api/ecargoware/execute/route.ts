@@ -8,6 +8,7 @@ import {
 } from "@/lib/api/protection";
 import { getSession } from "@/lib/auth/session";
 import { executeEcargowareOperation, type EcargowareExecuteInput } from "@/lib/integrations/ecargoware-client";
+import { getCargoIntegrationRuntimeConfig } from "@/lib/services/cargo-integration-store";
 
 const ECARGOWARE_BODY_LIMIT_BYTES = 64 * 1024;
 
@@ -30,7 +31,8 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "operationId is required." }, { status: 400 });
     }
 
-    const result = await executeEcargowareOperation(payload);
+    const integrationConfig = await getCargoIntegrationRuntimeConfig(session, "ecargoware");
+    const result = await executeEcargowareOperation(payload, integrationConfig);
     return NextResponse.json(result, { status: result.ok ? 200 : 502 });
   } catch (error) {
     if (error instanceof RequestBodyTooLargeError) return bodyTooLargeResponse(error);

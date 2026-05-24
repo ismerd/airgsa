@@ -9,7 +9,9 @@ const PUBLIC_PREFIXES = [
   "/forgot-password",
   "/reset-password",
   "/pricing",
+  "/quote-room",
   "/api/auth",
+  "/api/quote-room",
   "/_next",
   "/favicon.ico",
 ];
