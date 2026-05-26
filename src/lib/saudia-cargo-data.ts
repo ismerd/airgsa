@@ -119,30 +119,3 @@ export const ICAO_TO_IATA: Record<string, string> = {
   DNMM: "LOS", DGAA: "ACC",
   FAOR: "JNB",
 };
-
-// Known Saudia Cargo routes — used as enrichment hint when flight-summary
-// doesn't return origin/destination (e.g. flight just departed, no summary yet)
-export const FLIGHT_ROUTE_LOOKUP: Record<string, { origin: string; destination: string }> = {
-  SV803: { origin: "JED", destination: "FRA" },
-  SV804: { origin: "FRA", destination: "JED" },
-  SV805: { origin: "JED", destination: "LHR" },
-  SV806: { origin: "LHR", destination: "JED" },
-  SV807: { origin: "JED", destination: "CDG" },
-  SV808: { origin: "CDG", destination: "JED" },
-  SV809: { origin: "JED", destination: "JFK" },
-  SV810: { origin: "JFK", destination: "JED" },
-  SV811: { origin: "JED", destination: "ORD" },
-  SV812: { origin: "ORD", destination: "JED" },
-  SV813: { origin: "JED", destination: "HKG" },
-  SV814: { origin: "HKG", destination: "JED" },
-  SV815: { origin: "JED", destination: "NRT" },
-  SV816: { origin: "NRT", destination: "JED" },
-  SV817: { origin: "JED", destination: "BOM" },
-  SV818: { origin: "BOM", destination: "JED" },
-  SV819: { origin: "RUH", destination: "FRA" },
-  SV820: { origin: "FRA", destination: "RUH" },
-  SV821: { origin: "JED", destination: "CGO" },
-  SV822: { origin: "CGO", destination: "JED" },
-  SV823: { origin: "JED", destination: "SIN" },
-  SV824: { origin: "SIN", destination: "JED" },
-};

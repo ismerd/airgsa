@@ -7,11 +7,11 @@ import { sendTransactionalEmail, type TransactionalEmailResult } from "@/lib/ser
 import { assertFileStoreFallbackAllowed, rowData, withPostgres, withPostgresTransaction } from "@/lib/services/postgres-store";
 import { listLivePartnerContracts } from "@/lib/services/tender-workflow-store";
 
-export type QuoteRoomStatus = "open" | "accepted" | "rejected" | "closed";
-export type QuoteRoomActor = "gsa" | "customer" | "system";
-export type QuoteOfferStatus = "sent" | "accepted" | "rejected" | "withdrawn";
+type QuoteRoomStatus = "open" | "accepted" | "rejected" | "closed";
+type QuoteRoomActor = "gsa" | "customer" | "system";
+type QuoteOfferStatus = "sent" | "accepted" | "rejected" | "withdrawn";
 
-export type QuoteRoomMessage = {
+type QuoteRoomMessage = {
   id: string;
   roomId: string;
   actor: QuoteRoomActor;

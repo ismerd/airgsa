@@ -1,12 +1,11 @@
 import type {
   LinkedinImportPostedLimit,
   LinkedinImportRequest,
-  LinkedinImportScheduleUnit,
   LinkedinMediaItem,
   LinkedinPostPreview,
 } from "@/lib/types";
 
-export const LINKEDIN_TARGET_URLS_PER_REQUEST = 6;
+const LINKEDIN_TARGET_URLS_PER_REQUEST = 6;
 
 export const linkedinImportDefaults: LinkedinImportRequest = {
   includeQuotePosts: false,
@@ -61,7 +60,7 @@ export type RawLinkedinPost = {
   };
 };
 
-export function buildLinkedinImportRequest(input: Partial<LinkedinImportRequest>): LinkedinImportRequest {
+function buildLinkedinImportRequest(input: Partial<LinkedinImportRequest>): LinkedinImportRequest {
   return {
     includeQuotePosts: input.includeQuotePosts ?? false,
     includeReposts: input.includeReposts ?? false,
@@ -89,10 +88,6 @@ export function buildLinkedinImportBatches(
   }
 
   return chunks.map((targetUrlChunk) => buildLinkedinImportRequest({ ...input, targetUrls: targetUrlChunk }));
-}
-
-export function getScheduleLabel(value: number, unit: LinkedinImportScheduleUnit) {
-  return `every ${value} ${value === 1 ? unit.slice(0, -1) : unit}`;
 }
 
 export function getPostedLimitLabel(value: LinkedinImportPostedLimit): string {
@@ -179,27 +174,6 @@ export function isPostInsideLookback(
   };
 
   return postedAt >= now - ms[postedLimit];
-}
-
-export function toNewsPostUpsert(post: RawLinkedinPost) {
-  const normalized = normalizeLinkedinPost(post);
-  const title = normalized.content.trim().slice(0, 120) || `LinkedIn post ${normalized.id}`;
-
-  return {
-    external_id: normalized.id,
-    title,
-    source: normalized.authorName,
-    source_url: normalized.linkedinUrl,
-    author_name: normalized.authorName,
-    author_url: normalized.authorUrl,
-    category: null,
-    market: null,
-    published_at: normalized.postedAt || null,
-    summary: normalized.content,
-    confidence: 0,
-    media: normalized.media,
-    raw_payload: post,
-  };
 }
 
 function isRawLinkedinPost(value: unknown): value is RawLinkedinPost {

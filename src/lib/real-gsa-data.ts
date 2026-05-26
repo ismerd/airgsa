@@ -385,7 +385,3 @@ export const realGsaFlightPartners = realGsaPartners.map(({ name, color, markets
   color,
   markets,
 }));
-
-export function getRealGsaById(id: string) {
-  return realGsaPartners.find((partner) => partner.id === id) ?? null;
-}

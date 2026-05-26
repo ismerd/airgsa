@@ -4,12 +4,12 @@ import {
   AlertTriangle,
   ArrowRight,
   BarChart3,
-  BellRing,
   BriefcaseBusiness,
+  CheckCircle2,
   CheckSquare2,
+  Clock3,
   FileSpreadsheet,
   Inbox,
-  Megaphone,
   PackageCheck,
   PlaneTakeoff,
   Route,
@@ -22,7 +22,6 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { getSession } from "@/lib/auth/session";
 import { canViewTender, isApplicationOwnedByGsa } from "@/lib/auth/permissions";
-import { listCampaigns } from "@/lib/services/campaign-store";
 import { listCapacityAlerts } from "@/lib/services/capacity-alert-store";
 import {
   listContractPerformance,
@@ -73,6 +72,12 @@ type TeamLoad = {
   nextItem: string;
 };
 
+type TeamCompletion = {
+  key: string;
+  name: string;
+  count: number;
+};
+
 export default async function GsaOperationsPage() {
   const session = await getSession();
   if (!session) {
@@ -88,12 +93,12 @@ export default async function GsaOperationsPage() {
     );
   }
 
+  const canInspectTeam = canViewGsaTeam(session);
   const [
     tenders,
     applications,
     assignedRoutes,
     alerts,
-    campaigns,
     performance,
     notifications,
     quotes,
@@ -102,17 +107,16 @@ export default async function GsaOperationsPage() {
     reports,
     quoteRooms,
   ] = await Promise.all([
-    listLiveTenders(),
-    listLiveApplications(),
+    canInspectTeam ? listLiveTenders() : Promise.resolve([]),
+    canInspectTeam ? listLiveApplications() : Promise.resolve([]),
     listRoutesForGsa(session),
     listCapacityAlerts(session),
-    listCampaigns(session),
-    listContractPerformance(session),
+    canInspectTeam ? listContractPerformance(session) : Promise.resolve([]),
     listWorkflowNotifications(session),
     listMandateQuotes(session),
     listMandateBookings(session),
     listControlActions(session),
-    listMonthlyReports(session),
+    canInspectTeam ? listMonthlyReports(session) : Promise.resolve([]),
     listQuoteRoomsForSession(session),
   ]);
 
@@ -121,14 +125,16 @@ export default async function GsaOperationsPage() {
   const appliedTenderIds = new Set(ownApplications.map((application) => application.tenderId));
   const newTenders = visibleTenders.filter((tender) => !appliedTenderIds.has(tender.id));
   const activeAlerts = alerts.filter((alert) => alert.status === "active");
-  const partnerCampaigns = campaigns.filter((campaign) => campaign.authorRole === "airline" && campaign.status === "published");
   const unreadNotifications = notifications.filter((notification) => !notification.readAt);
-  const atRiskContracts = performance.filter((snapshot) => snapshot.riskLevel !== "green");
+  const atRiskContracts = canInspectTeam ? performance.filter((snapshot) => snapshot.riskLevel !== "green") : [];
   const openActions = controlActions.filter((action) => action.status !== "completed" && action.status !== "cancelled");
-  const reportFixes = reports.filter((report) => report.status === "changes-requested");
+  const criticalOpenActions = openActions.filter((action) => action.severity === "critical");
+  const completedYesterday = buildYesterdayCompletions(controlActions);
+  const reportFixes = canInspectTeam ? reports.filter((report) => report.status === "changes-requested") : [];
   const bookingByQuoteId = new Set(bookings.map((booking) => booking.quoteId));
   const quotesToBook = quotes.filter((quote) => (quote.status === "auto-approved" || quote.status === "airline-approved") && !bookingByQuoteId.has(quote.id));
-  const customerThreads = buildCustomerThreads(quoteRooms, quotes);
+  const visibleQuoteIds = new Set(quotes.map((quote) => quote.id));
+  const customerThreads = buildCustomerThreads(quoteRooms.filter((room) => visibleQuoteIds.has(room.quoteId)), quotes);
   const activeCustomerThreads = customerThreads.filter((thread) => thread.stateTone !== "success" && thread.stateTone !== "danger");
   const customerThreadsNeedingReply = activeCustomerThreads.filter((thread) => thread.stateTone === "warning");
   const monthBookings = filterCurrentMonth(bookings);
@@ -144,267 +150,312 @@ export default async function GsaOperationsPage() {
     atRiskContracts,
     unreadNotifications,
   });
-  const teamLoad = buildTeamLoad({
-    customerThreadsNeedingReply,
-    quotesToBook,
-    openActions,
-    reportFixes,
-  });
+  const teamLoad = canInspectTeam
+    ? buildTeamLoad({
+        customerThreadsNeedingReply,
+        quotesToBook,
+        openActions,
+        reportFixes,
+      })
+    : [];
+  const urgentWorkCount = customerThreadsNeedingReply.length + quotesToBook.length + criticalOpenActions.length + (canInspectTeam ? reportFixes.length : activeAlerts.length);
+  const completedYesterdayCount = completedYesterday.reduce((sum, owner) => sum + owner.count, 0);
+  const todayLabel = formatToday(new Date());
 
   return (
     <>
-      <Topbar title="GSA Operations" subtitle={session.company} />
-      <main className="space-y-5 p-5">
-        <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-          <Metric
-            icon={<Inbox className="h-5 w-5" />}
-            label="Customer desk"
-            value={String(activeCustomerThreads.length)}
-            helper={`${customerThreadsNeedingReply.length} need reply`}
-            tone={customerThreadsNeedingReply.length ? "warning" : "success"}
-          />
-          <Metric
-            icon={<PackageCheck className="h-5 w-5" />}
-            label="Quotes to book"
-            value={String(quotesToBook.length)}
-            helper="Approved, not booked"
-            tone={quotesToBook.length ? "warning" : "success"}
-          />
-          <Metric
-            icon={<TrendingUp className="h-5 w-5" />}
-            label="Booked this month"
-            value={formatMoney(monthRevenue)}
-            helper={`${formatKg(monthWeight)} handled`}
-          />
-          <Metric
-            icon={<AlertTriangle className="h-5 w-5" />}
-            label="Operational risk"
-            value={String(activeAlerts.length + atRiskContracts.length + openActions.filter((action) => action.severity === "critical").length)}
-            helper="Capacity, contract, or airline action"
-            tone={activeAlerts.length || atRiskContracts.length ? "danger" : "success"}
-          />
-        </section>
-
-        <section className="grid gap-5 xl:grid-cols-[1.1fr_.9fr]">
-          <Card>
-            <CardHeader>
-              <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
-                <div>
-                  <CardTitle className="flex items-center gap-2">
-                    <CheckSquare2 className="h-5 w-5 text-brand" />
-                    Today&apos;s work queue
-                  </CardTitle>
-                  <p className="mt-1 text-sm text-ink-muted">Start here. These are the customer, airline, and booking actions that need human attention.</p>
-                </div>
-                <Button asChild size="sm" variant="outline">
-                  <Link href="/gsa/tasks">Open task list</Link>
-                </Button>
-              </div>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              {workQueue.length > 0 ? (
-                workQueue.slice(0, 7).map((item) => <WorkQueueRow key={item.key} item={item} />)
-              ) : (
-                <EmptyState title="No urgent work right now" body="New customer replies, approved quotes, airline actions, and report fixes will appear here first." />
-              )}
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <BarChart3 className="h-5 w-5 text-brand" />
-                Month control
-              </CardTitle>
-              <p className="text-sm text-ink-muted">Compact business picture without making the team hunt through KPI pages.</p>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              <div className="grid gap-3 sm:grid-cols-3 xl:grid-cols-1">
-                <ControlStat label="Revenue" value={formatMoney(monthRevenue)} helper="Booked this month" />
-                <ControlStat label="Tonnage" value={formatKg(monthWeight)} helper={`${monthBookings.length} shipment${monthBookings.length === 1 ? "" : "s"}`} />
-                <ControlStat label="Quote win rate" value={`${quoteWinRate}%`} helper={`${bookings.length} bookings from ${quotes.length} quotes`} />
-              </div>
-              <Button asChild size="sm" variant="outline">
-                <Link href="/gsa/performance">Open performance</Link>
-              </Button>
-            </CardContent>
-          </Card>
-        </section>
-
-        <section className="grid gap-5 xl:grid-cols-[1fr_.85fr]">
-          <Card>
-            <CardHeader>
-              <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
-                <div>
-                  <CardTitle className="flex items-center gap-2">
-                    <Inbox className="h-5 w-5 text-brand" />
-                    Customer conversations
-                  </CardTitle>
-                  <p className="mt-1 text-sm text-ink-muted">One row per forwarder or customer email. Reply and quote work should start here.</p>
-                </div>
-                <Button asChild size="sm">
-                  <Link href="/gsa/quotes">Open quote inbox</Link>
-                </Button>
-              </div>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              {activeCustomerThreads.length > 0 ? (
-                activeCustomerThreads.slice(0, 5).map((thread) => <CustomerThreadRow key={thread.key} thread={thread} />)
-              ) : (
-                <EmptyState title="No active customer threads" body="Imported emails, created quote rooms, and customer replies will show here." />
-              )}
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Users className="h-5 w-5 text-brand" />
-                Team workload
-              </CardTitle>
-              <p className="text-sm text-ink-muted">Uses actual assignees where available. Unassigned work stays visible instead of disappearing.</p>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              {teamLoad.length > 0 ? (
-                teamLoad.map((owner) => (
-                  <div key={owner.key} className="rounded-lg border border-border-ui bg-surface2 p-4">
-                    <div className="flex items-start justify-between gap-3">
-                      <div>
-                        <p className="font-semibold text-ink">{owner.name}</p>
-                        <p className="text-xs text-ink-muted">{owner.role}</p>
-                      </div>
-                      <Badge variant={owner.critical ? "warning" : "muted"}>{owner.count} open</Badge>
-                    </div>
-                    <p className="mt-2 line-clamp-2 text-sm text-ink-muted">{owner.nextItem}</p>
-                  </div>
-                ))
-              ) : (
-                <EmptyState title="No assigned workload" body="Assign airline actions or reports to see employee workload here." />
-              )}
-              <Button asChild size="sm" variant="outline">
-                <Link href="/gsa/team">Team &amp; access</Link>
-              </Button>
-            </CardContent>
-          </Card>
-        </section>
-
-        <section className="grid gap-5 xl:grid-cols-2">
-          <Card>
-            <CardHeader>
-              <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
-                <div>
-                  <CardTitle className="flex items-center gap-2">
-                    <Route className="h-5 w-5 text-brand" />
-                    Route and shipment work
-                  </CardTitle>
-                  <p className="mt-1 text-sm text-ink-muted">Assigned contract lanes and booked AWBs, kept below customer work because they are execution context.</p>
-                </div>
-                <Button asChild size="sm" variant="outline">
-                  <Link href="/gsa/shipments">Open shipments</Link>
-                </Button>
-              </div>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              {assignedRoutes.slice(0, 4).map((route) => (
-                <div key={`${route.contractId}-${route.id}`} className="flex items-center justify-between gap-3 rounded-lg border border-border-ui bg-surface2 p-3">
+      <Topbar title="Today Cockpit" subtitle={session.company} />
+      <main className="p-5 animate-fade-in">
+        <div className="mx-auto flex w-full max-w-[1500px] flex-col gap-4">
+          <section className="rounded-2xl border border-border-ui bg-surface p-5 shadow-[0_2px_10px_rgba(11,30,79,0.06)] animate-fade-up">
+            <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_380px]">
+              <div>
+                <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
                   <div>
-                    <p className="font-mono text-sm font-semibold text-ink">{route.origin} - {route.destination}</p>
-                    <p className="mt-1 text-xs text-ink-muted">{route.airline} - {route.frequencyPerWeek}/week - {route.aircraft ?? "Aircraft TBC"}</p>
+                    <p className="text-xs font-semibold uppercase tracking-[0.22em] text-brand">{todayLabel}</p>
+                    <h1 className="mt-2 text-2xl font-bold tracking-tight text-ink">Start with the work that blocks money.</h1>
+                    <p className="mt-2 max-w-2xl text-sm leading-6 text-ink-muted">
+                      {canInspectTeam
+                        ? "This cockpit shows live desk work first. Reporting, tenders, and route context stay one level down."
+                        : "This cockpit only shows assigned customers, quotes, bookings, tracking, and capacity alerts you can act on today."}
+                    </p>
                   </div>
-                  <Badge variant={route.status === "assigned" ? "success" : "muted"}>{route.status}</Badge>
+                  <Button asChild size="sm" variant="outline" className="shrink-0">
+                    <Link href="/gsa/tasks">Open full task list</Link>
+                  </Button>
                 </div>
-              ))}
-              {assignedRoutes.length === 0 && <EmptyState title="No assigned routes" body="Awarded airline contracts can add route assignments later. Customer quotes can still be created from contract scope." />}
-            </CardContent>
-          </Card>
 
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <AlertTriangle className="h-5 w-5 text-brand" />
-                Risks that can hurt revenue
-              </CardTitle>
-              <p className="text-sm text-ink-muted">Only the signals that require a decision or follow-up.</p>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              {activeAlerts.slice(0, 2).map((alert) => (
-                <RiskRow key={alert.id} label={alert.urgency} title={alert.message} meta={`${formatKg(alert.availableKg)} open - ${alert.sentTo}`} href="/gsa/capacity-alerts" />
-              ))}
-              {atRiskContracts.slice(0, 3).map((snapshot) => (
-                <RiskRow key={snapshot.contractId} label={snapshot.riskLevel} title={`${snapshot.airline} - ${snapshot.market}`} meta={snapshot.riskReasons[0] ?? "Performance below target"} href="/gsa/performance" />
-              ))}
-              {activeAlerts.length === 0 && atRiskContracts.length === 0 && <EmptyState title="No active risks" body="Capacity shortfalls and contract performance warnings will appear here." />}
-            </CardContent>
-          </Card>
-        </section>
-
-        <section className="grid gap-5 xl:grid-cols-2">
-          <GrowthPanel title="Growth opportunities" icon={<BriefcaseBusiness className="h-5 w-5 text-brand" />} href="/gsa/tenders" cta="Open tender pipeline">
-            {newTenders.length > 0 ? (
-              newTenders.slice(0, 3).map((tender) => (
-                <Link key={tender.id} href={`/gsa/tenders/${tender.id}`} className="block rounded-lg border border-border-ui bg-surface2 p-4 transition hover:border-brand/40">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <Badge variant="success">Open</Badge>
-                    <Badge variant="muted">{tender.countryScope || tender.regions.join(", ") || "Market scope"}</Badge>
-                  </div>
-                  <p className="mt-2 font-semibold text-ink">{tender.title}</p>
-                  <p className="mt-1 text-sm text-ink-muted">{tender.airline} - deadline {tender.deadline}</p>
-                </Link>
-              ))
-            ) : (
-              <EmptyState title="No new tenders" body={`Submitted applications: ${ownApplications.length}. New airline opportunities stay here, away from the daily queue.`} />
-            )}
-          </GrowthPanel>
-
-          <GrowthPanel title="Airline campaigns" icon={<Megaphone className="h-5 w-5 text-brand" />} href="/gsa/campaigns" cta="Open campaigns">
-            {partnerCampaigns.length > 0 ? (
-              partnerCampaigns.slice(0, 3).map((campaign) => (
-                <div key={campaign.id} className="rounded-lg border border-border-ui bg-surface2 p-4">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <Badge variant="success">Published</Badge>
-                    <Badge variant="muted">{campaign.type.replace(/_/g, " ")}</Badge>
-                  </div>
-                  <p className="mt-2 font-semibold text-ink">{campaign.title}</p>
-                  <p className="mt-1 line-clamp-2 text-sm text-ink-muted">{campaign.body}</p>
+                <div className="mt-5 grid gap-3 md:grid-cols-3">
+                  <StartTile
+                    href="/gsa/quotes"
+                    icon={<Inbox className="h-5 w-5" />}
+                    label="Customer replies"
+                    value={String(customerThreadsNeedingReply.length)}
+                    helper={`${activeCustomerThreads.length} active thread${activeCustomerThreads.length === 1 ? "" : "s"}`}
+                    tone={customerThreadsNeedingReply.length ? "warning" : "success"}
+                  />
+                  <StartTile
+                    href="/gsa/quotes"
+                    icon={<PackageCheck className="h-5 w-5" />}
+                    label="Approved quotes"
+                    value={String(quotesToBook.length)}
+                    helper="Need booking follow-up"
+                    tone={quotesToBook.length ? "warning" : "success"}
+                  />
+                  <StartTile
+                    href={canInspectTeam ? "/gsa/tasks" : "/gsa/capacity-alerts"}
+                    icon={canInspectTeam ? <AlertTriangle className="h-5 w-5" /> : <PlaneTakeoff className="h-5 w-5" />}
+                    label={canInspectTeam ? "Critical actions" : "Capacity alerts"}
+                    value={String(canInspectTeam ? criticalOpenActions.length + reportFixes.length : activeAlerts.length)}
+                    helper={canInspectTeam ? `${activeAlerts.length + atRiskContracts.length} risks on watch` : "Call assigned customers when airline capacity opens"}
+                    tone={(canInspectTeam ? criticalOpenActions.length || reportFixes.length : activeAlerts.length) ? "danger" : "success"}
+                  />
                 </div>
-              ))
-            ) : (
-              <EmptyState title="No active campaigns" body="Airline campaign material stays secondary unless it creates a task or customer conversation." />
+              </div>
+
+              <div className="rounded-xl border border-border-ui bg-surface2 p-4">
+                <div className="flex items-center justify-between gap-3">
+                  <div>
+                    <p className="text-xs font-semibold uppercase tracking-[0.18em] text-ink-muted">Shift check</p>
+                    <p className="mt-1 text-sm font-semibold text-ink">What changed before 08:00</p>
+                  </div>
+                  <Badge variant={urgentWorkCount ? "warning" : "success"}>{urgentWorkCount} do first</Badge>
+                </div>
+                <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-1">
+                  <MiniStat icon={<Clock3 className="h-4 w-4" />} label="Open now" value={String(workQueue.length)} helper="Items in the morning queue" />
+                  <MiniStat icon={<CheckCircle2 className="h-4 w-4" />} label="Closed yesterday" value={String(completedYesterdayCount)} helper={completedYesterday.length ? completedYesterday.slice(0, 2).map((owner) => owner.name).join(", ") : "No closed actions recorded"} />
+                  <MiniStat icon={<TrendingUp className="h-4 w-4" />} label="Month booked" value={formatMoney(monthRevenue)} helper={`${formatKg(monthWeight)} handled`} />
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <section className={`grid items-start gap-4 ${canInspectTeam ? "xl:grid-cols-[minmax(0,1fr)_380px]" : ""}`}>
+            <Card className="overflow-hidden">
+              <CardHeader className="border-b border-border-ui p-4">
+                <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+                  <div>
+                    <CardTitle className="flex items-center gap-2">
+                      <CheckSquare2 className="h-5 w-5 text-brand" />
+                      Next up
+                    </CardTitle>
+                    <p className="mt-1 text-sm text-ink-muted">Maximum four actions. Clear these before opening the rest of the app.</p>
+                  </div>
+                  <Badge variant={workQueue.length ? "default" : "success"}>{workQueue.length} open</Badge>
+                </div>
+              </CardHeader>
+              <CardContent className="p-0">
+                {workQueue.length > 0 ? (
+                  <div className="divide-y divide-border-ui">
+                    {workQueue.slice(0, 4).map((item, index) => <FocusTaskRow key={item.key} item={item} index={index + 1} />)}
+                  </div>
+                ) : (
+                  <div className="p-5">
+                    <EmptyState
+                      title="No urgent work right now"
+                      body={canInspectTeam ? "New customer replies, approved quotes, airline actions, and report fixes will appear here first." : "New customer replies, approved quotes, assigned follow-ups, and capacity alerts will appear here first."}
+                    />
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            {canInspectTeam && (
+              <Card>
+                <CardHeader className="p-4">
+                  <CardTitle className="flex items-center gap-2">
+                    <Users className="h-5 w-5 text-brand" />
+                    Team handoff
+                  </CardTitle>
+                  <p className="text-sm text-ink-muted">Who has open work, plus what was closed yesterday.</p>
+                </CardHeader>
+                <CardContent className="space-y-3 px-4 pb-4 pt-0">
+                  {teamLoad.length > 0 ? (
+                    teamLoad.slice(0, 4).map((owner) => <TeamLoadRow key={owner.key} owner={owner} />)
+                  ) : (
+                    <EmptyState title="No assigned workload" body="Open control actions, report fixes, and booking follow-ups will create a team handoff." />
+                  )}
+                  <div className="rounded-lg border border-border-ui bg-page/60 p-3">
+                    <p className="text-xs font-semibold uppercase tracking-[0.16em] text-ink-muted">Yesterday</p>
+                    {completedYesterday.length > 0 ? (
+                      <div className="mt-2 space-y-2">
+                        {completedYesterday.slice(0, 3).map((owner) => (
+                          <div key={owner.key} className="flex items-center justify-between gap-3 text-sm">
+                            <span className="truncate font-medium text-ink">{owner.name}</span>
+                            <span className="shrink-0 text-ink-muted">{owner.count} closed</span>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <p className="mt-2 text-sm text-ink-muted">No completed actions recorded yesterday.</p>
+                    )}
+                  </div>
+                  <Button asChild size="sm" variant="outline" className="w-full">
+                    <Link href="/gsa/team">Open team</Link>
+                  </Button>
+                </CardContent>
+              </Card>
             )}
-          </GrowthPanel>
-        </section>
+          </section>
+
+          <section className="grid items-start gap-4 xl:grid-cols-[minmax(0,1fr)_380px]">
+            <Card>
+              <CardHeader className="p-4">
+                <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+                  <div>
+                    <CardTitle className="flex items-center gap-2">
+                      <Inbox className="h-5 w-5 text-brand" />
+                      Customer desk
+                    </CardTitle>
+                    <p className="mt-1 text-sm text-ink-muted">Only live conversations. Old quote history stays in the inbox.</p>
+                  </div>
+                  <Button asChild size="sm">
+                    <Link href="/gsa/quotes">Open inbox</Link>
+                  </Button>
+                </div>
+              </CardHeader>
+              <CardContent className="space-y-2 px-4 pb-4 pt-0">
+                {activeCustomerThreads.length > 0 ? (
+                  activeCustomerThreads.slice(0, 3).map((thread) => <CustomerThreadCompact key={thread.key} thread={thread} />)
+                ) : (
+                  <EmptyState title="No active customer threads" body="Imported emails, created quote rooms, and customer replies will show here." />
+                )}
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader className="p-4">
+                <CardTitle className="flex items-center gap-2">
+                  <BarChart3 className="h-5 w-5 text-brand" />
+                  {canInspectTeam ? "Business pulse" : "My sales pulse"}
+                </CardTitle>
+                <p className="text-sm text-ink-muted">
+                  {canInspectTeam ? "Enough context for the morning, not a KPI page." : "A quick read of your assigned bookings before opening the full sales page."}
+                </p>
+              </CardHeader>
+              <CardContent className="space-y-3 px-4 pb-4 pt-0">
+                <ControlStat label="Revenue MTD" value={formatMoney(monthRevenue)} helper={`${monthBookings.length} shipment${monthBookings.length === 1 ? "" : "s"}`} />
+                <ControlStat label="Quote win rate" value={`${quoteWinRate}%`} helper={`${bookings.length} bookings from ${quotes.length} quotes`} />
+                <ControlStat label="Route context" value={String(assignedRoutes.length)} helper="Assigned contract lanes" />
+                <Button asChild size="sm" variant="outline" className="w-full">
+                  <Link href="/gsa/performance">{canInspectTeam ? "Open performance" : "Open my sales"}</Link>
+                </Button>
+              </CardContent>
+            </Card>
+          </section>
+
+          <section className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+            {canInspectTeam ? (
+              <>
+                <NextArea
+                  href="/gsa/tenders"
+                  icon={<BriefcaseBusiness className="h-4 w-4" />}
+                  title="Tender Desk"
+                  value={`${newTenders.length} new`}
+                  helper={`${ownApplications.length} submitted applications`}
+                />
+                <NextArea
+                  href="/gsa/shipments"
+                  icon={<Route className="h-4 w-4" />}
+                  title="Shipment work"
+                  value={`${monthBookings.length} booked`}
+                  helper={`${assignedRoutes.length} assigned routes`}
+                />
+                <NextArea
+                  href="/gsa/capacity-alerts"
+                  icon={<PlaneTakeoff className="h-4 w-4" />}
+                  title="Capacity"
+                  value={`${activeAlerts.length} active`}
+                  helper="Only urgent alerts enter the morning queue"
+                />
+                <NextArea
+                  href="/gsa/monthly-reports"
+                  icon={<FileSpreadsheet className="h-4 w-4" />}
+                  title="Reports"
+                  value={`${reportFixes.length} fixes`}
+                  helper="Monthly work stays separate from live ops"
+                />
+              </>
+            ) : (
+              <>
+                <NextArea
+                  href="/gsa/customers"
+                  icon={<Users className="h-4 w-4" />}
+                  title="My customers"
+                  value={`${customerThreads.length} active`}
+                  helper="Only customers assigned to you"
+                />
+                <NextArea
+                  href="/gsa/shipments"
+                  icon={<Route className="h-4 w-4" />}
+                  title="Shipments"
+                  value={`${monthBookings.length} booked`}
+                  helper="Track AWB status and customer updates"
+                />
+                <NextArea
+                  href="/gsa/capacity-alerts"
+                  icon={<PlaneTakeoff className="h-4 w-4" />}
+                  title="Capacity alerts"
+                  value={`${activeAlerts.length} active`}
+                  helper="Sell available airline capacity fast"
+                />
+                <NextArea
+                  href="/gsa/performance"
+                  icon={<BarChart3 className="h-4 w-4" />}
+                  title="My sales"
+                  value={formatMoney(monthRevenue)}
+                  helper={`${formatKg(monthWeight)} booked this month`}
+                />
+              </>
+            )}
+          </section>
+        </div>
       </main>
     </>
   );
 }
 
-function Metric({ icon, label, value, helper, tone = "brand" }: { icon: React.ReactNode; label: string; value: string; helper: string; tone?: Tone }) {
+function StartTile({ href, icon, label, value, helper, tone = "brand" }: { href: string; icon: React.ReactNode; label: string; value: string; helper: string; tone?: Tone }) {
   return (
-    <Card>
-      <CardContent className="flex h-full items-center gap-3 p-4">
-        <div className={`grid h-11 w-11 shrink-0 place-items-center rounded-xl ${toneClass(tone)}`}>{icon}</div>
-        <div className="min-w-0">
-          <p className="truncate text-2xl font-semibold text-ink">{value}</p>
-          <p className="text-xs font-semibold uppercase tracking-wider text-ink-muted">{label}</p>
-          <p className="mt-1 truncate text-xs text-ink-muted">{helper}</p>
+    <Link href={href} className="group flex min-h-[104px] items-start gap-3 rounded-xl border border-border-ui bg-page/60 p-4 transition hover:border-brand/35 hover:bg-brand-light/35">
+      <div className={`grid h-10 w-10 shrink-0 place-items-center rounded-lg ${toneClass(tone)}`}>{icon}</div>
+      <div className="min-w-0 flex-1">
+        <div className="flex items-start justify-between gap-3">
+          <p className="text-sm font-semibold text-ink">{label}</p>
+          <ArrowRight className="h-4 w-4 shrink-0 text-ink-muted transition group-hover:translate-x-0.5 group-hover:text-brand" />
         </div>
-      </CardContent>
-    </Card>
+        <p className="mt-2 text-3xl font-bold leading-none tracking-tight text-ink tabular-nums">{value}</p>
+        <p className="mt-1 truncate text-xs text-ink-muted">{helper}</p>
+      </div>
+    </Link>
   );
 }
 
-function WorkQueueRow({ item }: { item: WorkItem }) {
+function MiniStat({ icon, label, value, helper }: { icon: React.ReactNode; label: string; value: string; helper: string }) {
   return (
-    <Link href={item.href} className="flex items-center gap-3 rounded-lg border border-border-ui bg-surface2 p-4 transition hover:border-brand/40 hover:bg-brand-light/40">
-      <div className={`grid h-10 w-10 shrink-0 place-items-center rounded-lg ${priorityClass(item.priority)}`}>{item.icon}</div>
-      <div className="min-w-0 flex-1">
-        <div className="flex flex-wrap items-center gap-2">
-          <Badge variant={priorityVariant(item.priority)}>{priorityLabel(item.priority)}</Badge>
-          <span className="truncate text-xs text-ink-muted">{item.meta}</span>
-        </div>
-        <p className="mt-1 line-clamp-2 font-semibold text-ink">{item.title}</p>
+    <div className="flex items-start gap-3 rounded-lg bg-surface px-3 py-3">
+      <div className="mt-0.5 text-brand">{icon}</div>
+      <div className="min-w-0">
+        <p className="text-xs font-medium text-ink-muted">{label}</p>
+        <p className="mt-0.5 truncate text-base font-bold text-ink tabular-nums">{value}</p>
+        <p className="mt-0.5 truncate text-xs text-ink-muted">{helper}</p>
       </div>
-      <span className="hidden shrink-0 items-center gap-1 text-sm font-semibold text-brand md:inline-flex">
+    </div>
+  );
+}
+
+function FocusTaskRow({ item, index }: { item: WorkItem; index: number }) {
+  return (
+    <Link href={item.href} className="grid gap-3 px-4 py-3.5 transition hover:bg-brand-light/35 md:grid-cols-[36px_minmax(0,1fr)_88px] md:items-center">
+      <span className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-surface2 text-sm font-bold text-ink-muted tabular-nums">{index}</span>
+      <div className="min-w-0">
+        <div className="flex min-w-0 items-center gap-2">
+          <Badge variant={priorityVariant(item.priority)} className="shrink-0">{priorityLabel(item.priority)}</Badge>
+          <span className="min-w-0 truncate text-xs text-ink-muted">{item.meta}</span>
+        </div>
+        <p className="mt-1 line-clamp-1 text-sm font-semibold text-ink md:text-base">{item.title}</p>
+      </div>
+      <span className="inline-flex items-center gap-1 text-sm font-semibold text-brand md:justify-end">
         {item.cta}
         <ArrowRight className="h-4 w-4" />
       </span>
@@ -412,18 +463,33 @@ function WorkQueueRow({ item }: { item: WorkItem }) {
   );
 }
 
-function CustomerThreadRow({ thread }: { thread: CustomerThread }) {
+function TeamLoadRow({ owner }: { owner: TeamLoad }) {
   return (
-    <Link href="/gsa/quotes" className="block rounded-lg border border-border-ui bg-surface2 p-4 transition hover:border-brand/40">
+    <div className="rounded-lg border border-border-ui bg-surface2 px-3 py-3">
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
-          <p className="truncate font-semibold text-ink">{thread.customer}</p>
-          <p className="truncate text-sm text-ink-muted">{thread.contact || "No contact"} - {formatDateTime(thread.latestAt)}</p>
+          <p className="truncate text-sm font-semibold text-ink">{owner.name}</p>
+          <p className="mt-0.5 truncate text-xs text-ink-muted">{owner.role}</p>
         </div>
-        <Badge variant={threadStateVariant(thread.stateTone)}>{thread.stateLabel}</Badge>
+        <Badge variant={owner.critical ? "warning" : "muted"}>{owner.count} open</Badge>
       </div>
-      <p className="mt-3 line-clamp-2 text-sm text-ink-muted">{thread.latest}</p>
-      <div className="mt-3 flex flex-wrap gap-2">
+      <p className="mt-2 line-clamp-1 text-sm text-ink-muted">{owner.nextItem}</p>
+    </div>
+  );
+}
+
+function CustomerThreadCompact({ thread }: { thread: CustomerThread }) {
+  return (
+    <Link href="/gsa/quotes" className="grid gap-3 rounded-lg border border-border-ui bg-surface2 p-3 transition hover:border-brand/40 md:grid-cols-[minmax(0,1fr)_auto] md:items-center">
+      <div className="min-w-0">
+        <div className="flex flex-wrap items-center gap-2">
+          <p className="truncate text-sm font-semibold text-ink">{thread.customer}</p>
+          <Badge variant={threadStateVariant(thread.stateTone)}>{thread.stateLabel}</Badge>
+        </div>
+        <p className="mt-1 truncate text-xs text-ink-muted">{thread.contact || "No contact"} - {formatDateTime(thread.latestAt)}</p>
+        <p className="mt-2 line-clamp-1 text-sm text-ink-muted">{thread.latest}</p>
+      </div>
+      <div className="flex gap-2 md:justify-end">
         <Badge variant="muted">{thread.quoteCount} quote{thread.quoteCount === 1 ? "" : "s"}</Badge>
         <Badge variant="muted">{thread.roomCount} room{thread.roomCount === 1 ? "" : "s"}</Badge>
       </div>
@@ -433,54 +499,29 @@ function CustomerThreadRow({ thread }: { thread: CustomerThread }) {
 
 function ControlStat({ label, value, helper }: { label: string; value: string; helper: string }) {
   return (
-    <div className="rounded-lg border border-border-ui bg-surface2 p-4">
-      <p className="text-xs font-semibold uppercase tracking-wider text-ink-muted">{label}</p>
-      <p className="mt-1 text-xl font-semibold text-ink">{value}</p>
-      <p className="mt-1 text-xs text-ink-muted">{helper}</p>
+    <div className="rounded-lg border border-border-ui bg-surface2 p-3">
+      <p className="text-xs font-medium text-ink-muted">{label}</p>
+      <p className="mt-1 truncate text-xl font-bold tracking-tight text-ink tabular-nums">{value}</p>
+      <p className="mt-1 truncate text-xs text-ink-muted">{helper}</p>
     </div>
   );
 }
 
-function RiskRow({ label, title, meta, href }: { label: string; title: string; meta: string; href: string }) {
+function NextArea({ href, icon, title, value, helper }: { href: string; icon: React.ReactNode; title: string; value: string; helper: string }) {
   return (
-    <Link href={href} className="block rounded-lg border border-warning/25 bg-warning-bg p-4 transition hover:border-warning/50">
-      <div className="flex flex-wrap items-center gap-2">
-        <Badge variant="warning">{label}</Badge>
-        <span className="text-xs text-warning">{meta}</span>
-      </div>
-      <p className="mt-2 line-clamp-2 text-sm font-semibold text-ink">{title}</p>
-    </Link>
-  );
-}
-
-function GrowthPanel({
-  title,
-  icon,
-  href,
-  cta,
-  children,
-}: {
-  title: string;
-  icon: React.ReactNode;
-  href: string;
-  cta: string;
-  children: React.ReactNode;
-}) {
-  return (
-    <Card>
-      <CardHeader>
-        <div className="flex items-center justify-between gap-3">
-          <div>
-            <CardTitle className="flex items-center gap-2">{icon}{title}</CardTitle>
-            <p className="mt-1 text-sm text-ink-muted">Secondary pipeline, kept separate from today&apos;s operational work.</p>
+    <Link href={href} className="group rounded-xl border border-border-ui bg-surface px-4 py-3 transition hover:border-brand/35 hover:bg-brand-light/35">
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <div className="flex items-center gap-2 text-ink-muted">
+            {icon}
+            <p className="truncate text-sm font-semibold text-ink">{title}</p>
           </div>
-          <Button asChild size="sm" variant="outline">
-            <Link href={href}>{cta}</Link>
-          </Button>
+          <p className="mt-2 text-lg font-bold text-ink tabular-nums">{value}</p>
+          <p className="mt-1 line-clamp-2 text-xs text-ink-muted">{helper}</p>
         </div>
-      </CardHeader>
-      <CardContent className="space-y-3">{children}</CardContent>
-    </Card>
+        <ArrowRight className="mt-1 h-4 w-4 shrink-0 text-ink-muted transition group-hover:translate-x-0.5 group-hover:text-brand" />
+      </div>
+    </Link>
   );
 }
 
@@ -593,7 +634,7 @@ function buildWorkQueue({
         href: notification.href,
         cta: "Open",
         priority: "normal",
-        icon: <BellRing className="h-5 w-5" />,
+        icon: <CheckSquare2 className="h-5 w-5" />,
       });
     }
   }
@@ -676,6 +717,27 @@ function buildTeamLoad({
   return [...owners.values()].sort((left, right) => right.critical - left.critical || right.count - left.count);
 }
 
+function buildYesterdayCompletions(actions: Awaited<ReturnType<typeof listControlActions>>): TeamCompletion[] {
+  const owners = new Map<string, TeamCompletion>();
+
+  for (const action of actions) {
+    if (action.status !== "completed") continue;
+    if (!isYesterday(action.closedAt ?? action.updatedAt)) continue;
+
+    const name = action.assigneeName || action.lastUpdatedBy || "Unassigned";
+    const key = name.toLowerCase();
+    const owner = owners.get(key) ?? { key, name, count: 0 };
+    owner.count += 1;
+    owners.set(key, owner);
+  }
+
+  return [...owners.values()].sort((left, right) => right.count - left.count || left.name.localeCompare(right.name));
+}
+
+function canViewGsaTeam(session: NonNullable<Awaited<ReturnType<typeof getSession>>>) {
+  return session.role === "gsa" && ["owner", "admin", "manager"].includes(session.accessRole ?? "owner");
+}
+
 function getRoomState(room: QuoteRoom): { label: string; tone: CustomerThread["stateTone"] } {
   if (room.status === "accepted") return { label: "Accepted", tone: "success" };
   if (room.status === "rejected" || room.status === "closed") return { label: "Closed", tone: "danger" };
@@ -699,6 +761,18 @@ function filterCurrentMonth(bookings: MandateBooking[]) {
     const time = new Date(booking.createdAt);
     return time.getFullYear() === now.getFullYear() && time.getMonth() === now.getMonth();
   });
+}
+
+function isYesterday(value: string) {
+  const time = new Date(value);
+  if (!Number.isFinite(time.getTime())) return false;
+  const yesterday = new Date();
+  yesterday.setDate(yesterday.getDate() - 1);
+  return (
+    time.getFullYear() === yesterday.getFullYear() &&
+    time.getMonth() === yesterday.getMonth() &&
+    time.getDate() === yesterday.getDate()
+  );
 }
 
 function displayContact(name?: string, email?: string) {
@@ -734,19 +808,20 @@ function formatDateTime(value: string) {
   }).format(new Date(value));
 }
 
+function formatToday(value: Date) {
+  return new Intl.DateTimeFormat("en-GB", {
+    weekday: "long",
+    day: "2-digit",
+    month: "short",
+  }).format(value);
+}
+
 function toneClass(tone: Tone) {
   if (tone === "danger") return "bg-danger-bg text-danger";
   if (tone === "warning") return "bg-warning-bg text-warning";
   if (tone === "success") return "bg-success-bg text-success";
   if (tone === "muted") return "bg-surface2 text-ink-muted";
   return "bg-brand-light text-brand";
-}
-
-function priorityClass(priority: Priority) {
-  if (priority === "urgent") return "bg-danger-bg text-danger";
-  if (priority === "today") return "bg-warning-bg text-warning";
-  if (priority === "watch") return "bg-brand-light text-brand";
-  return "bg-surface text-ink-muted";
 }
 
 function priorityVariant(priority: Priority): "danger" | "warning" | "default" | "muted" {

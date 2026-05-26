@@ -9,7 +9,7 @@ function cleanEnvValue(value: string | undefined) {
   return trimmed.replace(/^["']|["']$/g, "");
 }
 
-export function getDatabaseUrl() {
+function getDatabaseUrl() {
   const explicitUrl =
     cleanEnvValue(process.env.DATABASE_URL) ??
     cleanEnvValue(process.env.POSTGRES_URL) ??
@@ -59,7 +59,7 @@ export function hasPostgres() {
   return Boolean(getDatabaseUrl());
 }
 
-export function canUseFileStoreFallback() {
+function canUseFileStoreFallback() {
   return process.env.NODE_ENV !== "production" || process.env.ALLOW_FILE_STORE_FALLBACK === "true";
 }
 

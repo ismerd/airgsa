@@ -221,7 +221,7 @@ export default function ContractsPage() {
   return (
     <>
       <Topbar title="Contracts & KPI" subtitle="Mandate control center" />
-      <main className="space-y-5 p-5">
+      <main className="min-w-0 space-y-5 overflow-x-hidden p-5">
         {error && <div className="rounded-lg border border-danger/25 bg-danger-bg p-3 text-sm text-danger">{error}</div>}
 
         <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-7">

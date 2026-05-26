@@ -298,7 +298,7 @@ function toPublicSettings(row: IntegrationRow): CargoIntegrationSettings {
   };
 }
 
-export function companyIntegrationKey(session: Pick<SessionPayload, "companyId" | "company">) {
+function companyIntegrationKey(session: Pick<SessionPayload, "companyId" | "company">) {
   return (session.companyId?.trim() || session.company.trim().toLowerCase()).slice(0, 160);
 }
 

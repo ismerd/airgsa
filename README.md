@@ -76,7 +76,6 @@ For file uploads on Railway without another provider, mount a Railway volume and
 ## Useful Routes
 
 - `/` landing page
-- `/pricing`
 - `/login`
 - `/signup`
 - `/role-selection`

@@ -218,6 +218,15 @@ export async function listLiveTenders() {
   return store.tenders.sort((left, right) => right.createdAt.localeCompare(left.createdAt));
 }
 
+export async function getTenderWorkflowSnapshot() {
+  const store = await readStore();
+  return {
+    tenders: [...store.tenders].sort((left, right) => right.createdAt.localeCompare(left.createdAt)),
+    applications: [...store.applications].sort((left, right) => right.submittedAt.localeCompare(left.submittedAt)),
+    contracts: [...store.contracts].sort((left, right) => right.createdAt.localeCompare(left.createdAt)),
+  };
+}
+
 export async function getLiveTender(id: string) {
   const store = await readStore();
   return store.tenders.find((tender) => tender.id === id) ?? null;
@@ -301,24 +310,13 @@ export async function getLiveApplication(id: string) {
 }
 
 export async function listLivePartnerContracts() {
-  const store = await readStoreWithPersistedContractReconciliation();
+  const store = await readStore();
   return store.contracts.sort((left, right) => right.createdAt.localeCompare(left.createdAt));
 }
 
 export async function getLivePartnerContract(id: string) {
-  const store = await readStoreWithPersistedContractReconciliation();
+  const store = await readStore();
   return store.contracts.find((contract) => contract.id === id) ?? null;
-}
-
-export async function getContractByGsaAndAirline(gsaCompanyIdOrId: string, airlineCompanyIdOrEmail: string) {
-  const store = await readStoreWithPersistedContractReconciliation();
-  return store.contracts.find((contract) => {
-    const gsaMatches = contract.gsaCompanyId === gsaCompanyIdOrId || contract.gsaId === gsaCompanyIdOrId;
-    const airlineMatches =
-      contract.airlineCompanyId === airlineCompanyIdOrEmail ||
-      contract.airlineEmail.toLowerCase() === airlineCompanyIdOrEmail.toLowerCase();
-    return gsaMatches && airlineMatches;
-  }) ?? null;
 }
 
 export async function updateContractTerms(id: string, input: ContractTermsUpdateInput) {
@@ -518,7 +516,7 @@ function normalizeContractRoute(input: ContractRouteCreateInput): TenderRouteFre
 }
 
 export async function listRoutesForGsa(session: Pick<SessionPayload, "companyId" | "company" | "email">) {
-  const store = await readStoreWithPersistedContractReconciliation();
+  const store = await readStore();
   return store.contracts
     .filter((contract) => isContractOwnedByGsaSession(session, contract))
     .flatMap((contract) =>
@@ -659,7 +657,7 @@ function slugId(value: string) {
     .replace(/^-|-$/g, "") || createId("gsa");
 }
 
-export function canEditApplication(application: Pick<LiveTenderApplication, "submittedAt" | "status">) {
+function canEditApplication(application: Pick<LiveTenderApplication, "submittedAt" | "status">) {
   if (application.status !== "pending") return false;
   return Date.now() - new Date(application.submittedAt).getTime() < 24 * 60 * 60 * 1000;
 }
@@ -932,13 +930,9 @@ function normalizedMatch(left?: string, right?: string) {
   return Boolean(left?.trim() && right?.trim() && left.trim().toLowerCase() === right.trim().toLowerCase());
 }
 
-export function getTenderAwardSlots(tender: Pick<LiveTender, "awardMode" | "maxAwards">) {
+function getTenderAwardSlots(tender: Pick<LiveTender, "awardMode" | "maxAwards">) {
   if (tender.awardMode === "multi") return Math.max(2, tender.maxAwards ?? 2);
   return Math.max(1, tender.maxAwards ?? 1);
-}
-
-export function getTenderCommercialModel(tender: Pick<LiveTender, "commercialModel">) {
-  return tender.commercialModel ?? "commission";
 }
 
 async function readStore(): Promise<TenderWorkflowStore> {
@@ -1096,49 +1090,6 @@ async function readRawStoreFromPostgresClient(client: PgQueryable): Promise<Tend
     applications: applicationsResult.rows.map((row) => rowData<LiveTenderApplication>(row)),
     contracts: contractsResult.rows.map((row) => rowData<LivePartnerContract>(row)),
   };
-}
-
-async function readStoreWithPersistedContractReconciliation(): Promise<TenderWorkflowStore> {
-  const dbResult = await withPostgresTransaction(async (client) => {
-    await lockWorkflowStore(client);
-    const rawStore = await readRawStoreFromPostgresClient(client);
-    const reconciledStore = normalizeWorkflowStore(rawStore);
-    if (hasContractReconciliationChanges(rawStore, reconciledStore)) {
-      await writeStoreToPostgresClient(client, reconciledStore);
-    }
-    return reconciledStore;
-  });
-  if (dbResult) return dbResult;
-
-  assertFileStoreFallbackAllowed("Tender workflow store");
-  return readFileStore();
-}
-
-function hasContractReconciliationChanges(rawStore: TenderWorkflowStore, reconciledStore: TenderWorkflowStore) {
-  if (rawStore.contracts.length !== reconciledStore.contracts.length) return true;
-
-  const rawById = new Map(rawStore.contracts.map((contract) => [contract.id, contract]));
-  return reconciledStore.contracts.some((contract) => {
-    const raw = rawById.get(contract.id);
-    if (!raw) return true;
-    if ((raw.contractRoutes?.length ?? 0) !== contract.contractRoutes.length) return true;
-    if (raw.contactName !== contract.contactName && contract.contactName) return true;
-    if (raw.email !== contract.email && contract.email) return true;
-    if (raw.gsaCompanyId !== contract.gsaCompanyId && contract.gsaCompanyId) return true;
-    if (raw.airlineCompanyId !== contract.airlineCompanyId && contract.airlineCompanyId) return true;
-    if (raw.startDate !== contract.startDate && contract.startDate) return true;
-    if (raw.endDate !== contract.endDate && contract.endDate) return true;
-    if (raw.commissionRate !== contract.commissionRate && contract.commissionRate != null) return true;
-    if (raw.targetLoadFactor !== contract.targetLoadFactor && contract.targetLoadFactor != null) return true;
-    if (raw.monthlyTonnageTargetKg !== contract.monthlyTonnageTargetKg && contract.monthlyTonnageTargetKg != null) return true;
-    if (raw.reportingCadence !== contract.reportingCadence && contract.reportingCadence) return true;
-    if (raw.mandateType !== contract.mandateType && contract.mandateType) return true;
-    if (raw.coverageModel !== contract.coverageModel && contract.coverageModel) return true;
-    if (raw.awardMode !== contract.awardMode && contract.awardMode) return true;
-    if (raw.maxAwards !== contract.maxAwards && contract.maxAwards != null) return true;
-    if (raw.commercialModel !== contract.commercialModel && contract.commercialModel) return true;
-    return false;
-  });
 }
 
 async function writeStoreToPostgresClient(client: PgQueryable, store: TenderWorkflowStore) {

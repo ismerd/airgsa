@@ -31,7 +31,7 @@ export type EcargowareTestResult = {
   message: string;
 };
 
-export function isEcargowareConfigured(config?: CargoIntegrationRuntimeConfig | null) {
+function isEcargowareConfigured(config?: CargoIntegrationRuntimeConfig | null) {
   if (config?.enabled) {
     return Boolean(
       config.authMode === "bearer"

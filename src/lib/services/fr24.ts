@@ -3,12 +3,11 @@
  *
  * The FR24 API spec in this repo does not expose a complete airline fleet roster
  * endpoint. We can query live aircraft by airline livery/operator and query
- * historical flight summaries over a date range to infer seen registrations and
- * airport arrivals.
+ * flight summaries to enrich live positions and infer seen registrations.
  */
 
 import { unstable_cache } from "next/cache";
-import type { AirportPoint, FlightTrackerRecord, LandedAirportCluster } from "@/lib/flight-data-types";
+import type { AirportPoint, FlightTrackerRecord } from "@/lib/flight-data-types";
 import { AIRPORTS, ICAO_TO_IATA, SAUDIA_CARGO, SAUDIA_GSA_PARTNERS } from "@/lib/saudia-cargo-data";
 import { getFr24Settings } from "@/lib/services/fr24-settings";
 import {
@@ -201,42 +200,6 @@ async function fetchFlightSummary(fr24Ids: string[]): Promise<Map<string, Fr24Su
   return new Map(records.flat().map((record) => [record.fr24_id, record]));
 }
 
-async function fetchSummarySet(filter: "painted_as" | "operating_as"): Promise<Fr24SummaryRecord[]> {
-  const now = new Date();
-  const from = new Date(now.getTime() - 24 * 60 * 60 * 1000);
-  const params = new URLSearchParams({
-    [filter]: SAUDIA_ICAO,
-    flight_datetime_from: formatFr24Date(from),
-    flight_datetime_to: formatFr24Date(now),
-    sort: "desc",
-    limit: "300",
-  });
-
-  const res = await fetch(`${FR24_BASE}/api/flight-summary/light?${params.toString()}`, {
-    headers: headers(),
-    next: { revalidate: 600 },
-    signal: AbortSignal.timeout(FR24_TIMEOUT_MS),
-  });
-
-  if (!res.ok) throw new Error(`flight-summary ${filter} HTTP ${res.status}`);
-  const json = (await res.json()) as Fr24SummaryResponse;
-  return json.data ?? [];
-}
-
-const fetchRecentFlightSummaries = unstable_cache(
-  async (): Promise<Fr24SummaryRecord[]> => {
-    const results = await Promise.allSettled([fetchSummarySet("painted_as"), fetchSummarySet("operating_as")]);
-    const summaries = results.flatMap((result) => (result.status === "fulfilled" ? result.value : []));
-    if (summaries.length === 0 && results.some((result) => result.status === "rejected")) {
-      const error = results.find((result) => result.status === "rejected") as PromiseRejectedResult | undefined;
-      throw error?.reason ?? new Error("flight-summary HTTP error");
-    }
-    return dedupeSummaries(summaries);
-  },
-  ["fr24-saudia-recent-flight-summaries-v1"],
-  { revalidate: 600 },
-);
-
 function resolveByIcao(icao: string | null | undefined): AirportPoint | null {
   if (!icao) return null;
   const iata = ICAO_TO_IATA[icao];
@@ -245,19 +208,6 @@ function resolveByIcao(icao: string | null | undefined): AirportPoint | null {
 
 function resolveByIata(iata: string | null | undefined): AirportPoint | null {
   return iata ? (AIRPORTS[iata] ?? null) : null;
-}
-
-function resolveAirportFromSummary(record: Fr24SummaryRecord, direction: "origin" | "destination"): AirportPoint | null {
-  if (direction === "origin") {
-    return resolveByIcao(record.orig_icao) ?? resolveByIata(record.orig_iata);
-  }
-
-  return (
-    resolveByIcao(record.dest_icao_actual) ??
-    resolveByIcao(record.dest_icao) ??
-    resolveByIata(record.dest_iata_actual) ??
-    resolveByIata(record.dest_iata)
-  );
 }
 
 function pickGsa(flightNumber: string) {
@@ -411,8 +361,8 @@ function buildFleetSighting(
   };
 }
 
-export type FlightDataSource = "live" | "disabled" | "no-key" | "no-flights" | "error";
-export type SaudiaFlightResult = {
+type FlightDataSource = "live" | "disabled" | "no-key" | "no-flights" | "error";
+type SaudiaFlightResult = {
   flights: FlightTrackerRecord[];
   source: FlightDataSource;
   fetchedAt: string;
@@ -459,54 +409,6 @@ async function persistFleetSightings(sightings: FleetAircraftSighting[]) {
   } catch (err) {
     console.warn("[fleet] persistence error:", (err as Error).message);
   }
-}
-
-export async function getSaudiaLandedAirportClusters(): Promise<LandedAirportCluster[]> {
-  const settings = await getFr24Settings();
-  if (!settings.enabled) return [];
-
-  if (!API_KEY) return [];
-
-  try {
-    const summaries = await fetchRecentFlightSummaries();
-    const clusters = new Map<string, LandedAirportCluster>();
-
-    for (const summary of summaries) {
-      if (!summary.datetime_landed) continue;
-
-      const airport = resolveAirportFromSummary(summary, "destination");
-      if (!airport) continue;
-
-      const flightNumber =
-        summary.flight ??
-        (summary.callsign ? summary.callsign.replace(/^SVA?/, "SV") : `SV-${summary.fr24_id.slice(-4)}`);
-      const cluster = clusters.get(airport.airportCode) ?? { airport, flights: [] };
-      cluster.flights.push({
-        id: summary.fr24_id,
-        flightNumber,
-        registration: summary.reg ?? undefined,
-        aircraftType: summary.type ?? undefined,
-        flightType: resolveFlightType(summary.type),
-        origin: resolveAirportFromSummary(summary, "origin") ?? undefined,
-        landedAt: summary.datetime_landed,
-      });
-      clusters.set(airport.airportCode, cluster);
-    }
-
-    return Array.from(clusters.values())
-      .map((cluster) => ({
-        ...cluster,
-        flights: cluster.flights.sort((a, b) => (b.landedAt ?? "").localeCompare(a.landedAt ?? "")),
-      }))
-      .sort((a, b) => b.flights.length - a.flights.length);
-  } catch (err) {
-    console.warn("[fr24] landed summary error:", (err as Error).message);
-    return [];
-  }
-}
-
-export async function getSaudiaCargoFlights(): Promise<SaudiaFlightResult> {
-  return getSaudiaFlights();
 }
 
 function dedupeByFr24Id(positions: Fr24LivePosition[]) {
@@ -570,18 +472,10 @@ function getNestedString(payload: Record<string, unknown>, path: string[]) {
   return typeof current === "string" ? current : undefined;
 }
 
-function dedupeSummaries(records: Fr24SummaryRecord[]) {
-  return Array.from(new Map(records.map((record) => [record.fr24_id, record])).values());
-}
-
 function chunk<T>(items: T[], size: number) {
   const chunks: T[][] = [];
   for (let i = 0; i < items.length; i += size) {
     chunks.push(items.slice(i, i + size));
   }
   return chunks;
-}
-
-function formatFr24Date(date: Date) {
-  return date.toISOString().replace(/\.\d{3}Z$/, "");
 }

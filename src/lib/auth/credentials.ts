@@ -56,7 +56,7 @@ export const DEMO_ACCOUNTS: DemoAccount[] = [
     })),
 ];
 
-export function validateCredentials(
+function validateCredentials(
   email: string,
   password: string
 ): DemoAccount | null {

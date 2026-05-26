@@ -1,6 +1,8 @@
 import {
   BarChart3,
   BellRing,
+  BriefcaseBusiness,
+  Building2,
   FileCheck2,
   Globe,
   Handshake,
@@ -9,6 +11,7 @@ import {
   PanelLeft,
   Plane,
   PlaneTakeoff,
+  Settings2,
   Users,
 } from "lucide-react";
 import { Sidebar, type NavGroup } from "@/components/dashboard/sidebar";
@@ -22,16 +25,32 @@ function getNav(pendingApplications: number, controlQueueCount: number, accessRo
   if (accessRole === "operator") {
     return [
       {
-        heading: "Operations",
+        heading: "Work areas",
+        variant: "workspace",
         items: [
-          { label: "Control Center", href: "/airline", icon: PanelLeft, badgeCount: controlQueueCount },
-          { label: "Capacity alerts", href: "/airline/capacity-alerts", icon: BellRing },
-        ],
-      },
-      {
-        heading: "My results",
-        items: [
-          { label: "Performance", href: "/airline/performance", icon: BarChart3 },
+          {
+            label: "Airline Work",
+            href: "/airline",
+            icon: BriefcaseBusiness,
+            badgeCount: controlQueueCount,
+            description: "Control, capacity, results.",
+            children: [
+              { label: "Control Center", href: "/airline", icon: PanelLeft, badgeCount: controlQueueCount },
+              { label: "Capacity Alerts", href: "/airline/capacity-alerts", icon: BellRing },
+              { label: "Performance", href: "/airline/performance", icon: BarChart3 },
+            ],
+          },
+          {
+            label: "Tender Desk",
+            href: "/airline/tenders",
+            icon: PlaneTakeoff,
+            badgeCount: pendingApplications,
+            description: "Tenders and GSA decisions.",
+            children: [
+              { label: "Tender Pipeline", href: "/airline/tenders", icon: PlaneTakeoff },
+              { label: "Decision Room", href: "/airline/applications", icon: Users, badgeCount: pendingApplications },
+            ],
+          },
         ],
       },
     ];
@@ -39,50 +58,55 @@ function getNav(pendingApplications: number, controlQueueCount: number, accessRo
 
   return [
   {
-    heading: "Overview",
+    heading: "Work areas",
+    variant: "workspace",
     items: [
-      { label: "Control Center", href: "/airline", icon: PanelLeft, badgeCount: controlQueueCount },
+      {
+        label: "Airline Work",
+        href: "/airline",
+        icon: BriefcaseBusiness,
+        badgeCount: controlQueueCount,
+        description: "Control, capacity, results.",
+        children: [
+          { label: "Control Center", href: "/airline", icon: PanelLeft, badgeCount: controlQueueCount },
+          { label: "Fleet", href: "/airline/fleet", icon: Plane },
+          { label: "Capacity Alerts", href: "/airline/capacity-alerts", icon: BellRing },
+          { label: "Route Performance", href: "/airline/performance", icon: BarChart3 },
+          { label: "Contracts & KPI", href: "/airline/contracts", icon: FileCheck2 },
+        ],
+      },
+      {
+        label: "Tender Desk",
+        href: "/airline/tenders",
+        icon: PlaneTakeoff,
+        badgeCount: pendingApplications,
+        description: "Tenders, GSAs, growth.",
+        children: [
+          { label: "Tender Pipeline", href: "/airline/tenders", icon: PlaneTakeoff },
+          { label: "Decision Room", href: "/airline/applications", icon: Users, badgeCount: pendingApplications },
+          { label: "Partner Activation", href: "/airline/gsa/overview", icon: Handshake },
+          { label: "GSA Network", href: "/airline/gsa-network", icon: Globe },
+        ],
+      },
+      {
+        label: "Company Settings",
+        href: "/airline/profile",
+        icon: Settings2,
+        description: "Profile, team access.",
+        children: [
+          { label: "Company Profile", href: "/airline/profile", icon: Building2 },
+          { label: "Team & Access", href: "/airline/team", icon: Users },
+        ],
+      },
     ],
   },
   {
-    heading: "Fleet & Capacity",
-    items: [
-      { label: "Fleet", href: "/airline/fleet", icon: Plane },
-      { label: "Capacity alerts", href: "/airline/capacity-alerts", icon: BellRing },
-    ],
-  },
-  {
-    heading: "Tender & Award",
-    items: [
-      { label: "Tender Pipeline", href: "/airline/tenders", icon: PlaneTakeoff },
-      { label: "Decision Room", href: "/airline/applications", icon: Users, badgeCount: pendingApplications },
-    ],
-  },
-  {
-    heading: "Partner Operations",
-    items: [
-      { label: "Partner Activation", href: "/airline/gsa/overview", icon: Handshake },
-    ],
-  },
-  {
-    heading: "Performance Control",
-    items: [
-      { label: "Route Performance", href: "/airline/performance", icon: BarChart3 },
-      { label: "Contracts & KPI", href: "/airline/contracts", icon: FileCheck2 },
-    ],
-  },
-  {
-    heading: "Market & Growth",
+    heading: "Extended tools",
+    variant: "disclosure",
+    description: "Useful later, not required for the daily tender and contract flow.",
     items: [
       { label: "Intelligence", href: "/airline/intelligence", icon: Newspaper },
       { label: "Marketing", href: "/airline/campaigns", icon: Megaphone },
-      { label: "GSA Network", href: "/airline/gsa-network", icon: Globe },
-    ],
-  },
-  {
-    heading: "Account",
-    items: [
-      { label: "Team & access", href: "/airline/team", icon: Users },
     ],
   },
   ];
@@ -124,7 +148,7 @@ export default async function AirlineLayout({ children }: { children: React.Reac
           userName: session?.name ?? "-",
         }}
       />
-      <div className="min-w-0 flex-1">{children}</div>
+      <div className="min-w-0 flex-1 pb-24 lg:pb-0">{children}</div>
     </div>
   );
 }

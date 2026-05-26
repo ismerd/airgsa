@@ -14,6 +14,14 @@ export async function resolveGsaOperationalProfile(session: SessionPayload | nul
   if (!session) return createSessionGsaProfile(session);
 
   const [contracts, applications] = await Promise.all([listLivePartnerContracts(), listLiveApplications()]);
+  return resolveGsaOperationalProfileFromWorkflow(session, contracts, applications);
+}
+
+export function resolveGsaOperationalProfileFromWorkflow(
+  session: SessionPayload,
+  contracts: LivePartnerContract[],
+  applications: LiveTenderApplication[],
+): RealGsaPartner {
   const contract = contracts
     .filter((item) => belongsToSession(item, session))
     .sort((left, right) => right.updatedAt.localeCompare(left.updatedAt))[0];
@@ -43,7 +51,7 @@ export async function getGsaProfileById(id: string): Promise<GsaProfile | null> 
   return directoryProfile ? publicProfileFromDirectory(directoryProfile) : null;
 }
 
-export function createSessionGsaProfile(session: SessionPayload | null): RealGsaPartner {
+function createSessionGsaProfile(session: SessionPayload | null): RealGsaPartner {
   const company = session?.company?.trim() || "GSA";
   return {
     id: session?.companyId ?? session?.email ?? "gsa-session",

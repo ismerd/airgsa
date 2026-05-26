@@ -6,7 +6,7 @@ import { assertFileStoreFallbackAllowed, rowData, withPostgres } from "@/lib/ser
 const STORE_PATH = path.join(process.cwd(), "data", "airline-fleet-aircraft.json");
 const FILE_STORE_LIVE_WRITE_INTERVAL_MS = 60_000;
 
-export type FleetStatus = "in_air" | "parked" | "tracking";
+type FleetStatus = "in_air" | "parked" | "tracking";
 
 export type StoredFleetAircraft = {
   registration: string;

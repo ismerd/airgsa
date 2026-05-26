@@ -1,4 +1,4 @@
-import { AlertTriangle, ArrowRight, ClipboardCheck, DollarSign, FileSpreadsheet, Gauge, Handshake, PackageCheck, TrendingUp } from "lucide-react";
+import { AlertTriangle, ArrowRight, ClipboardCheck, DollarSign, FileSpreadsheet, Gauge, Handshake, PackageCheck, Plane, TrendingUp } from "lucide-react";
 import Link from "next/link";
 import type React from "react";
 import { AirlineGsaAssignmentSummary } from "@/components/dashboard/airline-gsa-assignment-summary";
@@ -79,22 +79,12 @@ export default async function AirlineDashboardPage() {
   return (
     <>
       <Topbar title="Sales overview" subtitle={companyName} />
-      <main className="space-y-6 p-5">
-        <FlightWorldMap
-          title="Live flight tracker"
-          subtitle={useLegacySaudiaTracker
-            ? "Live tracked flights worldwide. Commercial performance below is calculated from recorded contract bookings."
-            : "Connect airline tracking to populate live aircraft. Commercial performance below is calculated from recorded contract bookings."}
-          flights={trackedFlights}
-          markerColorMode="seller"
-          enableFlightTypeFilter
-        />
-
+      <main className="space-y-6 p-5 animate-fade-in">
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-          <KpiCard label="Revenue MTD" value={formatEur(latest.revenue)} change="From contract bookings" icon={DollarSign} />
-          <KpiCard label="Load factor" value={`${latest.loadFactor}%`} change={`${latest.flightCount} recorded bookings`} icon={PackageCheck} />
-          <KpiCard label="Avg yield" value={`EUR ${latest.yieldPerKg.toFixed(2)}/kg`} change="From booked and flown shipments" icon={Gauge} />
-          <KpiCard label="Active GSAs" value={String(gsaRows.length)} change={`${trackedFlights.length} live flights tracked`} icon={Handshake} />
+          <div className="animate-fade-up stagger-1"><KpiCard label="Revenue MTD" value={formatEur(latest.revenue)} change="From contract bookings" icon={DollarSign} /></div>
+          <div className="animate-fade-up stagger-2"><KpiCard label="Load factor" value={`${latest.loadFactor}%`} change={`${latest.flightCount} recorded bookings`} icon={PackageCheck} /></div>
+          <div className="animate-fade-up stagger-3"><KpiCard label="Avg yield" value={`EUR ${latest.yieldPerKg.toFixed(2)}/kg`} change="From booked and flown shipments" icon={Gauge} /></div>
+          <div className="animate-fade-up stagger-4"><KpiCard label="Active GSAs" value={String(gsaRows.length)} change={`${trackedFlights.length} live flights tracked`} icon={Handshake} /></div>
         </div>
 
         <section className="grid gap-4 xl:grid-cols-[1fr_1fr_1.2fr]">
@@ -151,6 +141,20 @@ export default async function AirlineDashboardPage() {
         </section>
 
         <AirlineGsaAssignmentSummary />
+
+        {useLegacySaudiaTracker || trackedFlights.length > 0 ? (
+          <FlightWorldMap
+            title="Live flight tracker"
+            subtitle={useLegacySaudiaTracker
+              ? "Live tracked flights worldwide. Commercial performance below is calculated from recorded contract bookings."
+              : "Connected live aircraft. Commercial performance is calculated from recorded contract bookings."}
+            flights={trackedFlights}
+            markerColorMode="seller"
+            enableFlightTypeFilter
+          />
+        ) : (
+          <DeferredFlightTrackingCard />
+        )}
 
         <div className="grid gap-5 lg:grid-cols-[1fr_1.4fr]">
           <Card>
@@ -324,6 +328,29 @@ function ControlQueueCard({
           <div className="rounded-lg border border-border-ui bg-surface2 p-4 text-sm text-ink-muted">{empty}</div>
         )}
         <Button asChild size="sm" variant="outline"><Link href={href}>{cta}</Link></Button>
+      </CardContent>
+    </Card>
+  );
+}
+
+function DeferredFlightTrackingCard() {
+  return (
+    <Card className="border-dashed">
+      <CardContent className="flex flex-col gap-4 p-5 md:flex-row md:items-center md:justify-between">
+        <div className="flex gap-3">
+          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-surface2 text-ink-muted">
+            <Plane className="h-5 w-5" />
+          </span>
+          <div>
+            <p className="text-sm font-bold text-ink">Live flight tracking is optional for now</p>
+            <p className="mt-1 max-w-3xl text-sm leading-6 text-ink-muted">
+              The daily sales workflow is driven by tenders, applications, contracts, quotes, and bookings. Aircraft tracking stays secondary until the provider connection is active.
+            </p>
+          </div>
+        </div>
+        <Button asChild size="sm" variant="outline" className="shrink-0">
+          <Link href="/airline/fleet">Open fleet</Link>
+        </Button>
       </CardContent>
     </Card>
   );

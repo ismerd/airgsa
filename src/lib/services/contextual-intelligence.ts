@@ -4,7 +4,7 @@ import { listNewsPosts } from "@/lib/services/intelligence-store";
 import { listLivePartnerContracts, type LivePartnerContract } from "@/lib/services/tender-workflow-store";
 import type { NewsPost } from "@/lib/types";
 
-export type ContextualNewsSignal = {
+type ContextualNewsSignal = {
   post: NewsPost;
   relevanceScore: number;
   matchedTerms: string[];

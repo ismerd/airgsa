@@ -58,7 +58,7 @@ export function QuoteRoomClient({ token }: { token: string }) {
       if (document.visibilityState === "visible") void refresh({ silent: true });
     }
 
-    const interval = window.setInterval(refreshIfVisible, 2000);
+    const interval = window.setInterval(refreshIfVisible, 15000);
     window.addEventListener("focus", refreshIfVisible);
     document.addEventListener("visibilitychange", refreshIfVisible);
 

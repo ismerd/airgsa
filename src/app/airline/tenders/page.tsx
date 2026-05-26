@@ -155,7 +155,7 @@ function TenderPortfolioCard({
       <div className="space-y-4 p-5">
         <div className="space-y-3">
           <FactRow icon={MapPin} label="Region" value={tender.countryScope || tender.regions.join(", ") || "Not set"} />
-          <FactRow icon={MapPin} label="Scope" value={`${getMandateLabel(tender)} · ${getCoverageLabel(tender)}`} />
+          <FactRow icon={MapPin} label="Scope" value={`${getMandateLabel(tender)} / ${getCoverageLabel(tender)}`} />
           <FactRow icon={Package} label="Cargo focus" value={cargoTypes.join(", ") || tender.productMix || "Not set"} />
           <FactRow icon={CalendarDays} label="Deadline" value={tender.deadline || "Not set"} />
           <FactRow icon={UsersRound} label="Applications" value={`${applications.length} total, ${shortlisted} shortlisted, ${accepted} awarded`} />

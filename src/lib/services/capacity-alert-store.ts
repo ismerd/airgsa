@@ -10,7 +10,7 @@ const STORE_PATH = path.join(process.cwd(), "data", "capacity-alerts.json");
 const LEGACY_STORE_KEY = "capacity_alert_store";
 
 export type CapacityAlertUrgency = "normal" | "urgent" | "critical";
-export type CapacityAlertStatus = "active" | "filled" | "recalled";
+type CapacityAlertStatus = "active" | "filled" | "recalled";
 
 export type CapacityAlertRoute = {
   key: string;

@@ -116,7 +116,7 @@ function Nav() {
         AirGSA
       </Link>
       <div style={{ display: 'none', alignItems: 'center', gap: 28 }} className="md:flex">
-        {([['#how-it-works', 'How it works'], ['#features', 'Features'], ['/pricing', 'Pricing'], ['/news', 'Intelligence']] as [string, string][]).map(([href, label]) => (
+        {([['#how-it-works', 'How it works'], ['#features', 'Features'], ['/news', 'Intelligence']] as [string, string][]).map(([href, label]) => (
           <Link key={label} href={href} style={{ fontSize: 13, color: 'rgba(255,255,255,0.5)', textDecoration: 'none' }}>{label}</Link>
         ))}
       </div>
@@ -754,7 +754,7 @@ function Footer() {
         <span style={{ fontSize: 11, fontWeight: 800, letterSpacing: '0.26em', textTransform: 'uppercase', color: C.sky }}>AirGSA</span>
         <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.25)' }}>© 2026 AirGSA. Aviation cargo partnership infrastructure.</span>
         <div style={{ display: 'flex', gap: 24 }}>
-          {([['Pricing', '/pricing'], ['Intelligence', '/news'], ['Login', '/login']] as [string, string][]).map(([label, href]) => (
+          {([['Intelligence', '/news'], ['Login', '/login']] as [string, string][]).map(([label, href]) => (
             <Link key={label} href={href} style={{ fontSize: 12, color: 'rgba(255,255,255,0.3)', textDecoration: 'none' }}>{label}</Link>
           ))}
         </div>
