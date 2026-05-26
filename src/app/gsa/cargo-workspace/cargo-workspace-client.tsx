@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import type { ReactNode } from "react";
 import {
   ArrowRight,
@@ -30,9 +30,22 @@ type Tab = "rates" | "bookings" | "tracking";
 type BookingSubView = "create" | "search" | "update" | "cancel";
 
 type ExecutionResult = {
-  mode?: "live";
+  mode?: "live" | "simulation";
   status?: number | "not-configured";
   ok?: boolean;
+  operation?: {
+    id: string;
+    label: string;
+    method: string;
+    path: string;
+  };
+  request?: {
+    url: string;
+    method: string;
+    query?: Record<string, string>;
+    pathParams?: Record<string, string>;
+    body?: unknown;
+  };
   response?: unknown;
   message?: string;
   error?: string;
@@ -99,9 +112,14 @@ export function CargoWorkspaceClient({ operations }: { operations: EcargowareOpe
     refreshWorkflow();
   }, []);
 
+  const operationalContracts = useMemo(
+    () => contracts.filter((contract) => contract.status === "active" && contract.contractRoutes.some((route) => route.status === "assigned")),
+    [contracts],
+  );
+
   useEffect(() => {
-    if (!rateForm.contractId && contracts.length > 0) {
-      const contract = contracts[0];
+    if (!rateForm.contractId && operationalContracts.length > 0) {
+      const contract = operationalContracts[0];
       const route = firstAssignedRoute(contract);
       setRateForm((current) => ({
         ...current,
@@ -111,9 +129,9 @@ export function CargoWorkspaceClient({ operations }: { operations: EcargowareOpe
         destination: route?.destination ?? current.destination,
       }));
     }
-  }, [contracts, rateForm.contractId]);
+  }, [operationalContracts, rateForm.contractId]);
 
-  const selectedContract = contracts.find((contract) => contract.id === rateForm.contractId) ?? null;
+  const selectedContract = operationalContracts.find((contract) => contract.id === rateForm.contractId) ?? null;
   const selectedRoute = selectedContract?.contractRoutes.find((route) => route.id === rateForm.routeId) ?? null;
   const approvedQuotes = quotes.filter((quote) =>
     (quote.status === "auto-approved" || quote.status === "airline-approved") &&
@@ -136,14 +154,14 @@ export function CargoWorkspaceClient({ operations }: { operations: EcargowareOpe
     setBookings(bookingRes.ok ? bookingData.bookings ?? [] : []);
   }
 
-  async function callApi(operationId: string, payload: object) {
+  async function callApi(operationId: string, payload: object, simulate = false) {
     setRunning(true);
     setResult(null);
     try {
       const res = await fetch("/api/ecargoware/execute", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ operationId, ...payload }),
+        body: JSON.stringify({ operationId, simulate, ...payload }),
       });
       const data = (await res.json()) as ExecutionResult;
       setResult(res.ok ? data : { ...data, error: data.error ?? data.message ?? "Cargo system execution failed." });
@@ -296,7 +314,7 @@ export function CargoWorkspaceClient({ operations }: { operations: EcargowareOpe
       {/* Daily stats */}
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <StatCard icon={<Plane className="h-4 w-4" />} label="Contract bookings" value={String(bookings.length)} accent="success" />
-        <StatCard icon={<Package className="h-4 w-4" />} label="Assigned routes" value={String(contracts.reduce((sum, contract) => sum + contract.contractRoutes.filter((route) => route.status === "assigned").length, 0))} accent="brand" />
+        <StatCard icon={<Package className="h-4 w-4" />} label="Active assigned routes" value={String(operationalContracts.reduce((sum, contract) => sum + contract.contractRoutes.filter((route) => route.status === "assigned").length, 0))} accent="brand" />
         <StatCard icon={<BarChart3 className="h-4 w-4" />} label="Contract quotes" value={String(quotes.length)} accent="brand" />
         <StatCard icon={<Zap className="h-4 w-4" />} label="Ready to book" value={String(approvedQuotes.length)} accent="warning" />
       </div>
@@ -335,9 +353,9 @@ export function CargoWorkspaceClient({ operations }: { operations: EcargowareOpe
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          {contracts.length === 0 ? (
+          {operationalContracts.length === 0 ? (
             <div className="rounded-lg border border-border-ui bg-surface2 p-4 text-sm text-ink-muted">
-              No assigned contract routes are available yet. Airline route assignment is required before operational quotes and bookings can be created here.
+              No active assigned contract routes are available yet. Airline activation and route assignment are required before operational quotes and bookings can be created here.
             </div>
           ) : (
             <>
@@ -354,7 +372,7 @@ export function CargoWorkspaceClient({ operations }: { operations: EcargowareOpe
                       destination: route?.destination ?? current.destination,
                     }));
                   }}>
-                    {contracts.map((contract) => <option key={contract.id} value={contract.id}>{contract.airline} - {contract.market}</option>)}
+                    {operationalContracts.map((contract) => <option key={contract.id} value={contract.id}>{contract.airline} - {contract.market}</option>)}
                   </Select>
                 </Field>
                 <Field label="Assigned route">
@@ -433,13 +451,22 @@ export function CargoWorkspaceClient({ operations }: { operations: EcargowareOpe
                   <TrendingUp className="h-4 w-4" />
                   {running ? "Searching…" : "Find Rates"}
                 </Button>
+                <Button variant="outline" onClick={() => callApi("rates-find-rates", { body: { carrierCode: rateForm.carrier, origin: rateForm.origin, destination: rateForm.destination, productType: rateForm.productType, grossWeight: Number(rateForm.grossWeight), chargeWeight: Number(rateForm.grossWeight), flightDate: rateForm.flightDate } }, true)} disabled={running || !rateForm.origin || !rateForm.destination}>
+                  Simulate rates
+                </Button>
                 <Button variant="outline" onClick={() => callApi("webcargo-rate-and-routes", { body: webCargoShipmentBody() })} disabled={running || !rateForm.origin || !rateForm.destination || !rateForm.grossWeight || !hasOperation("webcargo-rate-and-routes")}>
                   <TrendingUp className="h-4 w-4" />
                   WebCargo rates
                 </Button>
+                <Button variant="outline" onClick={() => callApi("webcargo-rate-and-routes", { body: webCargoShipmentBody() }, true)} disabled={running || !rateForm.origin || !rateForm.destination || !rateForm.grossWeight}>
+                  Simulate WebCargo
+                </Button>
                 <Button variant="outline" onClick={() => callApi("flights-find-routes", { body: { carrierCode: rateForm.carrier, origin: rateForm.origin, destination: rateForm.destination } })} disabled={running || !rateForm.origin || !rateForm.destination || !hasOperation("flights-find-routes")}>
                   <Plane className="h-4 w-4" />
                   Find Routes
+                </Button>
+                <Button variant="outline" onClick={() => callApi("flights-find-routes", { body: { carrierCode: rateForm.carrier, origin: rateForm.origin, destination: rateForm.destination } }, true)} disabled={running || !rateForm.origin || !rateForm.destination}>
+                  Simulate route API
                 </Button>
                 <Button variant="outline" onClick={() => createContractQuote()} disabled={running || !selectedRoute || !rateForm.customer || !rateForm.grossWeight || !rateForm.requestedRatePerKg}>
                   <Package className="h-4 w-4" />
@@ -569,9 +596,15 @@ export function CargoWorkspaceClient({ operations }: { operations: EcargowareOpe
                     <Plus className="h-4 w-4" />
                     {running ? "Creating…" : "Create Booking"}
                   </Button>
+                  <Button variant="outline" className="w-full" disabled={running || !bookingForm.origin || !bookingForm.destination || !bookingForm.customerName} onClick={() => callApi("bookings-create", { body: { origin: bookingForm.origin, destination: bookingForm.destination, grossweight: Number(bookingForm.grossWeight), chargeweight: Number(bookingForm.chargeWeight || bookingForm.grossWeight), pieces: Number(bookingForm.pieces), flight: bookingForm.flight, flightDate: bookingForm.flightDate, commodity: bookingForm.commodity || bookingForm.productType, agentName: bookingForm.customerName, iataNo: bookingForm.iataNo, productType: bookingForm.productType, stackable: bookingForm.stackable } }, true)}>
+                    Simulate booking API
+                  </Button>
                   <Button variant="outline" className="w-full" disabled={running || !bookingForm.awbNo || !hasOperation("webcargo-request-booking")} onClick={() => callApi("webcargo-request-booking", { body: { correlationId: bookingForm.awbNo, routingId: 1 } })}>
                     <Plane className="h-4 w-4" />
                     Request WebCargo booking
+                  </Button>
+                  <Button variant="outline" className="w-full" disabled={running || !bookingForm.awbNo} onClick={() => callApi("webcargo-request-booking", { body: { correlationId: bookingForm.awbNo, routingId: 1 } }, true)}>
+                    Simulate WebCargo booking
                   </Button>
                 </>
               )}
@@ -605,6 +638,9 @@ export function CargoWorkspaceClient({ operations }: { operations: EcargowareOpe
                     <Search className="h-4 w-4" />
                     {running ? "Searching…" : "Search Bookings"}
                   </Button>
+                  <Button variant="outline" className="w-full" disabled={running} onClick={() => callApi("bookings-search", { query: { origin: bookingForm.origin, destination: bookingForm.destination, ...(bookingForm.awbNo && { awbNo: bookingForm.awbNo }), ...(bookingForm.iataNo && { iataNo: bookingForm.iataNo }), flightFromDate: bookingForm.searchFromDate, flightToDate: bookingForm.searchToDate } }, true)}>
+                    Simulate booking search
+                  </Button>
                 </>
               )}
 
@@ -637,6 +673,9 @@ export function CargoWorkspaceClient({ operations }: { operations: EcargowareOpe
                   <Button className="w-full" disabled={running || !bookingForm.awbNo || !hasOperation("bookings-update")} onClick={() => callApi("bookings-update", { body: { awbNo: bookingForm.awbNo, ...(bookingForm.grossWeight && { grossweight: Number(bookingForm.grossWeight) }), ...(bookingForm.chargeWeight && { chargeweight: Number(bookingForm.chargeWeight) }), ...(bookingForm.pieces && { pieces: Number(bookingForm.pieces) }), ...(bookingForm.flight && { flight: bookingForm.flight }), ...(bookingForm.flightDate && { flightDate: bookingForm.flightDate }) } })}>
                     {running ? "Saving…" : "Update Booking"}
                   </Button>
+                  <Button variant="outline" className="w-full" disabled={running || !bookingForm.awbNo} onClick={() => callApi("bookings-update", { body: { awbNo: bookingForm.awbNo, ...(bookingForm.grossWeight && { grossweight: Number(bookingForm.grossWeight) }), ...(bookingForm.chargeWeight && { chargeweight: Number(bookingForm.chargeWeight) }), ...(bookingForm.pieces && { pieces: Number(bookingForm.pieces) }), ...(bookingForm.flight && { flight: bookingForm.flight }), ...(bookingForm.flightDate && { flightDate: bookingForm.flightDate }) } }, true)}>
+                    Simulate update
+                  </Button>
                 </>
               )}
 
@@ -665,6 +704,9 @@ export function CargoWorkspaceClient({ operations }: { operations: EcargowareOpe
                     <div className="space-y-2">
                       <Button variant="destructive" className="w-full" disabled={running || !bookingForm.awbNo || !hasOperation("bookings-cancel")} onClick={() => callApi("bookings-cancel", { body: { awbNo: bookingForm.awbNo, returnAwbTo: bookingForm.cancelReturn } })}>
                         {running ? "Cancelling…" : `Cancel AWB ${bookingForm.awbNo}`}
+                      </Button>
+                      <Button variant="outline" className="w-full" disabled={running || !bookingForm.awbNo} onClick={() => callApi("bookings-cancel", { body: { awbNo: bookingForm.awbNo, returnAwbTo: bookingForm.cancelReturn } }, true)}>
+                        Simulate cancellation
                       </Button>
                       <Button variant="outline" className="w-full" onClick={() => setConfirmedCancel(false)}>Go back</Button>
                     </div>
@@ -745,6 +787,9 @@ export function CargoWorkspaceClient({ operations }: { operations: EcargowareOpe
                     <Button disabled={running || !trackForm.awbNo || !hasOperation("tracking-awb")} onClick={() => callApi("tracking-awb", { pathParams: { awbno: trackForm.awbNo } })}>
                       {running ? "…" : <Search className="h-4 w-4" />}
                     </Button>
+                    <Button variant="outline" disabled={running || !trackForm.awbNo} onClick={() => callApi("tracking-awb", { pathParams: { awbno: trackForm.awbNo } }, true)}>
+                      Simulate
+                    </Button>
                   </div>
                 </Field>
               </CardContent>
@@ -767,6 +812,9 @@ export function CargoWorkspaceClient({ operations }: { operations: EcargowareOpe
                 <Button variant="outline" className="w-full" disabled={running || !trackForm.awbNos || !hasOperation("tracking-awb-list")} onClick={() => { const awbs = trackForm.awbNos.split(/[,\n\s]+/).map((s) => s.trim()).filter(Boolean); callApi("tracking-awb-list", { body: { awbNos: awbs } }); }}>
                   <Search className="h-4 w-4" />
                   {running ? "Tracking…" : `Track ${trackForm.awbNos.split(/[,\n\s]+/).filter((s) => s.trim()).length || 0} AWBs`}
+                </Button>
+                <Button variant="outline" className="w-full" disabled={running || !trackForm.awbNos} onClick={() => { const awbs = trackForm.awbNos.split(/[,\n\s]+/).map((s) => s.trim()).filter(Boolean); callApi("tracking-awb-list", { body: { awbNos: awbs } }, true); }}>
+                  Simulate bulk tracking
                 </Button>
               </CardContent>
             </Card>
@@ -847,7 +895,10 @@ function ApiResult({ result, running, label, successLabel }: { result: Execution
         <CardContent className="p-4">
           <div className="flex items-start gap-3 rounded-lg border border-danger/25 bg-danger-bg p-3">
             <X className="mt-0.5 h-5 w-5 shrink-0 text-danger" />
-            <p className="text-sm font-semibold text-danger">{result.error ?? result.message ?? "Cargo system execution failed."}</p>
+            <div className="min-w-0">
+              <p className="text-sm font-semibold text-danger">{result.error ?? result.message ?? "Cargo system execution failed."}</p>
+              {result.request && <ExecutionDetails result={result} />}
+            </div>
           </div>
         </CardContent>
       </Card>
@@ -859,17 +910,42 @@ function ApiResult({ result, running, label, successLabel }: { result: Execution
         <div className="flex items-center gap-3">
           <CheckCircle2 className="h-5 w-5 text-success" />
           <div>
-            <p className="text-sm font-bold text-success">{successLabel}</p>
+            <p className="text-sm font-bold text-success">{result.message ?? successLabel}</p>
             <p className="text-xs text-ink-muted">
-              Live response from eCargoWare/WebCargo
+              {result.mode === "simulation"
+                ? "Simulation only. No external cargo-system call was sent."
+                : result.operation
+                  ? "Live response from eCargoWare/WebCargo"
+                  : "AirGSA workflow action completed."}
             </p>
           </div>
           {result.status && (
             <Badge variant="success" className="ml-auto">HTTP {result.status}</Badge>
           )}
         </div>
+        <ExecutionDetails result={result} />
       </CardContent>
     </Card>
+  );
+}
+
+function ExecutionDetails({ result }: { result: ExecutionResult }) {
+  const payload = {
+    operation: result.operation,
+    request: result.request,
+    response: result.response,
+    message: result.message,
+  };
+
+  return (
+    <details className="mt-3 rounded-lg border border-border-ui bg-surface2 p-3 text-left">
+      <summary className="cursor-pointer text-xs font-semibold uppercase tracking-wider text-ink-muted">
+        {result.mode === "simulation" ? "Simulated API payload and outcome" : "API payload and response"}
+      </summary>
+      <pre className="mt-3 max-h-80 overflow-auto whitespace-pre-wrap break-words rounded-md bg-surface p-3 text-xs text-ink">
+        {JSON.stringify(payload, null, 2)}
+      </pre>
+    </details>
   );
 }
 

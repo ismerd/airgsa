@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { AlertTriangle, CheckCircle2, ExternalLink, Inbox, Link2, Loader2, Mail, MessageSquare, PackageCheck, Plus, RefreshCw, Send, Sparkles, X } from "lucide-react";
 import { Topbar } from "@/components/dashboard/topbar";
 import { AirportCodePicker, CargoProductSelect } from "@/components/dashboard/freight-field-selects";
@@ -124,14 +124,33 @@ export default function QuotesPage() {
   const [parsingEmail, setParsingEmail] = useState(false);
   const [counterDrafts, setCounterDrafts] = useState<Record<string, CounterDraft>>({});
   const [messageDrafts, setMessageDrafts] = useState<Record<string, string>>({});
+  const refreshInFlightRef = useRef(false);
 
   useEffect(() => {
     void refresh({ initial: true });
+    function refreshIfVisible() {
+      if (document.visibilityState === "visible") void refresh({ silent: true });
+    }
+
+    const interval = window.setInterval(refreshIfVisible, 2000);
+    window.addEventListener("focus", refreshIfVisible);
+    document.addEventListener("visibilitychange", refreshIfVisible);
+
+    return () => {
+      window.clearInterval(interval);
+      window.removeEventListener("focus", refreshIfVisible);
+      document.removeEventListener("visibilitychange", refreshIfVisible);
+    };
   }, []);
 
+  const operationalContracts = useMemo(
+    () => contracts.filter((contract) => contract.status === "active" && contract.contractRoutes.some((route) => route.status === "assigned")),
+    [contracts],
+  );
+
   useEffect(() => {
-    if (!form.contractId && contracts.length > 0) {
-      const contract = contracts[0];
+    if (!form.contractId && operationalContracts.length > 0) {
+      const contract = operationalContracts[0];
       const route = firstAssignedRoute(contract);
       setForm((current) => ({
         ...current,
@@ -141,9 +160,9 @@ export default function QuotesPage() {
         destination: route?.destination ?? current.destination,
       }));
     }
-  }, [contracts, form.contractId]);
+  }, [operationalContracts, form.contractId]);
 
-  const selectedContract = contracts.find((contract) => contract.id === form.contractId) ?? null;
+  const selectedContract = operationalContracts.find((contract) => contract.id === form.contractId) ?? null;
   const selectedRoute = selectedContract?.contractRoutes.find((route) => route.id === form.routeId) ?? null;
   const pendingApprovalCount = quotes.filter((quote) => quote.status === "airline-approval-required").length;
   const approvedCount = quotes.filter((quote) => quote.status === "auto-approved" || quote.status === "airline-approved").length;
@@ -168,10 +187,12 @@ export default function QuotesPage() {
     setSelectedConversationKey(activeConversations[0]?.key ?? completedConversations[0]?.key ?? null);
   }, [activeConversations, completedConversations, conversations, selectedConversationKey]);
 
-  async function refresh(options: { initial?: boolean } = {}) {
+  async function refresh(options: { initial?: boolean; silent?: boolean } = {}) {
+    if (refreshInFlightRef.current && options.silent) return;
+    refreshInFlightRef.current = true;
     if (options.initial) setLoading(true);
-    else setRefreshing(true);
-    setError(null);
+    else if (!options.silent) setRefreshing(true);
+    if (!options.silent) setError(null);
     try {
       const [contractRes, quoteRes, bookingRes, roomRes] = await Promise.all([
         fetch("/api/contracts", { cache: "no-store" }),
@@ -195,10 +216,11 @@ export default function QuotesPage() {
       setQuoteRooms(roomData.rooms ?? []);
       setRoomLinks(roomData.links ?? {});
     } catch (err) {
-      setError((err as Error).message);
+      if (!options.silent) setError((err as Error).message);
     } finally {
-      setLoading(false);
-      setRefreshing(false);
+      refreshInFlightRef.current = false;
+      if (options.initial) setLoading(false);
+      if (!options.silent) setRefreshing(false);
     }
   }
 
@@ -299,6 +321,19 @@ export default function QuotesPage() {
     }
   }
 
+  async function simulateCustomerInvite(quote: MandateQuote) {
+    const existingRoom = roomByQuoteId.get(quote.id);
+    const result = existingRoom
+      ? { room: existingRoom, publicUrl: roomLinks[existingRoom.id] || `/quote-room/${encodeURIComponent(existingRoom.publicToken)}` }
+      : await createCustomerRoom(quote, false, false);
+
+    if (!result?.room) return;
+
+    setNotice(
+      `Simulation only: AirGSA would email ${quote.contactEmail || quote.contactName || quote.customer} with the secure quote-room link ${result.publicUrl}. No email was sent.`,
+    );
+  }
+
   async function sendOfferBlock(quote: MandateQuote, room: QuoteRoom) {
     setSaving(true);
     setError(null);
@@ -389,7 +424,7 @@ export default function QuotesPage() {
 
       const result = data as ParsedEmailResult;
       const extracted = result.extracted;
-      const matchedContract = contracts.find((contract) => contract.id === result.match?.contractId) ?? selectedContract ?? contracts[0] ?? null;
+      const matchedContract = operationalContracts.find((contract) => contract.id === result.match?.contractId) ?? selectedContract ?? operationalContracts[0] ?? null;
       const exactRoute = matchedContract?.contractRoutes.find((route) => route.id === result.match?.routeId && result.match?.exactRouteMatch) ?? null;
       const flightDate = normalizeOperationalDate(extracted.readyDate);
 
@@ -521,6 +556,7 @@ export default function QuotesPage() {
         const existing = current.some((booking) => booking.id === data.booking.id);
         return existing ? current.map((booking) => (booking.id === data.booking.id ? data.booking : booking)) : [data.booking, ...current];
       });
+      setNotice("Booking logged for this quote.");
     } catch (err) {
       setError((err as Error).message);
     } finally {
@@ -599,6 +635,7 @@ export default function QuotesPage() {
           onToggleCompleted={() => setShowCompletedRooms((open) => !open)}
           onCreateRoom={(quote) => createCustomerRoom(quote, false, false)}
           onInvite={(quote) => createCustomerRoom(quote, true, true)}
+          onSimulateInvite={simulateCustomerInvite}
           onSendOffer={(quote, room) => sendOfferBlock(quote, room)}
           onMessageDraftChange={(roomId, value) => setMessageDrafts((current) => ({ ...current, [roomId]: value }))}
           onSendMessage={sendTeamMessage}
@@ -676,16 +713,16 @@ export default function QuotesPage() {
           </CardHeader>
           {showCreate && (
             <CardContent className="space-y-4">
-              {contracts.length === 0 ? (
+              {operationalContracts.length === 0 ? (
                 <div className="rounded-lg border border-border-ui bg-surface2 p-4 text-sm text-ink-muted">
-                  No active contract routes are assigned yet.
+                  No active assigned contract routes are available yet. Ask the airline to activate the mandate and assign route scope first.
                 </div>
               ) : (
                 <>
                   <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
                     <Field label="Contract">
                       <Select value={form.contractId} onChange={(event) => {
-                        const contract = contracts.find((item) => item.id === event.target.value);
+                        const contract = operationalContracts.find((item) => item.id === event.target.value);
                         const route = contract ? firstAssignedRoute(contract) : null;
                         setForm((current) => ({
                           ...current,
@@ -695,7 +732,7 @@ export default function QuotesPage() {
                           destination: route?.destination ?? current.destination,
                         }));
                       }}>
-                        {contracts.map((contract) => (
+                        {operationalContracts.map((contract) => (
                           <option key={contract.id} value={contract.id}>{contract.airline} - {contract.market}</option>
                         ))}
                       </Select>
@@ -928,6 +965,7 @@ function ConversationWorkspace({
   onToggleCompleted,
   onCreateRoom,
   onInvite,
+  onSimulateInvite,
   onSendOffer,
   onMessageDraftChange,
   onSendMessage,
@@ -955,6 +993,7 @@ function ConversationWorkspace({
   onToggleCompleted: () => void;
   onCreateRoom: (quote: MandateQuote) => void;
   onInvite: (quote: MandateQuote) => void;
+  onSimulateInvite: (quote: MandateQuote) => void;
   onSendOffer: (quote: MandateQuote, room: QuoteRoom) => void;
   onMessageDraftChange: (roomId: string, value: string) => void;
   onSendMessage: (room: QuoteRoom) => void;
@@ -1036,6 +1075,7 @@ function ConversationWorkspace({
         messageDrafts={messageDrafts}
         onCreateRoom={onCreateRoom}
         onInvite={onInvite}
+        onSimulateInvite={onSimulateInvite}
         onSendOffer={onSendOffer}
         onMessageDraftChange={onMessageDraftChange}
         onSendMessage={onSendMessage}
@@ -1096,6 +1136,7 @@ function ConversationDetail({
   messageDrafts,
   onCreateRoom,
   onInvite,
+  onSimulateInvite,
   onSendOffer,
   onMessageDraftChange,
   onSendMessage,
@@ -1117,6 +1158,7 @@ function ConversationDetail({
   messageDrafts: Record<string, string>;
   onCreateRoom: (quote: MandateQuote) => void;
   onInvite: (quote: MandateQuote) => void;
+  onSimulateInvite: (quote: MandateQuote) => void;
   onSendOffer: (quote: MandateQuote, room: QuoteRoom) => void;
   onMessageDraftChange: (roomId: string, value: string) => void;
   onSendMessage: (room: QuoteRoom) => void;
@@ -1129,6 +1171,19 @@ function ConversationDetail({
   onOpenCreate: () => void;
   onOpenEmail: () => void;
 }) {
+  const latestRoom = conversation
+    ? [...conversation.rooms].sort((a, b) => safeTime(b.lastMessageAt) - safeTime(a.lastMessageAt))[0]
+    : undefined;
+  const threadMessages = latestRoom ? [...latestRoom.messages].sort((a, b) => safeTime(a.createdAt) - safeTime(b.createdAt)) : [];
+  const customerRoomHref = latestRoom ? (roomLinks[latestRoom.id] || `/quote-room/${encodeURIComponent(latestRoom.publicToken)}`) : null;
+  const chatScrollRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const node = chatScrollRef.current;
+    if (!node) return;
+    node.scrollTop = node.scrollHeight;
+  }, [latestRoom?.id, latestRoom?.lastMessageAt, threadMessages.length]);
+
   if (!conversation) {
     return (
       <Card>
@@ -1144,11 +1199,6 @@ function ConversationDetail({
       </Card>
     );
   }
-
-  const latestRoom = [...conversation.rooms].sort((a, b) => safeTime(b.lastMessageAt) - safeTime(a.lastMessageAt))[0];
-  const latestOffer = latestRoom?.offers.find((offer) => offer.status === "sent") ?? latestRoom?.offers[0];
-  const threadMessages = latestRoom ? [...latestRoom.messages].sort((a, b) => safeTime(a.createdAt) - safeTime(b.createdAt)) : [];
-  const customerRoomHref = latestRoom ? (roomLinks[latestRoom.id] || `/quote-room/${encodeURIComponent(latestRoom.publicToken)}`) : null;
 
   return (
     <Card>
@@ -1182,32 +1232,58 @@ function ConversationDetail({
           </div>
         )}
 
-        {conversation.latestMessage && (
-          <div className="rounded-xl border border-border-ui bg-surface2 p-4">
-            <div className="flex items-center justify-between gap-2">
-              <p className="text-sm font-semibold text-ink">
-                Latest {conversation.latestMessage.actor === "customer" ? "customer message" : "team update"}
-              </p>
-              <p className="text-xs text-ink-muted">{formatDateTime(conversation.latestMessage.createdAt)}</p>
-            </div>
-            <p className="mt-2 text-sm text-ink-muted">{conversation.latestMessage.body}</p>
-          </div>
-        )}
-
-        {latestOffer && (
-          <div className="grid gap-3 rounded-xl border border-brand/20 bg-brand-light p-4 md:grid-cols-4">
-            <Info label="Last rate block" value={`EUR ${latestOffer.ratePerKg.toFixed(2)}/kg`} />
-            <Info label="Routing" value={latestOffer.routing || "-"} />
-            <Info label="Transit" value={latestOffer.transitTime || "-"} />
-            <Info label="Status" value={latestOffer.status} />
-          </div>
-        )}
-
-        <div className="rounded-xl border border-border-ui bg-surface2">
-          <div className="flex flex-col gap-2 border-b border-border-ui p-4 sm:flex-row sm:items-center sm:justify-between">
+        <div className="space-y-3 rounded-2xl border border-border-ui bg-surface2 p-4">
+          <div className="flex items-center justify-between gap-3">
             <div>
-              <p className="font-semibold text-ink">Chat with customer</p>
-              <p className="text-sm text-ink-muted">Reply here as the GSA team. The forwarder sees the same thread in the secure customer room.</p>
+              <p className="font-semibold text-ink">Quote context</p>
+              <p className="text-sm text-ink-muted">Customer-facing quote overview for this conversation.</p>
+            </div>
+            <Badge variant="muted">{conversation.quotes.length} quote{conversation.quotes.length === 1 ? "" : "s"}</Badge>
+          </div>
+
+          {conversation.quotes.length === 0 ? (
+            <div className="rounded-xl border border-dashed border-border-ui bg-surface p-6 text-center text-sm text-ink-muted">
+              This customer room has no linked quote. Create a quote from the next customer RFQ.
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {conversation.quotes.map((quote) => (
+                <ConversationQuoteRow
+                  key={quote.id}
+                  quote={quote}
+                  booking={bookingByQuoteId.get(quote.id)}
+                  room={roomByQuoteId.get(quote.id)}
+                  saving={saving}
+                  counterDraft={counterDrafts[quote.id]}
+                  onCreateRoom={() => onCreateRoom(quote)}
+                  onInvite={() => onInvite(quote)}
+                  onSimulateInvite={() => onSimulateInvite(quote)}
+                  onSendOffer={(room) => onSendOffer(quote, room)}
+                  onBook={() => onBook(quote)}
+                  onStartCounter={() => onStartCounter(quote)}
+                  onCounterDraftChange={(patch) => onCounterDraftChange(quote.id, patch)}
+                  onSubmitCounter={() => onSubmitCounter(quote)}
+                  onCancelCounter={() => onCancelCounter(quote.id)}
+                  onDecline={() => onDecline(quote)}
+                />
+              ))}
+            </div>
+          )}
+        </div>
+
+        <div className="overflow-hidden rounded-2xl border border-brand/20 bg-white shadow-sm">
+          <div className="flex flex-col gap-2 border-b border-brand/10 bg-[#F5F8FF] p-4 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <div className="flex flex-wrap items-center gap-2">
+                <p className="font-semibold text-ink">Chat with customer</p>
+                {saving && (
+                  <span className="inline-flex items-center gap-1 rounded-full bg-brand-light px-2 py-1 text-xs font-semibold text-brand">
+                    <Loader2 className="h-3 w-3 animate-spin" />
+                    Saving
+                  </span>
+                )}
+              </div>
+              <p className="mt-1 text-sm text-ink-muted">Reply here as the GSA team. The forwarder sees the same thread in the secure customer room.</p>
             </div>
             {customerRoomHref && (
               <Button asChild size="sm" variant="outline">
@@ -1220,14 +1296,14 @@ function ConversationDetail({
           </div>
 
           {!latestRoom ? (
-            <div className="p-4">
+            <div className="bg-white p-4">
               <div className="rounded-lg border border-warning/25 bg-warning-bg p-3 text-sm text-warning">
                 Create the secure customer link first. After that you can continue the chat directly from this inbox.
               </div>
             </div>
           ) : (
-            <div className="space-y-3 p-4">
-              <div className="max-h-[360px] space-y-3 overflow-y-auto pr-1">
+            <div className="space-y-4 bg-white p-4">
+              <div ref={chatScrollRef} className="max-h-[420px] space-y-3 overflow-y-auto rounded-xl border border-border-ui bg-[#F3F6FD] p-3">
                 {threadMessages.length === 0 ? (
                   <p className="rounded-lg border border-dashed border-border-ui bg-surface p-4 text-center text-sm text-ink-muted">
                     No messages yet. Send the first update or rate context below.
@@ -1249,55 +1325,23 @@ function ConversationDetail({
                   </Button>
                 ))}
               </div>
-              <div className="grid gap-2 sm:grid-cols-[1fr_auto] sm:items-end">
-                <Textarea
-                  rows={3}
-                  value={messageDrafts[latestRoom.id] ?? ""}
-                  onChange={(event) => onMessageDraftChange(latestRoom.id, event.target.value)}
-                  placeholder="Write to the customer, e.g. space is available, DG approval pending, or revised rate follows..."
-                />
-                <Button onClick={() => onSendMessage(latestRoom)} disabled={saving || !(messageDrafts[latestRoom.id] ?? "").trim()}>
-                  <Send className="h-4 w-4" />
-                  Send reply
-                </Button>
+              <div className="rounded-xl border-2 border-brand/20 bg-[#F8FAFF] p-3">
+                <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-ink-muted">Team reply</p>
+                <div className="grid gap-2 sm:grid-cols-[1fr_auto] sm:items-end">
+                  <Textarea
+                    rows={3}
+                    className="bg-white"
+                    value={messageDrafts[latestRoom.id] ?? ""}
+                    onChange={(event) => onMessageDraftChange(latestRoom.id, event.target.value)}
+                    placeholder="Write to the customer, e.g. space is available, DG approval pending, or revised rate follows..."
+                  />
+                  <Button onClick={() => onSendMessage(latestRoom)} disabled={saving || !(messageDrafts[latestRoom.id] ?? "").trim()}>
+                    <Send className="h-4 w-4" />
+                    {saving ? "Sending..." : "Send reply"}
+                  </Button>
+                </div>
               </div>
             </div>
-          )}
-        </div>
-
-        <div className="space-y-3">
-          <div className="flex items-center justify-between gap-3">
-            <div>
-              <p className="font-semibold text-ink">Quotes in this conversation</p>
-              <p className="text-sm text-ink-muted">Handle the next commercial action from one place.</p>
-            </div>
-            <Badge variant="muted">{conversation.quotes.length} quote{conversation.quotes.length === 1 ? "" : "s"}</Badge>
-          </div>
-
-          {conversation.quotes.length === 0 ? (
-            <div className="rounded-xl border border-dashed border-border-ui bg-surface2 p-6 text-center text-sm text-ink-muted">
-              This customer room has no linked quote. Create a quote from the next customer RFQ.
-            </div>
-          ) : (
-            conversation.quotes.map((quote) => (
-              <ConversationQuoteRow
-                key={quote.id}
-                quote={quote}
-                booking={bookingByQuoteId.get(quote.id)}
-                room={roomByQuoteId.get(quote.id)}
-                saving={saving}
-                counterDraft={counterDrafts[quote.id]}
-                onCreateRoom={() => onCreateRoom(quote)}
-                onInvite={() => onInvite(quote)}
-                onSendOffer={(room) => onSendOffer(quote, room)}
-                onBook={() => onBook(quote)}
-                onStartCounter={() => onStartCounter(quote)}
-                onCounterDraftChange={(patch) => onCounterDraftChange(quote.id, patch)}
-                onSubmitCounter={() => onSubmitCounter(quote)}
-                onCancelCounter={() => onCancelCounter(quote.id)}
-                onDecline={() => onDecline(quote)}
-              />
-            ))
           )}
         </div>
       </CardContent>
@@ -1317,20 +1361,28 @@ function MiniMetric({ label, value }: { label: string; value: string }) {
 function ThreadMessageBubble({ message }: { message: QuoteRoom["messages"][number] }) {
   const isTeam = message.actor === "gsa";
   const isSystem = message.actor === "system";
+  if (isSystem) {
+    return (
+      <div className="flex justify-center">
+        <div className="max-w-[90%] rounded-full border border-border-ui bg-[#EAF0FF] px-4 py-2 text-center text-xs text-ink-muted">
+          <span className="font-semibold text-ink">System update:</span> {message.body}
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className={`flex ${isTeam ? "justify-end" : "justify-start"}`}>
       <div
-        className={`max-w-[82%] rounded-2xl border px-4 py-3 text-sm ${
-          isSystem
-            ? "border-border-ui bg-surface text-ink-muted"
-            : isTeam
-              ? "border-brand/20 bg-brand text-white"
-              : "border-border-ui bg-surface text-ink"
+        className={`max-w-[82%] rounded-2xl border px-4 py-3 text-sm shadow-sm ${
+          isTeam
+            ? "rounded-br-md border-brand bg-brand text-white"
+            : "rounded-bl-md border-[#F59E0B]/30 bg-[#FFFBEB] text-ink"
         }`}
       >
         <div className="flex items-center justify-between gap-4">
           <p className={`text-xs font-semibold ${isTeam ? "text-white/80" : "text-ink-muted"}`}>
-            {isSystem ? "System" : isTeam ? "GSA team" : message.authorName || "Customer"}
+            {isTeam ? "GSA team" : message.authorName || "Customer"}
           </p>
           <p className={`text-[11px] ${isTeam ? "text-white/70" : "text-ink-muted"}`}>{formatDateTime(message.createdAt)}</p>
         </div>
@@ -1348,6 +1400,7 @@ function ConversationQuoteRow({
   counterDraft,
   onCreateRoom,
   onInvite,
+  onSimulateInvite,
   onSendOffer,
   onBook,
   onStartCounter,
@@ -1363,6 +1416,7 @@ function ConversationQuoteRow({
   counterDraft?: CounterDraft;
   onCreateRoom: () => void;
   onInvite: () => void;
+  onSimulateInvite: () => void;
   onSendOffer: (room: QuoteRoom) => void;
   onBook: () => void;
   onStartCounter: () => void;
@@ -1455,31 +1509,39 @@ function ConversationQuoteRow({
             <>
               <Button size="sm" variant="outline" onClick={onInvite} disabled={saving}>
                 <Mail className="h-3.5 w-3.5" />
-                Email link
+                {saving ? "Sending..." : "Email link"}
+              </Button>
+              <Button size="sm" variant="outline" onClick={onSimulateInvite} disabled={saving}>
+                Simulate email
               </Button>
               <Button size="sm" onClick={() => onSendOffer(room)} disabled={saving}>
                 <Send className="h-3.5 w-3.5" />
-                Send rate
+                {saving ? "Sending..." : "Send rate"}
               </Button>
             </>
           ) : (
             <Button size="sm" onClick={onCreateRoom} disabled={saving}>
               <Link2 className="h-3.5 w-3.5" />
-              Create room
+              {saving ? "Creating..." : "Create room"}
+            </Button>
+          )}
+          {!room && (
+            <Button size="sm" variant="outline" onClick={onSimulateInvite} disabled={saving}>
+              Simulate email
             </Button>
           )}
           {canBook && !booking && (
             <Button size="sm" variant="outline" onClick={onBook} disabled={saving}>
               <PackageCheck className="h-3.5 w-3.5" />
-              Book
+              {saving ? "Booking..." : "Book"}
             </Button>
           )}
-          <Button size="sm" variant="outline" onClick={onStartCounter} disabled={quote.status === "declined" || quote.status === "expired"}>
+          <Button size="sm" variant="outline" onClick={onStartCounter} disabled={saving || quote.status === "declined" || quote.status === "expired"}>
             Counter
           </Button>
-          <Button size="sm" variant="ghost" onClick={onDecline} disabled={quote.status === "declined" || quote.status === "expired"}>
+          <Button size="sm" variant="ghost" onClick={onDecline} disabled={saving || quote.status === "declined" || quote.status === "expired"}>
             <X className="h-3.5 w-3.5" />
-            Decline
+            {saving ? "Saving..." : "Decline"}
           </Button>
         </div>
       </div>

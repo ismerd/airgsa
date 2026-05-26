@@ -64,15 +64,20 @@ export default function GsaMonthlyReportsPage() {
     refresh();
   }, []);
 
+  const operationalContracts = useMemo(
+    () => contracts.filter((contract) => contract.status === "active"),
+    [contracts],
+  );
+
   useEffect(() => {
-    if (!form.contractId && contracts.length > 0) {
-      const contract = contracts[0];
+    if (!form.contractId && operationalContracts.length > 0) {
+      const contract = operationalContracts[0];
       const snapshot = performance.find((item) => item.contractId === contract.id);
       setForm((current) => hydrateForm(current, contract.id, snapshot));
     }
-  }, [contracts, performance, form.contractId]);
+  }, [operationalContracts, performance, form.contractId]);
 
-  const selectedContract = contracts.find((contract) => contract.id === form.contractId) ?? null;
+  const selectedContract = operationalContracts.find((contract) => contract.id === form.contractId) ?? null;
   const selectedPerformance = performance.find((item) => item.contractId === form.contractId) ?? null;
   const currentReport = reports.find((report) => report.contractId === form.contractId && report.period === form.period);
   const reportLocked = currentReport ? ["submitted", "accepted", "rejected"].includes(currentReport.status) : false;
@@ -169,8 +174,8 @@ export default function GsaMonthlyReportsPage() {
               <p className="text-sm text-ink-muted">Report actual performance and recovery plan against the airline contract.</p>
             </CardHeader>
             <CardContent className="space-y-4">
-              {contracts.length === 0 ? (
-                <div className="rounded-lg border border-border-ui bg-surface2 p-4 text-sm text-ink-muted">No active contracts available for reporting.</div>
+              {operationalContracts.length === 0 ? (
+                <div className="rounded-lg border border-border-ui bg-surface2 p-4 text-sm text-ink-muted">No active contracts available for reporting. Airline activation is required before monthly reporting opens.</div>
               ) : (
                 <>
                   <div className="grid gap-3 md:grid-cols-3">
@@ -179,7 +184,7 @@ export default function GsaMonthlyReportsPage() {
                         const snapshot = performance.find((item) => item.contractId === event.target.value);
                         setForm((current) => hydrateForm(current, event.target.value, snapshot));
                       }}>
-                        {contracts.map((contract) => <option key={contract.id} value={contract.id}>{contract.airline} - {contract.market}</option>)}
+                        {operationalContracts.map((contract) => <option key={contract.id} value={contract.id}>{contract.airline} - {contract.market}</option>)}
                       </Select>
                     </Field>
                     <Field label="Period">

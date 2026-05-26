@@ -33,11 +33,16 @@ export async function PATCH(req: NextRequest) {
   const name = typeof body.name === "string" ? body.name.trim() : "";
   const company = typeof body.company === "string" ? body.company.trim() : "";
   if (!name) return NextResponse.json({ error: "Name is required." }, { status: 400 });
-  if (!company) return NextResponse.json({ error: "Company name is required." }, { status: 400 });
+  const canEditCompanyName = canManageCompanyProfile(session);
+  if (canEditCompanyName && !company) return NextResponse.json({ error: "Company name is required." }, { status: 400 });
 
-  const updated = await updateRailwayAccountProfile(session.email, { name, company });
+  const updated = await updateRailwayAccountProfile(session.email, canEditCompanyName ? { name, company } : { name });
   if (!updated) return NextResponse.json({ error: "Account could not be updated." }, { status: 500 });
 
-  await updateSession({ name: updated.name, company: updated.company });
+  await updateSession(canEditCompanyName ? { name: updated.name, company: updated.company } : { name: updated.name });
   return NextResponse.json({ ok: true, role: updated.role });
+}
+
+function canManageCompanyProfile(session: NonNullable<Awaited<ReturnType<typeof getSession>>>) {
+  return session.role === "admin";
 }

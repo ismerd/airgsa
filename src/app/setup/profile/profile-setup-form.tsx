@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { LogoUploader } from "@/components/dashboard/logo-uploader";
+import { AvatarAssetUploader } from "@/app/airline/profile/airline-profile-assets";
 
 function workspaceHref(role: SessionPayload["role"], accessRole?: SessionPayload["accessRole"]) {
   if (role === "admin") return "/admin";
@@ -25,6 +26,8 @@ export function ProfileSetupForm({
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const destination = workspaceHref(session.role, session.accessRole);
+  const canEditCompanyName = canManageCompanyProfile(session);
+  const avatarEndpoint = profileAssetEndpoint(session.role);
 
   async function submit(event: React.FormEvent) {
     event.preventDefault();
@@ -34,7 +37,7 @@ export function ProfileSetupForm({
     const response = await fetch("/api/auth/profile-setup", {
       method: "PATCH",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ name, company }),
+      body: JSON.stringify(canEditCompanyName ? { name, company } : { name }),
     });
     const payload = await response.json().catch(() => ({}));
     setSaving(false);
@@ -53,11 +56,15 @@ export function ProfileSetupForm({
         <p className="text-xs font-semibold uppercase tracking-[0.24em] text-brand">Account setup</p>
         <CardTitle>Finish your AirGSA profile</CardTitle>
         <p className="text-sm text-ink-muted">
-          Add the visible account details your team and partners will see. You can skip this and update it later.
+          Add the personal account details your team and partners will see. You can skip this and update it later.
         </p>
       </CardHeader>
       <CardContent className="space-y-5">
-        {session.role === "airline" && (
+        {avatarEndpoint && (
+          <AvatarAssetUploader currentPath={session.avatarPath} uploadEndpoint={avatarEndpoint} />
+        )}
+
+        {session.role === "airline" && canEditCompanyName && (
           <div className="flex items-start gap-4 rounded-xl border border-border-ui bg-surface2 p-4">
             <LogoUploader currentLogo={airlineLogoPath} brandColor="#1a5aff" />
             <div className="pt-1">
@@ -74,10 +81,12 @@ export function ProfileSetupForm({
             <span className="text-xs font-semibold uppercase tracking-wide text-ink-muted">Your name</span>
             <Input value={name} onChange={(event) => setName(event.target.value)} required />
           </label>
-          <label className="space-y-1.5">
-            <span className="text-xs font-semibold uppercase tracking-wide text-ink-muted">Company display name</span>
-            <Input value={company} onChange={(event) => setCompany(event.target.value)} required />
-          </label>
+          {canEditCompanyName && (
+            <label className="space-y-1.5">
+              <span className="text-xs font-semibold uppercase tracking-wide text-ink-muted">Company display name</span>
+              <Input value={company} onChange={(event) => setCompany(event.target.value)} required />
+            </label>
+          )}
 
           {error && <p className="rounded-lg bg-danger-bg px-3 py-2 text-sm text-danger">{error}</p>}
 
@@ -93,4 +102,14 @@ export function ProfileSetupForm({
       </CardContent>
     </Card>
   );
+}
+
+function canManageCompanyProfile(session: SessionPayload) {
+  return session.role === "admin";
+}
+
+function profileAssetEndpoint(role: SessionPayload["role"]) {
+  if (role === "airline") return "/api/airline/profile/assets";
+  if (role === "gsa") return "/api/gsa/profile/assets";
+  return null;
 }

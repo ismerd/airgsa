@@ -126,8 +126,8 @@ export function GsaNetworkMap({ gsas, totalCountries }: Props) {
               </button>
             </div>
             <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-              {selectedGsas.map((gsa) => (
-                <GsaListItem key={gsa.name} gsa={gsa} />
+              {selectedGsas.map((gsa, index) => (
+                <GsaListItem key={`${gsa.name}-${gsa.email || gsa.hq}-${index}`} gsa={gsa} />
               ))}
             </div>
           </div>
