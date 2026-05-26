@@ -1,9 +1,8 @@
 "use client";
 
-import type React from "react";
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { CalendarDays, ChevronRight, FileText, MapPin, Package, Plus, UsersRound } from "lucide-react";
+import { CalendarDays, ChevronRight, FileText, MapPin, Package, Plus, UsersRound, type LucideIcon } from "lucide-react";
 import { Topbar } from "@/components/dashboard/topbar";
 import { Badge } from "@/components/ui/badge";
 import { Button, buttonVariants } from "@/components/ui/button";
@@ -176,7 +175,7 @@ function TenderPortfolioCard({
   );
 }
 
-function FactRow({ icon: Icon, label, value }: { icon: React.ElementType; label: string; value: string }) {
+function FactRow({ icon: Icon, label, value }: { icon: LucideIcon; label: string; value: string }) {
   return (
     <div className="grid grid-cols-[150px_1fr] gap-3 text-sm">
       <span className="flex items-center gap-2 text-ink-muted">

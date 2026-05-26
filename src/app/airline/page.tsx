@@ -45,6 +45,7 @@ export default async function AirlineDashboardPage() {
 
   const gsaRows = (performance?.gsas ?? [])
     .map((gsa, index) => ({
+      rowKey: `${gsa.gsaName}-${gsa.assignedMarkets}-${index}`,
       name: gsa.gsaName,
       assignedMarkets: gsa.assignedMarkets,
       color: palette[index % palette.length],
@@ -255,7 +256,7 @@ export default async function AirlineDashboardPage() {
             <div className="space-y-1">
               {gsaRows.map((gsa) => (
                 <div
-                  key={gsa.name}
+                  key={gsa.rowKey}
                   className="grid grid-cols-[1fr_70px_80px_90px_52px_80px] items-center gap-3 rounded-xl border border-transparent px-3 py-3 transition-colors hover:border-border-ui hover:bg-surface2"
                 >
                   <div className="min-w-0">

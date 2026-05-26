@@ -1,6 +1,5 @@
 "use client";
 
-import type React from "react";
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
@@ -19,6 +18,7 @@ import {
   Target,
   Trophy,
   UsersRound,
+  type LucideIcon,
 } from "lucide-react";
 import { AiTextButton } from "@/components/ai/ai-text-button";
 import { Topbar } from "@/components/dashboard/topbar";
@@ -834,7 +834,7 @@ function RequirementPanel({ title, tone, items }: { title: string; tone: "brand"
   );
 }
 
-function InfoTile({ icon: Icon, label, value }: { icon: React.ElementType; label: string; value: string }) {
+function InfoTile({ icon: Icon, label, value }: { icon: LucideIcon; label: string; value: string }) {
   return (
     <div className="rounded-xl border border-border-ui bg-surface2 p-4">
       <p className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-ink-muted">
@@ -846,7 +846,7 @@ function InfoTile({ icon: Icon, label, value }: { icon: React.ElementType; label
   );
 }
 
-function HeaderPill({ icon: Icon, label }: { icon: React.ElementType; label: string }) {
+function HeaderPill({ icon: Icon, label }: { icon: LucideIcon; label: string }) {
   return (
     <span className="inline-flex items-center gap-2 rounded-full border border-border-ui bg-surface px-3 py-1 text-xs font-semibold text-ink-muted">
       <Icon className="h-3.5 w-3.5 text-brand" />

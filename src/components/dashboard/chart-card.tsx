@@ -134,6 +134,7 @@ export function GsaPerformanceChart({ data }: { data: GsaPerformance[] }) {
   const total = data.reduce((s, d) => s + d.revenue, 0);
   const maxRevenue = data.reduce((max, d) => Math.max(max, d.revenue), 0);
   const pieData = data.map((d, i) => ({
+    key: `${d.gsaName}-${d.assignedMarkets}-${i}`,
     name: d.gsaName,
     value: d.revenue,
     color: GSA_COLORS[i % GSA_COLORS.length],
@@ -163,7 +164,7 @@ export function GsaPerformanceChart({ data }: { data: GsaPerformance[] }) {
                   strokeWidth={0}
                 >
                   {pieData.map((entry) => (
-                    <Cell key={entry.name} fill={entry.color} />
+                    <Cell key={entry.key} fill={entry.color} />
                   ))}
                 </Pie>
                 <Tooltip
@@ -182,7 +183,7 @@ export function GsaPerformanceChart({ data }: { data: GsaPerformance[] }) {
           {/* Legend with values */}
           <div className="flex-1 space-y-3">
             {pieData.map((entry) => (
-              <div key={entry.name} className="flex items-center gap-3">
+              <div key={entry.key} className="flex items-center gap-3">
                 <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ background: entry.color }} />
                 <div className="min-w-0 flex-1">
                   <p className="truncate text-xs font-medium text-ink">{entry.name}</p>

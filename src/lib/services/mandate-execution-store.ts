@@ -99,6 +99,8 @@ export type MandateQuote = {
   priority?: "standard" | "priority" | "urgent";
   createdAt: string;
   updatedAt: string;
+  createdBy?: string;
+  createdByName?: string;
   decidedAt?: string;
   decidedBy?: string;
 };
@@ -587,6 +589,8 @@ export async function createMandateQuote(session: SessionPayload, input: QuoteCr
     decisionReason: status === "airline-approval-required" ? "Requested rate is below airline floor." : undefined,
     createdAt: now,
     updatedAt: now,
+    createdBy: session.email,
+    createdByName: session.name,
   };
 
   const store = await readStore();

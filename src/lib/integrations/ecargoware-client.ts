@@ -3,13 +3,14 @@ import type { CargoIntegrationRuntimeConfig } from "@/lib/services/cargo-integra
 
 export type EcargowareExecuteInput = {
   operationId: string;
+  simulate?: boolean;
   body?: unknown;
   query?: Record<string, string>;
   pathParams?: Record<string, string>;
 };
 
 export type EcargowareExecutionResult = {
-  mode: "live";
+  mode: "live" | "simulation";
   status: number | "not-configured";
   ok: boolean;
   operation: Pick<EcargowareOperation, "id" | "group" | "label" | "method" | "path">;
@@ -59,7 +60,6 @@ export async function executeEcargowareOperation(
   }
 
   const url = buildUrl(operation, input.query, input.pathParams, config);
-  const token = await getAccessToken(config);
   const request = {
     url: url.toString(),
     method: operation.method,
@@ -68,6 +68,11 @@ export async function executeEcargowareOperation(
     body: input.body,
   };
 
+  if (input.simulate) {
+    return simulateEcargowareOperation(operation, request);
+  }
+
+  const token = await getAccessToken(config);
   if (!token) {
     return {
       mode: "live",
@@ -309,4 +314,75 @@ function pickOperation(operation: EcargowareOperation) {
     method: operation.method,
     path: operation.path,
   };
+}
+
+function simulateEcargowareOperation(
+  operation: EcargowareOperation,
+  request: EcargowareExecutionResult["request"],
+): EcargowareExecutionResult {
+  return {
+    mode: "simulation",
+    status: 200,
+    ok: true,
+    operation: pickOperation(operation),
+    request,
+    response: buildSimulationResponse(operation.id, request),
+    message: "Simulation only. No cargo-system API request was sent.",
+  };
+}
+
+function buildSimulationResponse(operationId: string, request: EcargowareExecutionResult["request"]) {
+  const body = asRecord(request.body);
+  const route = `${body.origin ?? request.query?.origin ?? "FRA"}-${body.destination ?? request.query?.destination ?? "JED"}`;
+  const awb = body.awbNo ?? body.awbno ?? request.pathParams?.awbno ?? "16012345678";
+
+  if (operationId.includes("rate") || operationId.includes("routes")) {
+    return {
+      quoteId: `sim-rate-${Date.now()}`,
+      route,
+      rates: [
+        { product: body.productType ?? "GENERAL", currency: "EUR", ratePerKg: 1.85, minimumCharge: 45, routing: route, availableKg: 3200 },
+        { product: "EXPRESS", currency: "EUR", ratePerKg: 2.4, minimumCharge: 100, routing: route, availableKg: 1200 },
+      ],
+      nextAction: "Create a contract quote or request airline approval if the customer rate is below floor.",
+    };
+  }
+
+  if (operationId.includes("booking")) {
+    return {
+      bookingId: `sim-booking-${Date.now()}`,
+      awbNo: awb,
+      status: operationId.includes("cancel") ? "cancelled" : operationId.includes("search") ? "found" : "confirmed",
+      route,
+      flight: body.flight ?? "SV170",
+      flightDate: body.flightDate ?? request.query?.flightFromDate ?? "2026-06-01",
+      nextAction: operationId.includes("cancel")
+        ? "Mark the AirGSA booking as cancelled and release capacity."
+        : "Persist AWB, revenue, and flown status against the contract booking.",
+    };
+  }
+
+  if (operationId.includes("tracking")) {
+    return {
+      awbNo: awb,
+      status: "in-transit",
+      milestones: [
+        { station: "FRA", event: "Received from agent", time: "2026-06-01T08:00:00Z" },
+        { station: "FRA", event: "Departed on booked flight", time: "2026-06-01T14:30:00Z" },
+        { station: "JED", event: "Expected arrival", time: "2026-06-02T03:15:00Z" },
+      ],
+    };
+  }
+
+  return {
+    simulated: true,
+    operationId,
+    request,
+    nextAction: "Review the mapped payload before enabling the live API call.",
+  };
+}
+
+function asRecord(value: unknown): Record<string, string | number | boolean | null | undefined> {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return {};
+  return value as Record<string, string | number | boolean | null | undefined>;
 }
