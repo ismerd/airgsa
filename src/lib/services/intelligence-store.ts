@@ -4,7 +4,6 @@ import type { SessionPayload } from "@/lib/auth/session";
 import { assertFileStoreFallbackAllowed, hasPostgres, rowData, withPostgres, withPostgresTransaction } from "@/lib/services/postgres-store";
 import { createId } from "@/lib/services/ids";
 import { normalizeLinkedinPost, type RawLinkedinPost } from "@/lib/services/linkedin";
-import { linkedinImportDefaults } from "@/lib/services/linkedin";
 import type { LinkedinSource, NewsCategory, NewsPost } from "@/lib/types";
 
 const STORE_PATH = path.join(process.cwd(), "data", "intelligence.json");
@@ -32,8 +31,6 @@ export const newsCategories: NewsCategory[] = [
   "tender/RFP",
   "partnership",
 ];
-
-export { linkedinImportDefaults };
 
 export async function listNewsPosts() {
   return sortPosts((await readStore()).posts);

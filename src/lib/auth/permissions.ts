@@ -1,10 +1,6 @@
 import type { SessionPayload } from "@/lib/auth/session";
 import type { LivePartnerContract, LiveTender, LiveTenderApplication } from "@/lib/services/tender-workflow-store";
 
-export function getSessionTenantKey(session: Pick<SessionPayload, "companyId" | "email" | "company">) {
-  return session.companyId ?? session.email.toLowerCase() ?? session.company.toLowerCase();
-}
-
 export function canViewTender(session: SessionPayload, tender: LiveTender) {
   if (session.role === "admin") return true;
   if (session.role === "gsa") return tender.status === "open";
@@ -55,7 +51,7 @@ export function canManageWorkflow(session: SessionPayload) {
   return session.role === "admin" || session.accessRole === undefined || ["owner", "admin", "manager"].includes(session.accessRole);
 }
 
-export function isTenderOwnedByAirline(session: SessionPayload, tender: LiveTender) {
+function isTenderOwnedByAirline(session: SessionPayload, tender: LiveTender) {
   return (
     idsMatch(tender.airlineCompanyId, session.companyId) ||
     emailsMatch(tender.airlineEmail, session.email) ||
@@ -72,7 +68,7 @@ export function isApplicationOwnedByGsa(session: SessionPayload, application: Li
   );
 }
 
-export function isContractOwnedByAirline(session: SessionPayload, contract: LivePartnerContract) {
+function isContractOwnedByAirline(session: SessionPayload, contract: LivePartnerContract) {
   return (
     idsMatch(contract.airlineCompanyId, session.companyId) ||
     emailsMatch(contract.airlineEmail, session.email) ||
@@ -80,7 +76,7 @@ export function isContractOwnedByAirline(session: SessionPayload, contract: Live
   );
 }
 
-export function isContractOwnedByGsa(session: SessionPayload, contract: LivePartnerContract) {
+function isContractOwnedByGsa(session: SessionPayload, contract: LivePartnerContract) {
   return (
     idsMatch(contract.gsaCompanyId, session.companyId) ||
     idsMatch(contract.gsaId, session.companyId) ||

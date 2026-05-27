@@ -1,7 +1,7 @@
 import type { BadgeProps } from "@/components/ui/badge";
 import type { LiveTender, LiveTenderApplication } from "@/lib/services/tender-workflow-store";
 
-export type TenderStageKey =
+type TenderStageKey =
   | "draft"
   | "published"
   | "applications-open"

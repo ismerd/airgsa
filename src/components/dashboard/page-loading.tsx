@@ -3,14 +3,23 @@ import { Plane } from "lucide-react";
 export function PageLoading({ label = "Loading workspace..." }: { label?: string }) {
   return (
     <main className="flex min-h-[70vh] items-center justify-center p-6">
-      <div className="w-full max-w-md rounded-xl border border-border-ui bg-surface p-6 text-center shadow-sm">
-        <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-xl bg-brand-light text-brand">
-          <Plane className="h-5 w-5 animate-pulse" />
+      <div className="flex w-full max-w-xs flex-col items-center gap-5 text-center animate-fade-in">
+        <div
+          className="relative flex h-14 w-14 items-center justify-center rounded-2xl bg-brand-light"
+          style={{ boxShadow: '0 0 32px rgba(26,90,255,0.25)' }}
+        >
+          <Plane className="h-6 w-6 text-brand" />
+          <span
+            className="absolute inset-0 rounded-2xl border-2 border-brand/30 animate-[loading-pulse_1.6s_ease-in-out_infinite]"
+            style={{ animationDelay: '0ms' }}
+          />
         </div>
-        <p className="mt-4 text-sm font-semibold text-ink">{label}</p>
-        <p className="mt-1 text-xs text-ink-muted">Please wait while the latest data is loaded.</p>
-        <div className="mt-5 h-2 overflow-hidden rounded-full bg-surface2">
-          <div className="h-full w-1/3 animate-[loading-bar_1.1s_ease-in-out_infinite] rounded-full bg-brand" />
+        <div>
+          <p className="text-sm font-semibold text-ink">{label}</p>
+          <p className="mt-1 text-xs text-ink-muted">Fetching the latest data</p>
+        </div>
+        <div className="h-[2px] w-48 overflow-hidden rounded-full bg-surface2">
+          <div className="h-full w-1/3 animate-[loading-bar_1.1s_ease-in-out_infinite] rounded-full bg-brand opacity-80" />
         </div>
       </div>
     </main>

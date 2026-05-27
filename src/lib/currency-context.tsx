@@ -2,13 +2,13 @@
 
 import { createContext, useContext, useState } from "react";
 
-export type CurrencyConfig = {
+type CurrencyConfig = {
   code: string;
   symbol: string;
   rate: number;
 };
 
-export const CURRENCIES: CurrencyConfig[] = [
+const CURRENCIES: CurrencyConfig[] = [
   { code: "USD", symbol: "$", rate: 1 },
   { code: "EUR", symbol: "€", rate: 0.93 },
   { code: "GBP", symbol: "£", rate: 0.80 },

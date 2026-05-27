@@ -17,12 +17,14 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import type { MandateBooking, MandateQuote } from "@/lib/services/mandate-execution-store";
+import { Select } from "@/components/ui/select";
+import type { TeamAccount } from "@/lib/services/team-accounts";
 
 type Priority = "high" | "medium" | "watch";
 
 type Customer = {
   id: string;
+  customerKey: string;
   name: string;
   contactPerson: string;
   email: string;
@@ -37,6 +39,8 @@ type Customer = {
   shipmentStatus?: string;
   pendingInquiries: number;
   openQuotes: number;
+  assignedToEmail?: string;
+  assignedToName?: string;
 };
 
 const PRIORITY_CONFIG: Record<Priority, { label: string; variant: "danger" | "warning" | "muted" }> = {
@@ -64,34 +68,68 @@ function formatRevenue(value: number): string {
 }
 
 export default function CustomersPage() {
-  const [quotes, setQuotes] = useState<MandateQuote[]>([]);
-  const [bookings, setBookings] = useState<MandateBooking[]>([]);
+  const [customers, setCustomers] = useState<Customer[]>([]);
+  const [team, setTeam] = useState<TeamAccount[]>([]);
+  const [canAssign, setCanAssign] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [priorityFilter, setPriorityFilter] = useState<Priority | "all">("all");
   const [error, setError] = useState<string | null>(null);
+  const [assigningKey, setAssigningKey] = useState<string | null>(null);
 
   useEffect(() => {
     refresh();
   }, []);
 
   async function refresh() {
+    setIsLoading(true);
     setError(null);
     try {
-      const [quoteRes, bookingRes] = await Promise.all([
-        fetch("/api/quotes", { cache: "no-store" }),
-        fetch("/api/bookings", { cache: "no-store" }),
-      ]);
-      const [quoteData, bookingData] = await Promise.all([quoteRes.json(), bookingRes.json()]);
-      if (!quoteRes.ok) throw new Error(quoteData.error ?? "Quotes could not be loaded");
-      if (!bookingRes.ok) throw new Error(bookingData.error ?? "Bookings could not be loaded");
-      setQuotes(quoteData.quotes ?? []);
-      setBookings(bookingData.bookings ?? []);
+      const response = await fetch("/api/gsa/customers", { cache: "no-store" });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error ?? "Customers could not be loaded");
+      setCustomers(data.customers ?? []);
+      setTeam(data.team ?? []);
+      setCanAssign(Boolean(data.canAssign));
     } catch (err) {
       setError((err as Error).message);
+    } finally {
+      setIsLoading(false);
     }
   }
 
-  const customers = useMemo(() => buildCustomers(quotes, bookings), [quotes, bookings]);
+  async function assignCustomer(customer: Customer, assignedToEmail: string) {
+    setAssigningKey(customer.customerKey);
+    setError(null);
+    try {
+      const assignee = team.find((member) => member.email === assignedToEmail);
+      const response = await fetch("/api/gsa/customers", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          customerKey: customer.customerKey,
+          customerName: customer.name,
+          contactEmail: customer.email,
+          assignedToEmail: assignee?.email,
+          assignedToName: assignee?.name,
+        }),
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error ?? "Customer assignment could not be saved");
+      setCustomers((current) =>
+        current.map((row) =>
+          row.customerKey === customer.customerKey
+            ? { ...row, assignedToEmail: assignee?.email, assignedToName: assignee?.name }
+            : row,
+        ),
+      );
+    } catch (err) {
+      setError((err as Error).message);
+    } finally {
+      setAssigningKey(null);
+    }
+  }
+
   const filtered = useMemo(() => {
     const term = search.trim().toLowerCase();
     return customers
@@ -122,7 +160,10 @@ export default function CustomersPage() {
 
   return (
     <>
-      <Topbar title="My Customers" subtitle="Customer portfolio from real quotes and contract bookings" />
+      <Topbar
+        title={isLoading ? "Customers" : canAssign ? "Customer Assignment" : "My Customers"}
+        subtitle={isLoading ? "Loading customer scope" : canAssign ? "Assign customer accounts to GSA operators" : "Only your assigned customer accounts and bookings"}
+      />
 
       <main className="space-y-5 p-5">
         {error && <div className="rounded-lg border border-danger/25 bg-danger-bg p-3 text-sm text-danger">{error}</div>}
@@ -159,10 +200,14 @@ export default function CustomersPage() {
           {filtered.length === 0 && (
             <div className="col-span-full flex flex-col items-center justify-center rounded-2xl border border-dashed border-border-ui py-16 text-center">
               <UserRound className="h-10 w-10 text-ink-muted/40" />
-              <p className="mt-3 text-sm font-semibold text-ink-muted">No customers found from current quotes or bookings.</p>
-              <Button asChild className="mt-4" variant="outline">
-                <Link href="/gsa/quotes">Create customer quote</Link>
-              </Button>
+              <p className="mt-3 text-sm font-semibold text-ink-muted">
+                {isLoading ? "Loading customers..." : "No customers found from current quotes or bookings."}
+              </p>
+              {!isLoading && (
+                <Button asChild className="mt-4" variant="outline">
+                  <Link href="/gsa/quotes">Create customer quote</Link>
+                </Button>
+              )}
             </div>
           )}
           {filtered.map((customer) => {
@@ -189,10 +234,36 @@ export default function CustomersPage() {
                       <Badge variant={priority.variant}>{priority.label}</Badge>
                       {customer.pendingInquiries > 0 && (
                         <span className="inline-flex items-center gap-1 rounded-full bg-danger px-2 py-0.5 text-[10px] font-bold text-white">
-                          {customer.pendingInquiries} airline approval
+                      {customer.pendingInquiries} airline approval
                         </span>
                       )}
                     </div>
+                  </div>
+
+                  <div className="mt-4 rounded-xl border border-border-ui bg-surface2 p-3">
+                    {canAssign ? (
+                      <label className="block text-[11px] font-semibold uppercase tracking-wider text-ink-muted">
+                        Assigned owner
+                        <Select
+                          className="mt-2"
+                          value={customer.assignedToEmail ?? ""}
+                          disabled={assigningKey === customer.customerKey}
+                          onChange={(event) => assignCustomer(customer, event.target.value)}
+                        >
+                          <option value="">Unassigned</option>
+                          {team.map((member) => (
+                            <option key={member.email} value={member.email}>
+                              {member.name} ({member.title})
+                            </option>
+                          ))}
+                        </Select>
+                      </label>
+                    ) : (
+                      <div className="flex items-center justify-between gap-3">
+                        <p className="text-xs font-semibold uppercase tracking-wider text-ink-muted">Owner</p>
+                        <Badge variant="success">{customer.assignedToName ?? "Assigned to you"}</Badge>
+                      </div>
+                    )}
                   </div>
 
                   <div className="mt-3 rounded-xl border border-border-ui bg-surface2 p-3">
@@ -254,95 +325,6 @@ export default function CustomersPage() {
       </main>
     </>
   );
-}
-
-function buildCustomers(quotes: MandateQuote[], bookings: MandateBooking[]) {
-  const rows = new Map<string, Customer & { yieldKg: number }>();
-  const totalRevenue = bookings.reduce((sum, booking) => sum + booking.revenueAmount, 0);
-  const totalWeight = bookings.reduce((sum, booking) => sum + booking.weightKg, 0);
-  const averageYield = totalWeight > 0 ? totalRevenue / totalWeight : 0;
-
-  function upsert(base: {
-    customer: string;
-    contactName: string;
-    contactEmail: string;
-    origin: string;
-    destination: string;
-    updatedAt: string;
-  }) {
-    const key = `${base.customer.toLowerCase()}::${base.contactEmail.toLowerCase()}`;
-    const existing = rows.get(key);
-    if (existing) {
-      if (new Date(base.updatedAt).getTime() > new Date(existing.lastContact).getTime()) {
-        existing.origin = base.origin;
-        existing.destination = base.destination;
-        existing.lastContact = base.updatedAt;
-      }
-      return existing;
-    }
-    const row: Customer & { yieldKg: number } = {
-      id: key,
-      name: base.customer,
-      contactPerson: base.contactName || "Contact not provided",
-      email: base.contactEmail || "No email on file",
-      origin: base.origin,
-      destination: base.destination,
-      priority: "watch",
-      monthlyVolume: 0,
-      monthlyRevenue: 0,
-      yieldGap: 0,
-      yieldKg: 0,
-      lastContact: base.updatedAt,
-      pendingInquiries: 0,
-      openQuotes: 0,
-    };
-    rows.set(key, row);
-    return row;
-  }
-
-  for (const quote of quotes) {
-    const row = upsert({
-      customer: quote.customer,
-      contactName: quote.contactName,
-      contactEmail: quote.contactEmail,
-      origin: quote.origin,
-      destination: quote.destination,
-      updatedAt: quote.updatedAt,
-    });
-    if (quote.status === "airline-approval-required") row.pendingInquiries += 1;
-    if (quote.status !== "airline-rejected" && quote.status !== "declined" && quote.status !== "expired") row.openQuotes += 1;
-  }
-
-  for (const booking of bookings) {
-    const row = upsert({
-      customer: booking.customer,
-      contactName: booking.contactName,
-      contactEmail: booking.contactEmail,
-      origin: booking.origin,
-      destination: booking.destination,
-      updatedAt: booking.updatedAt,
-    });
-    row.monthlyVolume += booking.flownWeightKg ?? booking.bookedWeightKg ?? booking.weightKg;
-    row.monthlyRevenue += booking.finalRevenueAmount ?? booking.bookedRevenueAmount ?? booking.revenueAmount;
-    row.awbNumber = booking.awbNumber;
-    row.shipmentStatus = booking.status;
-  }
-
-  return Array.from(rows.values())
-    .map((row) => {
-      const customerYield = row.monthlyVolume > 0 ? row.monthlyRevenue / row.monthlyVolume : 0;
-      const yieldGap = averageYield > 0 && customerYield > 0 ? ((customerYield - averageYield) / averageYield) * 100 : 0;
-      const priority: Priority = row.pendingInquiries > 0 || row.shipmentStatus === "booked"
-        ? "high"
-        : row.openQuotes > 0 || row.monthlyRevenue > 0
-          ? "medium"
-          : "watch";
-      return { ...row, priority, yieldGap };
-    })
-    .sort((left, right) => {
-      const priorityRank = { high: 0, medium: 1, watch: 2 };
-      return priorityRank[left.priority] - priorityRank[right.priority] || right.monthlyRevenue - left.monthlyRevenue;
-    });
 }
 
 function StatCard({

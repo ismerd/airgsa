@@ -9,7 +9,7 @@ import {
   withPostgresTransaction,
 } from "@/lib/services/postgres-store";
 
-export type RegistrationStatus = "pending" | "approved" | "rejected";
+type RegistrationStatus = "pending" | "approved" | "rejected";
 
 export type Registration = {
   id: string;

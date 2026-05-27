@@ -204,8 +204,9 @@ export default function AccountsPage() {
               </CardTitle>
               <div className="flex items-center gap-3">
                 {pending.length > 0 && <Badge variant="warning">{pending.length} awaiting review</Badge>}
-                <Button variant="ghost" size="sm" onClick={load} disabled={loading}>
+                <Button variant="ghost" size="sm" onClick={load} disabled={loading} aria-label="Refresh accounts">
                   <RefreshCw className={`h-3.5 w-3.5 ${loading ? "animate-spin" : ""}`} />
+                  Refresh
                 </Button>
               </div>
             </CardHeader>
@@ -217,7 +218,8 @@ export default function AccountsPage() {
               ) : pending.length === 0 ? (
                 <div className="rounded-xl border border-border-ui bg-surface2 px-5 py-8 text-center">
                   <CheckCircle2 className="mx-auto h-8 w-8 text-ink-muted/40" />
-                  <p className="mt-3 text-sm text-ink-muted">No pending registrations.</p>
+                  <p className="mt-3 text-sm font-semibold text-ink">No pending registrations.</p>
+                  <p className="mt-1 text-xs text-ink-muted">New airline and GSA signups will appear here for review.</p>
                 </div>
               ) : (
                 <div className="divide-y divide-border-ui">
@@ -335,11 +337,12 @@ export default function AccountsPage() {
               {managedAccounts.length === 0 ? (
                 <div className="rounded-xl border border-border-ui bg-surface2 px-5 py-8 text-center">
                   <Users className="mx-auto h-8 w-8 text-ink-muted/40" />
-                  <p className="mt-3 text-sm text-ink-muted">No platform accounts yet.</p>
+                  <p className="mt-3 text-sm font-semibold text-ink">No platform accounts yet.</p>
+                  <p className="mt-1 text-xs text-ink-muted">Approved registrations create accounts with setup links.</p>
                 </div>
               ) : (
                 <div className="overflow-x-auto">
-                  <table className="w-full text-sm">
+                  <table className="w-full min-w-[860px] text-sm">
                     <thead>
                       <tr className="border-b border-border-ui text-[11px] font-semibold uppercase tracking-wider text-ink-muted">
                         <th className="pb-3 text-left">User</th>

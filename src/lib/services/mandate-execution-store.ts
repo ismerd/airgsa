@@ -2,6 +2,10 @@ import { mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 import type { SessionPayload } from "@/lib/auth/session";
 import { canViewContract } from "@/lib/auth/permissions";
+import {
+  filterRecordsForGsaCustomerScope,
+  listGsaCustomerAssignments,
+} from "@/lib/services/gsa-customer-assignment-store";
 import { saveWorkflowAttachment } from "@/lib/services/attachment-store";
 import { createId } from "@/lib/services/ids";
 import { queueWorkflowEmail } from "@/lib/services/notification-email";
@@ -37,11 +41,11 @@ export type MandateQuoteStatus =
   | "expired";
 
 export type MandateBookingStatus = "booked" | "flown" | "cancelled";
-export type RevenueReconciliationStatus = "pending" | "reconciled" | "disputed";
-export type ControlActionStatus = "open" | "in-progress" | "completed" | "cancelled";
-export type ControlActionSeverity = "info" | "warning" | "critical";
+type RevenueReconciliationStatus = "pending" | "reconciled" | "disputed";
+type ControlActionStatus = "open" | "in-progress" | "completed" | "cancelled";
+type ControlActionSeverity = "info" | "warning" | "critical";
 export type MonthlyReportStatus = "draft" | "submitted" | "accepted" | "changes-requested" | "rejected";
-export type NotificationType = "control-action" | "monthly-report" | "quote" | "booking" | "system";
+type NotificationType = "control-action" | "monthly-report" | "quote" | "booking" | "system";
 
 const MONTHLY_REPORT_ATTACHMENT_MAX_BYTES = 5 * 1024 * 1024;
 const MONTHLY_REPORT_ALLOWED_EXTENSIONS = new Set(["pdf", "csv", "xls", "xlsx"]);
@@ -210,7 +214,7 @@ export type BookingUpdateInput = {
   cancellationReason?: string;
 };
 
-export type ContractRoutePerformance = {
+type ContractRoutePerformance = {
   routeId: string;
   origin: string;
   destination: string;
@@ -467,11 +471,8 @@ type MandateExecutionStore = {
 
 export async function listMandateQuotes(session: SessionPayload) {
   const [store, contracts] = await Promise.all([readStore(), listLivePartnerContracts()]);
-  const visibleContractIds = new Set(contracts.filter((contract) => canViewContract(session, contract)).map((contract) => contract.id));
-  return store.quotes
-    .filter((quote) => visibleContractIds.has(quote.contractId))
-    .map(withRuntimeQuoteStatus)
-    .sort((left, right) => right.createdAt.localeCompare(left.createdAt));
+  const visibleContractIds = getVisibleContractIds(session, contracts);
+  return applyGsaCustomerScope(session, selectVisibleQuotes(store, visibleContractIds));
 }
 
 export async function getMandateQuote(id: string) {
@@ -481,41 +482,25 @@ export async function getMandateQuote(id: string) {
 
 export async function listMandateBookings(session: SessionPayload) {
   const [store, contracts] = await Promise.all([readStore(), listLivePartnerContracts()]);
-  const visibleContractIds = new Set(contracts.filter((contract) => canViewContract(session, contract)).map((contract) => contract.id));
-  return store.bookings
-    .filter((booking) => visibleContractIds.has(booking.contractId))
-    .sort((left, right) => right.createdAt.localeCompare(left.createdAt));
+  const visibleContractIds = getVisibleContractIds(session, contracts);
+  return applyGsaCustomerScope(session, selectVisibleBookings(store, visibleContractIds));
 }
 
 export async function listContractPerformance(session: SessionPayload) {
   const [store, contracts] = await Promise.all([readStore(), listLivePartnerContracts()]);
-  const visibleContracts = contracts.filter((contract) => canViewContract(session, contract));
+  const visibleContracts = getVisibleContracts(session, contracts);
   return visibleContracts.map((contract) => buildContractPerformance(contract, store));
 }
 
 export async function listControlActions(session: SessionPayload) {
   const [store, contracts] = await Promise.all([readStore(), listLivePartnerContracts()]);
-  const visibleContractIds = new Set(contracts.filter((contract) => canViewContract(session, contract)).map((contract) => contract.id));
-  return store.controlActions
-    .filter((action) => visibleContractIds.has(action.contractId))
-    .map((action) => ({
-      ...action,
-      comments: store.controlActionComments
-        .filter((comment) => comment.actionId === action.id)
-        .sort((left, right) => left.createdAt.localeCompare(right.createdAt)),
-    }))
-    .sort((left, right) => {
-      const statusScore = statusOrder(left.status) - statusOrder(right.status);
-      if (statusScore !== 0) return statusScore;
-      return right.createdAt.localeCompare(left.createdAt);
-    });
+  const visibleContractIds = getVisibleContractIds(session, contracts);
+  return applyControlActionScope(session, selectVisibleControlActions(store, visibleContractIds));
 }
 
 export async function listWorkflowNotifications(session: SessionPayload) {
   const store = await readStore();
-  return store.notifications
-    .filter((notification) => isNotificationForSession(notification, session))
-    .sort((left, right) => right.createdAt.localeCompare(left.createdAt));
+  return selectVisibleNotifications(store, session);
 }
 
 export async function markWorkflowNotificationRead(session: SessionPayload, id: string) {
@@ -556,10 +541,109 @@ export async function createWorkflowNotifications(inputs: Array<Omit<WorkflowNot
 
 export async function listMonthlyReports(session: SessionPayload) {
   const [store, contracts] = await Promise.all([readStore(), listLivePartnerContracts()]);
-  const visibleContractIds = new Set(contracts.filter((contract) => canViewContract(session, contract)).map((contract) => contract.id));
+  const visibleContractIds = getVisibleContractIds(session, contracts);
+  return selectVisibleMonthlyReports(store, visibleContractIds);
+}
+
+export async function getGsaAirlineDeskData(session: SessionPayload) {
+  const [store, contracts] = await Promise.all([readStore(), listLivePartnerContracts()]);
+  const visibleContracts = getVisibleContracts(session, contracts);
+  const visibleContractIds = new Set(visibleContracts.map((contract) => contract.id));
+
+  return {
+    contracts: visibleContracts,
+    performance: visibleContracts.map((contract) => buildContractPerformance(contract, store)),
+    controlActions: applyControlActionScope(session, selectVisibleControlActions(store, visibleContractIds)),
+    reports: selectVisibleMonthlyReports(store, visibleContractIds),
+    notifications: selectVisibleNotifications(store, session),
+    quotes: await applyGsaCustomerScope(session, selectVisibleQuotes(store, visibleContractIds)),
+  };
+}
+
+export async function getGsaPerformanceData(session: SessionPayload) {
+  const [store, contracts] = await Promise.all([readStore(), listLivePartnerContracts()]);
+  const visibleContracts = getVisibleContracts(session, contracts);
+  const visibleContractIds = new Set(visibleContracts.map((contract) => contract.id));
+
+  return {
+    performance: visibleContracts.map((contract) => buildContractPerformance(contract, store)),
+    controlActions: applyControlActionScope(session, selectVisibleControlActions(store, visibleContractIds)),
+    quotes: await applyGsaCustomerScope(session, selectVisibleQuotes(store, visibleContractIds)),
+    bookings: await applyGsaCustomerScope(session, selectVisibleBookings(store, visibleContractIds)),
+  };
+}
+
+export async function getGsaNavigationSignals(session: SessionPayload, preloadedContracts?: LivePartnerContract[]) {
+  const [store, contracts] = preloadedContracts
+    ? [await readStore(), preloadedContracts]
+    : await Promise.all([readStore(), listLivePartnerContracts()]);
+  const visibleContractIds = getVisibleContractIds(session, contracts);
+
+  return {
+    quotes: await applyGsaCustomerScope(session, selectVisibleQuotes(store, visibleContractIds)),
+    notifications: selectVisibleNotifications(store, session),
+  };
+}
+
+function getVisibleContracts(session: SessionPayload, contracts: LivePartnerContract[]) {
+  return contracts.filter((contract) => canViewContract(session, contract));
+}
+
+function getVisibleContractIds(session: SessionPayload, contracts: LivePartnerContract[]) {
+  return new Set(getVisibleContracts(session, contracts).map((contract) => contract.id));
+}
+
+function selectVisibleQuotes(store: MandateExecutionStore, visibleContractIds: Set<string>) {
+  return store.quotes
+    .filter((quote) => visibleContractIds.has(quote.contractId))
+    .map(withRuntimeQuoteStatus)
+    .sort((left, right) => right.createdAt.localeCompare(left.createdAt));
+}
+
+function selectVisibleBookings(store: MandateExecutionStore, visibleContractIds: Set<string>) {
+  return store.bookings
+    .filter((booking) => visibleContractIds.has(booking.contractId))
+    .sort((left, right) => right.createdAt.localeCompare(left.createdAt));
+}
+
+function selectVisibleControlActions(store: MandateExecutionStore, visibleContractIds: Set<string>) {
+  return store.controlActions
+    .filter((action) => visibleContractIds.has(action.contractId))
+    .map((action) => ({
+      ...action,
+      comments: store.controlActionComments
+        .filter((comment) => comment.actionId === action.id)
+        .sort((left, right) => left.createdAt.localeCompare(right.createdAt)),
+    }))
+    .sort((left, right) => {
+      const statusScore = statusOrder(left.status) - statusOrder(right.status);
+      if (statusScore !== 0) return statusScore;
+      return right.createdAt.localeCompare(left.createdAt);
+    });
+}
+
+function selectVisibleMonthlyReports(store: MandateExecutionStore, visibleContractIds: Set<string>) {
   return store.monthlyReports
     .filter((report) => visibleContractIds.has(report.contractId))
     .sort((left, right) => right.period.localeCompare(left.period) || right.updatedAt.localeCompare(left.updatedAt));
+}
+
+function selectVisibleNotifications(store: MandateExecutionStore, session: SessionPayload) {
+  return store.notifications
+    .filter((notification) => isNotificationForSession(notification, session))
+    .sort((left, right) => right.createdAt.localeCompare(left.createdAt));
+}
+
+async function applyGsaCustomerScope<T extends MandateQuote | MandateBooking>(session: SessionPayload, records: T[]) {
+  if (session.role !== "gsa") return records;
+  const assignments = await listGsaCustomerAssignments(session);
+  return filterRecordsForGsaCustomerScope(session, records, assignments);
+}
+
+function applyControlActionScope(session: SessionPayload, actions: ContractControlAction[]) {
+  if (session.role !== "gsa" || canManageWorkflow(session)) return actions;
+  const email = session.email.toLowerCase();
+  return actions.filter((action) => !action.assigneeEmail || action.assigneeEmail.toLowerCase() === email);
 }
 
 export async function createMandateQuote(session: SessionPayload, input: QuoteCreateInput) {

@@ -132,7 +132,7 @@ export default function QuotesPage() {
       if (document.visibilityState === "visible") void refresh({ silent: true });
     }
 
-    const interval = window.setInterval(refreshIfVisible, 2000);
+    const interval = window.setInterval(refreshIfVisible, 15000);
     window.addEventListener("focus", refreshIfVisible);
     document.addEventListener("visibilitychange", refreshIfVisible);
 
@@ -330,7 +330,7 @@ export default function QuotesPage() {
     if (!result?.room) return;
 
     setNotice(
-      `Simulation only: AirGSA would email ${quote.contactEmail || quote.contactName || quote.customer} with the secure quote-room link ${result.publicUrl}. No email was sent.`,
+      `Preview only: AirGSA would email ${quote.contactEmail || quote.contactName || quote.customer} with the secure quote-room link ${result.publicUrl}. No email was sent.`,
     );
   }
 
@@ -1512,7 +1512,7 @@ function ConversationQuoteRow({
                 {saving ? "Sending..." : "Email link"}
               </Button>
               <Button size="sm" variant="outline" onClick={onSimulateInvite} disabled={saving}>
-                Simulate email
+                Preview email
               </Button>
               <Button size="sm" onClick={() => onSendOffer(room)} disabled={saving}>
                 <Send className="h-3.5 w-3.5" />
@@ -1527,7 +1527,7 @@ function ConversationQuoteRow({
           )}
           {!room && (
             <Button size="sm" variant="outline" onClick={onSimulateInvite} disabled={saving}>
-              Simulate email
+              Preview email
             </Button>
           )}
           {canBook && !booking && (

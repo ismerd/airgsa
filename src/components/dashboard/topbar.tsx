@@ -3,10 +3,10 @@
 import React, { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Bell, CheckCheck, Search } from "lucide-react";
+import { Bell, CheckCheck } from "lucide-react";
 import { CommandAssistant } from "@/components/dashboard/command-assistant";
+import { GlobalCommandSearch } from "@/components/dashboard/global-command-search";
 import { buttonVariants } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
 import {
   getAirlineApplicationsForNotifications,
@@ -167,17 +167,17 @@ export function Topbar({
   }, [isAirline, pathname]);
 
   return (
-    <header className="sticky top-0 z-20 border-b border-border-ui bg-surface/90 px-6 py-4 shadow-[0_1px_12px_rgba(11,30,79,0.06)] backdrop-blur">
+    <header
+      className="sticky top-0 z-20 border-b border-border-ui bg-surface/85 px-6 py-4 backdrop-blur-xl"
+      style={{ boxShadow: '0 1px 0 rgba(96,165,250,0.04), 0 4px 24px rgba(0,0,0,0.10)' }}
+    >
       <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
         <div>
-          <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-brand">{subtitle}</p>
+          <p className="text-[10px] font-bold uppercase tracking-[0.22em] text-brand">{subtitle}</p>
           <h1 className="mt-0.5 text-xl font-bold tracking-tight text-ink">{title}</h1>
         </div>
-        <div className="flex items-center gap-3">
-          <div className="relative hidden w-64 md:block">
-            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-ink-muted" />
-            <Input className="pl-9" placeholder="Search tenders, GSAs, lanes..." />
-          </div>
+        <div className="flex items-center gap-2">
+          <GlobalCommandSearch />
           <ThemeToggle />
           <CommandAssistant />
           <div className="relative" ref={wrapperRef}>
@@ -189,13 +189,22 @@ export function Topbar({
             >
               <Bell className="h-4 w-4" />
               {notificationCount > 0 && (
-                <span className="absolute -right-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-brand px-1 text-[10px] font-bold text-white">
+                <span
+                  className="absolute -right-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-brand px-1 text-[10px] font-bold text-white"
+                  style={{ boxShadow: '0 0 10px rgba(26,90,255,0.6)' }}
+                >
                   {notificationCount > 9 ? "9+" : notificationCount}
                 </span>
               )}
             </button>
             {open && (
-              <div className="absolute right-0 top-full z-50 mt-2 w-80 overflow-hidden rounded-xl border border-border-ui bg-surface shadow-2xl">
+              <div
+                className="absolute right-0 top-full z-50 mt-2 w-80 overflow-hidden rounded-2xl border border-border-ui bg-surface animate-scale-in"
+                style={{
+                  transformOrigin: 'top right',
+                  boxShadow: '0 24px 64px rgba(0,0,0,0.3), 0 0 0 1px rgba(96,165,250,0.06)',
+                }}
+              >
                 <div className="flex items-start justify-between gap-3 border-b border-border-ui px-4 py-3">
                   <div>
                     <p className="text-sm font-semibold text-ink">Notifications</p>
@@ -205,7 +214,7 @@ export function Topbar({
                     <button
                       type="button"
                       onClick={() => dismissNotifications(notifications)}
-                      className="inline-flex items-center gap-1.5 rounded-md px-2 py-1 text-xs font-semibold text-brand transition hover:bg-brand-light"
+                      className="inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1 text-xs font-semibold text-brand transition hover:bg-brand-light"
                     >
                       <CheckCheck className="h-3.5 w-3.5" />
                       Mark all read

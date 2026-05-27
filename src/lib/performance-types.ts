@@ -8,7 +8,7 @@ export type RouteBreakdown = {
   flightCount: number;
 };
 
-export type AirportBreakdown = {
+type AirportBreakdown = {
   airportCode: string;
   airportName: string;
   city: string;
@@ -49,7 +49,7 @@ export type GsaPerformance = {
   flightCount: number;
 };
 
-export type PerformancePeriod = "daily" | "weekly" | "monthly" | "yearly";
+type PerformancePeriod = "daily" | "weekly" | "monthly" | "yearly";
 
 export type PeriodAveragePerformance = {
   period: PerformancePeriod;
@@ -60,10 +60,3 @@ export type PeriodAveragePerformance = {
   tonnage: number;
   flightCount: number;
 };
-
-export const performancePeriodOptions: { id: PerformancePeriod; label: string; description: string }[] = [
-  { id: "daily", label: "Daily", description: "Average day" },
-  { id: "weekly", label: "Weekly", description: "Average week" },
-  { id: "monthly", label: "Monthly", description: "Average month" },
-  { id: "yearly", label: "Yearly", description: "Projected year" },
-];

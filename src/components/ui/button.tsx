@@ -7,11 +7,11 @@ export const buttonVariants = cva(
   {
     variants: {
       variant: {
-        default:     "bg-brand text-white shadow-[0_2px_8px_rgba(26,90,255,0.3)] hover:bg-brand-dark hover:shadow-[0_4px_12px_rgba(26,90,255,0.35)]",
-        secondary:   "bg-brand-light text-brand hover:bg-[#DDE4F5]",
-        outline:     "border border-border-ui bg-surface text-ink hover:bg-surface2 hover:border-brand/30",
-        ghost:       "text-ink-muted hover:bg-surface2 hover:text-ink",
-        destructive: "bg-danger text-white hover:bg-[#A93226] shadow-[0_2px_8px_rgba(192,57,43,0.25)]",
+        default:     "bg-brand text-white shadow-[0_2px_12px_rgba(26,90,255,0.4)] hover:bg-brand-dark hover:shadow-[0_4px_20px_rgba(26,90,255,0.5)] active:scale-[0.98]",
+        secondary:   "bg-brand-light text-brand hover:bg-brand-xlight active:scale-[0.98]",
+        outline:     "border border-border-ui bg-surface text-ink hover:bg-surface2 hover:border-brand/40 active:scale-[0.98]",
+        ghost:       "text-ink-muted hover:bg-surface2 hover:text-ink active:scale-[0.98]",
+        destructive: "bg-danger text-white hover:bg-[#A93226] shadow-[0_2px_8px_rgba(192,57,43,0.3)] active:scale-[0.98]",
       },
       size: {
         default: "h-10 px-4 py-2",

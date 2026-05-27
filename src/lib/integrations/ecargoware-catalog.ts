@@ -1,4 +1,4 @@
-export type EcargowareMethod = "GET" | "POST" | "PATCH" | "PUT" | "DELETE";
+type EcargowareMethod = "GET" | "POST" | "PATCH" | "PUT" | "DELETE";
 
 export type EcargowareOperation = {
   id: string;
@@ -375,8 +375,4 @@ export const ECARGOWARE_OPERATIONS: EcargowareOperation[] = [
 
 export function getEcargowareOperation(id: string) {
   return ECARGOWARE_OPERATIONS.find((operation) => operation.id === id) ?? null;
-}
-
-export function getEcargowareGroups() {
-  return Array.from(new Set(ECARGOWARE_OPERATIONS.map((operation) => operation.group)));
 }

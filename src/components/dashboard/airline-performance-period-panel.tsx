@@ -71,7 +71,7 @@ export function AirlinePerformancePeriodPanel({
         </CardContent>
       </Card>
 
-      <ChartSection allData={kpiData} filterByPeriod={false} />
+      <ChartSection allData={kpiData} />
 
       <div className="grid gap-5 xl:grid-cols-2">
         <CountryPerformanceChart data={countries} />

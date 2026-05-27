@@ -8,7 +8,6 @@ const PUBLIC_PREFIXES = [
   "/signup",
   "/forgot-password",
   "/reset-password",
-  "/pricing",
   "/quote-room",
   "/api/auth",
   "/api/quote-room",
@@ -77,9 +76,14 @@ export async function middleware(req: NextRequest) {
     return withSecurityHeaders(NextResponse.redirect(new URL("/login", req.url)), req);
   }
   if (pathname.startsWith("/gsa") && session.role === "gsa" && session.accessRole === "operator") {
+    if (pathname.startsWith("/gsa/performance/")) {
+      return withSecurityHeaders(NextResponse.redirect(new URL("/gsa/performance", req.url)), req);
+    }
     const allowed =
+      pathname === "/gsa" ||
+      pathname.startsWith("/gsa/tasks") ||
       pathname.startsWith("/gsa/cargo-workspace") ||
-      pathname.startsWith("/gsa/performance") ||
+      pathname === "/gsa/performance" ||
       pathname.startsWith("/gsa/notifications") ||
       pathname.startsWith("/gsa/capacity-alerts") ||
       pathname.startsWith("/gsa/quotes") ||

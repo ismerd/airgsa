@@ -15,6 +15,11 @@ path.leaflet-interactive:focus {
   }
 }
 
+@keyframes loading-pulse {
+  0%, 100% { opacity: 0.3; transform: scale(1); }
+  50%       { opacity: 0.7; transform: scale(1.06); }
+}
+
 /* ── Design Token Palette ── */
 :root {
   --background: #F0F4FF;
@@ -80,22 +85,47 @@ path.leaflet-interactive:focus {
 
 /* ── Dark Mode Overrides ── */
 html.dark {
-  --background: #0A1628;
-  --surface:    #0F1E38;
-  --surface2:   #0B1630;
-  --surface3:   #131E3A;
-  --border-ui:  #1C2D52;
+  --background: #050D1E;
+  --foreground: #C8D8F0;
 
-  --ink:        #E4ECFF;
-  --ink-muted:  #7A8BB0;
-  --ink-faint:  #3A4B70;
+  /* Surfaces */
+  --surface:   #0B1630;
+  --surface2:  #071830;
+  --surface3:  #0F1E38;
+  --border-ui: rgba(96, 165, 250, 0.10);
 
-  --brand-light:  rgba(26, 90, 255, 0.14);
-  --brand-xlight: rgba(26, 90, 255, 0.07);
+  /* Navy becomes the deepest layer in dark mode */
+  --navy:      #050D1E;
+
+  /* Text */
+  --ink:       #C8D8F0;
+  --ink-muted: #8099C0;
+  --ink-faint: #1E2D50;
+
+  --brand-light:  rgba(26, 90, 255, 0.16);
+  --brand-xlight: rgba(26, 90, 255, 0.08);
 
   --success-bg: rgba(11, 122, 82, 0.16);
   --warning-bg: rgba(180, 83, 9, 0.16);
   --danger-bg:  rgba(192, 57, 43, 0.16);
+}
+
+/* ── Recharts dark mode ── */
+html.dark .recharts-cartesian-grid line {
+  stroke: rgba(96, 165, 250, 0.07);
+}
+html.dark .recharts-tooltip-wrapper .recharts-default-tooltip {
+  background-color: #0F1E38 !important;
+  border-color: rgba(96, 165, 250, 0.15) !important;
+  color: #C8D8F0 !important;
+  border-radius: 10px !important;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.4) !important;
+}
+html.dark .recharts-tooltip-item {
+  color: #C8D8F0 !important;
+}
+html.dark .recharts-tooltip-label {
+  color: #8099C0 !important;
 }
 
 /* ── Dark mode Leaflet ── */
@@ -122,6 +152,53 @@ html.dark .flight-map .leaflet-tooltip {
   border-color: #1C2D52;
   background: #0F1E38;
   color: #E4ECFF;
+}
+
+/* ── Motion easing curves ── */
+:root {
+  --ease-out-quint: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-out-expo:  cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-in-out:    cubic-bezier(0.77, 0, 0.175, 1);
+}
+
+/* ── Enter animation keyframes ── */
+@keyframes fade-up {
+  from { opacity: 0; transform: translateY(10px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes fade-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+@keyframes scale-in {
+  from { opacity: 0; transform: scale(0.96); }
+  to   { opacity: 1; transform: scale(1); }
+}
+@keyframes slide-down {
+  from { opacity: 0; transform: translateY(-6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.animate-fade-up   { animation: fade-up   380ms var(--ease-out-quint) both; }
+.animate-fade-in   { animation: fade-in   250ms ease-out both; }
+.animate-scale-in  { animation: scale-in  200ms var(--ease-out-quint) both; }
+.animate-slide-down { animation: slide-down 180ms var(--ease-out-quint) both; }
+
+/* Stagger helpers — apply alongside .animate-* */
+.stagger-1 { animation-delay:  60ms; }
+.stagger-2 { animation-delay: 120ms; }
+.stagger-3 { animation-delay: 180ms; }
+.stagger-4 { animation-delay: 240ms; }
+.stagger-5 { animation-delay: 300ms; }
+
+/* ── Reduced motion ── */
+@media (prefers-reduced-motion: reduce) {
+  .animate-fade-up,
+  .animate-fade-in,
+  .animate-scale-in,
+  .animate-slide-down {
+    animation: none !important;
+  }
 }
 
 /* ── Base ── */
